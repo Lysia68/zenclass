@@ -168,7 +168,7 @@ export default function LoginPage() {
         <p style={{
           textAlign: "center", color: "#B0A090", fontSize: 11,
           marginTop: 24, lineHeight: 1.8, letterSpacing: 0.2,
-        }}>© 2026 ZenClass · Connexion 100% sécurisée</p>
+        }}>© 2026 Samavi · Connexion 100% sécurisée</p>
       </div>
     </div>
   )

@@ -1616,29 +1616,190 @@ function SuperAdminView({ onSwitch, isMobile }) {
   const actifCount= tenants.filter(t=>t.status==="actif").length;
   const suspCount = tenants.filter(t=>t.status==="suspendu").length;
 
-  // Modal Nouveau Tenant — proper component
+  // Modal Nouveau Tenant — formulaire complet
   function NewTenantModalSA() {
-    const [f, setF] = useState({ name:"", city:"", plan:"Starter" });
+    const SA = { background:"rgba(255,255,255,.06)", border:"1px solid rgba(255,255,255,.12)", borderRadius:8, color:"#fff", fontSize:13, outline:"none", padding:"9px 12px", width:"100%", boxSizing:"border-box" };
+    const emptyF = { name:"", slug:"", email:"", firstName:"", lastName:"", phone:"", city:"", address:"", plan:"Starter", type:"Yoga", notes:"" };
+    const [f, setF] = useState(emptyF);
+    const [step, setStep] = useState(1); // 1=infos studio, 2=contact, 3=confirmation
+    const [errors, setErrors] = useState({});
+
+    const toSlug = (s) => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"");
+
+    const upd = (k, v) => {
+      const next = {...f, [k]:v};
+      if(k==="name") next.slug = toSlug(v);
+      setF(next);
+      setErrors(e=>({...e,[k]:undefined}));
+    };
+
+    const validate1 = () => {
+      const e = {};
+      if(!f.name.trim()) e.name = "Obligatoire";
+      if(!f.city.trim()) e.city = "Obligatoire";
+      if(!f.type) e.type = "Obligatoire";
+      return e;
+    };
+    const validate2 = () => {
+      const e = {};
+      if(!f.email.trim() || !f.email.includes("@")) e.email = "Email invalide";
+      if(!f.firstName.trim()) e.firstName = "Obligatoire";
+      if(!f.lastName.trim()) e.lastName = "Obligatoire";
+      if(!f.phone.trim()) e.phone = "Obligatoire";
+      return e;
+    };
+
+    const nextStep = () => {
+      if(step===1){ const e=validate1(); if(Object.keys(e).length){ setErrors(e); return; } }
+      if(step===2){ const e=validate2(); if(Object.keys(e).length){ setErrors(e); return; } }
+      setStep(s=>s+1);
+    };
+
+    const create = () => {
+      const slug = f.slug || toSlug(f.name);
+      setTenants(p=>[...p,{
+        id:`t${Date.now()}`, name:f.name, slug, city:f.city,
+        plan:f.plan, members:0,
+        revenue:f.plan==="Pro"?79:f.plan==="Business"?199:29,
+        status:"actif", since:"Mar 2026", growth:0,
+        contact:`${f.firstName} ${f.lastName}`, email:f.email, phone:f.phone, type:f.type
+      }]);
+      setModal(null);
+      showToast(`✅ "${f.name}" créé — seed data injecté !`);
+    };
+
+    const FieldSA = ({label, k, placeholder, type="text", required}) => (
+      <div>
+        <label style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
+          {label}{required && <span style={{color:"#F87171"}}> *</span>}
+        </label>
+        <input type={type} value={f[k]} onChange={e=>upd(k,e.target.value)} placeholder={placeholder}
+          style={{...SA, borderColor: errors[k] ? "#F87171" : "rgba(255,255,255,.12)"}}/>
+        {errors[k] && <div style={{fontSize:11,color:"#F87171",marginTop:3}}>{errors[k]}</div>}
+      </div>
+    );
+    const SelectSA = ({label, k, opts, required}) => (
+      <div>
+        <label style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
+          {label}{required && <span style={{color:"#F87171"}}> *</span>}
+        </label>
+        <select value={f[k]} onChange={e=>upd(k,e.target.value)} style={{...SA, appearance:"none"}}>
+          {opts.map(o=><option key={o.v} value={o.v} style={{background:"#1a1030"}}>{o.l}</option>)}
+        </select>
+      </div>
+    );
+
+    const STEPS = ["Studio", "Contact", "Confirmation"];
+
     return (
       <div onClick={e=>e.target===e.currentTarget&&setModal(null)}
-        style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:800, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-        <div style={{ background:C.surface, borderRadius:16, padding:28, width:"100%", maxWidth:440, boxShadow:"0 24px 56px rgba(0,0,0,.2)" }}>
-          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
-            <div style={{ fontSize:18, fontWeight:700, color:C.text }}>Nouveau tenant</div>
-            <button onClick={()=>setModal(null)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"3px 8px", cursor:"pointer", color:C.textSoft, fontSize:15 }}>✕</button>
+        style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.7)", zIndex:800, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+        <div style={{ background:"#1A1035", border:"1px solid rgba(167,139,250,.2)", borderRadius:20, padding:32, width:"100%", maxWidth:520, boxShadow:"0 32px 64px rgba(0,0,0,.5)", maxHeight:"90vh", overflowY:"auto" }}>
+
+          {/* Header */}
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:24 }}>
+            <div>
+              <div style={{ fontSize:20, fontWeight:800, color:"#fff", letterSpacing:-0.5 }}>Nouveau tenant</div>
+              <div style={{ fontSize:12, color:"#A78BFA", marginTop:2 }}>Étape {step} / 3 — {STEPS[step-1]}</div>
+            </div>
+            <button onClick={()=>setModal(null)} style={{ background:"rgba(255,255,255,.08)", border:"1px solid rgba(255,255,255,.15)", borderRadius:8, width:32, height:32, cursor:"pointer", color:"rgba(255,255,255,.6)", fontSize:16, display:"flex", alignItems:"center", justifyContent:"center" }}>✕</button>
           </div>
-          <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
-            <Field label="Nom du studio" value={f.name} onChange={v=>setF({...f,name:v})} placeholder="Ex: Hot Yoga Lyon"/>
-            <Field label="Ville" value={f.city} onChange={v=>setF({...f,city:v})} placeholder="Paris, Lyon…"/>
-            <Field label="Plan" value={f.plan} onChange={v=>setF({...f,plan:v})} opts={[{v:"Starter",l:"Starter — 29 €/mois"},{v:"Pro",l:"Pro — 79 €/mois"}]}/>
+
+          {/* Progress */}
+          <div style={{ display:"flex", gap:6, marginBottom:28 }}>
+            {STEPS.map((s,i)=>(
+              <div key={s} style={{ flex:1, height:3, borderRadius:2, background: i+1<=step ? "#7C3AED" : "rgba(255,255,255,.1)" }}/>
+            ))}
           </div>
-          <div style={{ display:"flex", gap:10 }}>
-            <Button sm onClick={()=>{
-              if(!f.name) return;
-              setTenants(p=>[...p,{id:`t${Date.now()}`,name:f.name,city:f.city,plan:f.plan,members:0,revenue:f.plan==="Pro"?79:29,status:"actif",since:"Mars 2026",growth:0}]);
-              setModal(null); showToast(`"${f.name}" créé avec succès !`);
-            }}>Créer le tenant</Button>
-            <Button sm variant="ghost" onClick={()=>setModal(null)}>Annuler</Button>
+
+          {/* Step 1 — Infos studio */}
+          {step===1 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              <FieldSA label="Nom du studio / centre" k="name" placeholder="Ex: Yoga Flow Paris" required/>
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
+                  Sous-domaine <span style={{color:"rgba(255,255,255,.3)"}}>(auto)</span>
+                </label>
+                <div style={{ display:"flex", alignItems:"center", background:"rgba(255,255,255,.04)", border:"1px solid rgba(255,255,255,.1)", borderRadius:8, overflow:"hidden" }}>
+                  <span style={{ padding:"9px 12px", color:"rgba(255,255,255,.3)", fontSize:13, borderRight:"1px solid rgba(255,255,255,.1)", whiteSpace:"nowrap" }}>fydelys.fr/</span>
+                  <input value={f.slug} onChange={e=>upd("slug",toSlug(e.target.value))} placeholder="yoga-flow-paris"
+                    style={{ ...SA, border:"none", background:"transparent", flex:1 }}/>
+                </div>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <FieldSA label="Ville" k="city" placeholder="Paris, Lyon…" required/>
+                <FieldSA label="Adresse" k="address" placeholder="12 rue de la Paix"/>
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <SelectSA label="Type de pratique" k="type" required opts={[
+                  {v:"Yoga",l:"🧘 Yoga"},{v:"Pilates",l:"⚡ Pilates"},{v:"Danse",l:"💃 Danse"},
+                  {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi-disciplines"}
+                ]}/>
+                <SelectSA label="Plan Fydelys" k="plan" opts={[
+                  {v:"Starter",l:"Starter — 29 €/mois"},{v:"Pro",l:"Pro — 79 €/mois"},{v:"Business",l:"Business — 199 €/mois"}
+                ]}/>
+              </div>
+            </div>
+          )}
+
+          {/* Step 2 — Contact */}
+          {step===2 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              <div style={{ padding:"12px 16px", background:"rgba(167,139,250,.08)", borderRadius:10, border:"1px solid rgba(167,139,250,.15)", fontSize:13, color:"#C4B5FD" }}>
+                👤 Informations du gérant / responsable du studio
+              </div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12 }}>
+                <FieldSA label="Prénom" k="firstName" placeholder="Marie" required/>
+                <FieldSA label="Nom" k="lastName" placeholder="Laurent" required/>
+              </div>
+              <FieldSA label="Email professionnel" k="email" type="email" placeholder="marie@studio.fr" required/>
+              <FieldSA label="Téléphone" k="phone" type="tel" placeholder="+33 6 12 34 56 78" required/>
+              <div>
+                <label style={{ fontSize:11, fontWeight:700, color:"rgba(255,255,255,.5)", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>Notes internes</label>
+                <textarea value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Informations complémentaires, source du lead…" rows={3}
+                  style={{...SA, resize:"vertical"}}/>
+              </div>
+            </div>
+          )}
+
+          {/* Step 3 — Confirmation */}
+          {step===3 && (
+            <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+              <div style={{ padding:"16px", background:"rgba(52,211,153,.06)", borderRadius:12, border:"1px solid rgba(52,211,153,.2)" }}>
+                <div style={{ fontSize:13, fontWeight:700, color:"#34D399", marginBottom:12 }}>✅ Récapitulatif</div>
+                {[
+                  ["Studio", f.name],
+                  ["Sous-domaine", `${f.slug || toSlug(f.name)}.fydelys.fr`],
+                  ["Ville", f.city],
+                  ["Type", f.type],
+                  ["Plan", f.plan],
+                  ["Gérant", `${f.firstName} ${f.lastName}`],
+                  ["Email", f.email],
+                  ["Téléphone", f.phone],
+                ].map(([k,v])=>(
+                  <div key={k} style={{ display:"flex", justifyContent:"space-between", padding:"6px 0", borderBottom:"1px solid rgba(255,255,255,.05)", fontSize:13 }}>
+                    <span style={{ color:"rgba(255,255,255,.4)" }}>{k}</span>
+                    <span style={{ color:"#fff", fontWeight:600 }}>{v}</span>
+                  </div>
+                ))}
+              </div>
+              <div style={{ padding:"12px 16px", background:"rgba(251,191,36,.08)", borderRadius:10, border:"1px solid rgba(251,191,36,.2)", fontSize:12, color:"#FCD34D", lineHeight:1.6 }}>
+                🌱 <strong>Seed automatique :</strong> disciplines, abonnements exemple et 1 séance de démo seront créés dans Supabase pour ce studio.
+              </div>
+            </div>
+          )}
+
+          {/* Actions */}
+          <div style={{ display:"flex", gap:10, marginTop:24 }}>
+            {step > 1 && (
+              <button onClick={()=>setStep(s=>s-1)} style={{ flex:1, padding:"11px", background:"transparent", border:"1px solid rgba(255,255,255,.2)", borderRadius:10, color:"rgba(255,255,255,.7)", fontSize:14, fontWeight:600, cursor:"pointer" }}>← Retour</button>
+            )}
+            {step < 3 ? (
+              <button onClick={nextStep} style={{ flex:2, padding:"11px", background:"linear-gradient(135deg,#7C3AED,#5B21B6)", border:"none", borderRadius:10, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>Continuer →</button>
+            ) : (
+              <button onClick={create} style={{ flex:2, padding:"11px", background:"linear-gradient(135deg,#059669,#047857)", border:"none", borderRadius:10, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>🚀 Créer le tenant</button>
+            )}
+            {step===1 && <button onClick={()=>setModal(null)} style={{ flex:1, padding:"11px", background:"transparent", border:"1px solid rgba(255,255,255,.15)", borderRadius:10, color:"rgba(255,255,255,.5)", fontSize:14, cursor:"pointer" }}>Annuler</button>}
           </div>
         </div>
       </div>

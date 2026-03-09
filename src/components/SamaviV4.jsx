@@ -222,7 +222,7 @@ function Sidebar({ active, onNav }) {
   return (
     <aside style={{ width:220, background:C.surface, borderRight:`1.5px solid ${C.border}`, minHeight:"100vh", display:"flex", flexDirection:"column", flexShrink:0 }}>
       <div style={{ padding:"24px 20px 18px" }}>
-        <div style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:-0.3, lineHeight:1 }}>Sam<span style={{ color:C.accent }}>avi</span></div>
+        <div style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:-0.3, lineHeight:1 }}>Fyde<span style={{ color:C.accent }}>lys</span></div>
         <div style={{ fontSize:12, color:C.textMuted, letterSpacing:0.2, textTransform:"uppercase", marginTop:4 }}>Studio Manager</div>
       </div>
       <div style={{ margin:"0 12px 12px", padding:"10px 12px", background:C.accentLight, borderRadius:10, border:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
@@ -294,7 +294,7 @@ function TopBar({ title, isMobile }) {
   return (
     <div style={{ background:C.surface, borderBottom:`1.5px solid ${C.border}`, padding:`0 ${isMobile?16:28}px`, height:isMobile?48:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
       <div style={{ fontSize:isMobile?18:20, fontWeight:700, color:C.text, letterSpacing:isMobile?-0.3:0 }}>
-        {isMobile ? <>Sam<span style={{ color:C.accent }}>avi</span></> : title}
+        {isMobile ? <>Fyde<span style={{ color:C.accent }}>lys</span></> : title}
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
         {!isMobile && <Pill color={C.textSoft} bg={C.bg}>Yogalate Paris</Pill>}
@@ -306,7 +306,7 @@ function TopBar({ title, isMobile }) {
         {/* Bouton déconnexion */}
         <button
           title="Se déconnecter"
-          onClick={()=>{ if(window.confirm("Se déconnecter de Samavi ?")) window.location.reload(); }}
+          onClick={()=>{ if(window.confirm("Se déconnecter de Fydelys ?")) window.location.reload(); }}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, cursor:"pointer", flexShrink:0, transition:"all .15s" }}
           onMouseEnter={e=>{e.currentTarget.style.background=C.warnBg; e.currentTarget.style.borderColor="#EFC8BC";}}
           onMouseLeave={e=>{e.currentTarget.style.background=C.bg; e.currentTarget.style.borderColor=C.border;}}>
@@ -1666,7 +1666,7 @@ function SuperAdminView({ onSwitch, isMobile }) {
         <div style={{ display:"flex", alignItems:"center", gap:12 }}>
           <div style={{ width:36, height:36, borderRadius:10, background:"#7C3AED", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>⚡</div>
           <div>
-            <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>Sam<span style={{ color:"#A78BFA" }}>avi</span></div>
+            <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>Fyde<span style={{ color:"#A78BFA" }}>lys</span></div>
             <div style={{ fontSize:11, color:"#A78BFA", textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Super Admin</div>
           </div>
         </div>
@@ -2117,7 +2117,7 @@ function AdherentView({ onSwitch, isMobile }) {
       {!isMobile && (
         <aside style={{ width:220, background:C.surface, borderRight:`1.5px solid ${C.border}`, minHeight:"100vh", display:"flex", flexDirection:"column", flexShrink:0 }}>
           <div style={{ padding:"24px 20px 18px" }}>
-            <div style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:-0.3, lineHeight:1 }}>Sam<span style={{ color:C.accent }}>avi</span></div>
+            <div style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:-0.3, lineHeight:1 }}>Fyde<span style={{ color:C.accent }}>lys</span></div>
             <div style={{ fontSize:12, color:C.textMuted, letterSpacing:0.2, textTransform:"uppercase", marginTop:4 }}>Mon espace</div>
           </div>
           <div style={{ margin:"0 12px 12px", padding:"10px 12px", background:C.accentLight, borderRadius:10, border:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
@@ -2153,7 +2153,7 @@ function AdherentView({ onSwitch, isMobile }) {
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?62:0 }}>
         <div style={{ background:C.surface, borderBottom:`1.5px solid ${C.border}`, padding:`0 ${isMobile?16:28}px`, height:isMobile?48:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
           <div style={{ fontSize:isMobile?18:20, fontWeight:700, color:C.text, letterSpacing:isMobile?-0.3:0 }}>
-            {isMobile ? <>Sam<span style={{ color:C.accent }}>avi</span></> : ADH_PAGE_TITLES[page]}
+            {isMobile ? <>Fyde<span style={{ color:C.accent }}>lys</span></> : ADH_PAGE_TITLES[page]}
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             {!isMobile && <Pill color={C.ok} bg={C.okBg}>💳 {ME.credits} crédits</Pill>}

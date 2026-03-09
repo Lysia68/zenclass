@@ -4,7 +4,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import dynamic from "next/dynamic"
 
-const SamaviV4 = dynamic(() => import("@/components/SamaviV4"), { ssr: false })
+const FydelysV4 = dynamic(() => import("@/components/FydelysV4"), { ssr: false })
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()
@@ -16,5 +16,5 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     })
   }, [])
 
-  return <SamaviV4 />
+  return <FydelysV4 />
 }

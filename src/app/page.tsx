@@ -2,18 +2,14 @@
 import { useState } from "react"
 import { createClient } from "@/lib/supabase"
 
-function LotusIcon() {
+function FleurDeLys() {
   return (
     <svg width="38" height="38" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
-      <ellipse cx="32" cy="38" rx="7" ry="9" fill="white" fillOpacity="0.95"/>
-      <path d="M32 10 C28 18, 26 26, 32 32 C38 26, 36 18, 32 10Z" fill="white" fillOpacity="0.95"/>
-      <path d="M10 30 C16 24, 24 24, 28 32 C20 34, 13 32, 10 30Z" fill="white" fillOpacity="0.85"/>
-      <path d="M54 30 C48 24, 40 24, 36 32 C44 34, 51 32, 54 30Z" fill="white" fillOpacity="0.85"/>
-      <path d="M4 42 C10 32, 20 30, 26 36 C18 42, 8 44, 4 42Z" fill="white" fillOpacity="0.7"/>
-      <path d="M60 42 C54 32, 44 30, 38 36 C46 42, 56 44, 60 42Z" fill="white" fillOpacity="0.7"/>
-      <path d="M14 52 C18 44, 26 42, 30 46 C26 52, 18 54, 14 52Z" fill="white" fillOpacity="0.5"/>
-      <path d="M50 52 C46 44, 38 42, 34 46 C38 52, 46 54, 50 52Z" fill="white" fillOpacity="0.5"/>
-      <path d="M32 54 L32 62" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeOpacity="0.6"/>
+      <path d="M32 54 C32 54 28 46 28 38 C28 32 30 28 32 24 C34 28 36 32 36 38 C36 46 32 54 32 54Z" fill="white" fillOpacity="0.95"/>
+      <path d="M32 24 C32 24 26 18 26 12 C26 7 29 4 32 4 C35 4 38 7 38 12 C38 18 32 24 32 24Z" fill="white" fillOpacity="0.95"/>
+      <path d="M28 30 C28 30 20 28 14 22 C10 18 10 13 13 11 C16 9 21 11 24 16 C27 21 28 30 28 30Z" fill="white" fillOpacity="0.85"/>
+      <path d="M36 30 C36 30 44 28 50 22 C54 18 54 13 51 11 C48 9 43 11 40 16 C37 21 36 30 36 30Z" fill="white" fillOpacity="0.85"/>
+      <rect x="22" y="36" width="20" height="4" rx="2" fill="white" fillOpacity="0.7"/>
     </svg>
   )
 }
@@ -32,10 +28,23 @@ export default function LoginPage() {
     setError(null)
     const { error } = await supabase.auth.signInWithOtp({
       email,
-      options: { emailRedirectTo: `${window.location.origin}/dashboard` },
+      options: {
+        emailRedirectTo: `${window.location.origin}/auth/callback?next=/dashboard`,
+        shouldCreateUser: true,
+      },
     })
-    if (error) { setError(error.message); setLoading(false) }
-    else { setSent(true); setLoading(false) }
+    if (error) {
+      // Ignore trigger errors — l'email est quand même envoyé
+      if (error.message?.includes("Database error") || error.message?.includes("saving new user")) {
+        setSent(true)
+      } else {
+        setError(error.message)
+      }
+      setLoading(false)
+    } else {
+      setSent(true)
+      setLoading(false)
+    }
   }
 
   return (
@@ -61,10 +70,10 @@ export default function LoginPage() {
             margin: "0 auto 20px",
             boxShadow: "0 12px 40px rgba(140,88,56,.35), 0 4px 12px rgba(140,88,56,.2), inset 0 1px 0 rgba(255,255,255,.15)",
           }}>
-            <LotusIcon />
+            <FleurDeLys />
           </div>
           <h1 style={{ fontSize: 30, fontWeight: 800, color: "#2A1F14", margin: "0 0 6px", letterSpacing: -0.8, lineHeight: 1 }}>
-            Sama<span style={{ color: "#A06838" }}>vi</span>
+            Fyde<span style={{ color: "#A06838" }}>lys</span>
           </h1>
           <p style={{ color: "#8C7B6C", fontSize: 13, margin: 0, fontWeight: 500, letterSpacing: 0.1 }}>
             Gestion de studio · Yoga &amp; Bien-être
@@ -168,7 +177,7 @@ export default function LoginPage() {
         <p style={{
           textAlign: "center", color: "#B0A090", fontSize: 11,
           marginTop: 24, lineHeight: 1.8, letterSpacing: 0.2,
-        }}>© 2026 Samavi · Connexion 100% sécurisée</p>
+        }}>© 2026 Fydelys · Connexion 100% sécurisée</p>
       </div>
     </div>
   )

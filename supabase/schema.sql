@@ -1,5 +1,5 @@
 -- ============================================================
--- SAMAVI — Supabase Schema v4
+-- FYDELYS — Supabase Schema v4
 -- 3 vues : Super Admin / Studio (admin+staff) / Adhérent
 -- Copiez-collez dans Supabase SQL Editor → Run
 -- ============================================================
@@ -280,9 +280,9 @@ create policy "tickets_studio"     on support_tickets for all using (studio_id =
 -- ══════════════════════════════════════════════════════════════
 /*
 insert into studios (id, name, slug, city, address, email, plan) values
-  ('00000000-0000-0000-0000-000000000001', 'Samavi Paris',   'samavi-paris',   'Paris 1er',   '12 rue de la Paix, 75001 Paris',   'contact@samavi.fr',   'pro'),
-  ('00000000-0000-0000-0000-000000000002', 'Samavi Lyon',  'samavi-lyon',  'Lyon 2e',     '5 place Bellecour, 69002 Lyon',     'hello@samavi-lyon.fr',    'starter'),
-  ('00000000-0000-0000-0000-000000000003', 'Samavi Bordeaux',    'samavi-bordeaux',    'Bordeaux',    '8 cours Victor Hugo, 33000 Bordeaux','info@samavi-bordeaux.fr',  'pro');
+  ('00000000-0000-0000-0000-000000000001', 'Fydelys Paris',   'fydelys-paris',   'Paris 1er',   '12 rue de la Paix, 75001 Paris',   'contact@fydelys.fr',   'pro'),
+  ('00000000-0000-0000-0000-000000000002', 'Fydelys Lyon',  'fydelys-lyon',  'Lyon 2e',     '5 place Bellecour, 69002 Lyon',     'hello@fydelys-lyon.fr',    'starter'),
+  ('00000000-0000-0000-0000-000000000003', 'Fydelys Bordeaux',    'fydelys-bordeaux',    'Bordeaux',    '8 cours Victor Hugo, 33000 Bordeaux','info@fydelys-bordeaux.fr',  'pro');
 
 -- Rattacher l'admin au studio (remplacer YOUR_USER_ID)
 update profiles

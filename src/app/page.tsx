@@ -252,7 +252,7 @@ export default function LoginPage() {
     if(ex){ setRegErrors({slug:"Ce sous-domaine est déjà pris"}); setRegStep(1); setLoading(false); return }
     const {error:se}=await supabase.from("pending_registrations").upsert({
       email:reg.email,
-      data:{studioName:reg.studioName,slug:reg.slug,city:reg.city,address:reg.address||null,
+      data:{studioName:reg.studioName,slug:reg.slug,city:reg.city,zip:reg.zip||null,address:reg.address||null,
             type:reg.type,firstName:reg.firstName,lastName:reg.lastName,phone:reg.phone,
             isCoach:reg.isCoach,disciplines:reg.disciplines},
       expires_at:new Date(Date.now()+24*3600*1000).toISOString(),

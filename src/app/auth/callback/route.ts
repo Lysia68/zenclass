@@ -50,14 +50,16 @@ export async function GET(request: NextRequest) {
 
     if (pending?.data) {
       const r = pending.data as any
-      const { data: studio } = await supabase.from("studios").insert({
+      const { data: studio, error: studioErr } = await supabase.from("studios").insert({
         name: r.studioName, slug: r.slug, city: r.city,
+        postal_code: r.zip || null,
         address: r.address || null, email: userEmail,
         phone: r.phone || null,
         plan: (r.plan || "starter").toLowerCase(),
         status: "actif",
       }).select().single()
 
+      if (studioErr) console.error("Studio insert error:", studioErr)
       if (studio) {
         await supabase.from("profiles").insert({
           id: userId, role: "admin", studio_id: studio.id,

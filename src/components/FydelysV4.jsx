@@ -2009,9 +2009,9 @@ function SuperAdminView({ onSwitch, isMobile }) {
                   Sous-domaine <span style={{color:"#B0A090"}}>(lettres, chiffres, tirets)</span> <span style={{color:"#F87171"}}>*</span>
                 </label>
                 <div style={{display:"flex",alignItems:"center",background:"#FAFAF8",border:`1.5px solid ${errors.slug?"#F87171":"#DDD5C8"}`,borderRadius:9,overflow:"hidden"}}>
-                  <span style={{padding:"9px 12px",color:"#8C7B6C",fontSize:13,borderRight:"1px solid #DDD5C8",whiteSpace:"nowrap"}}>fydelys.fr/</span>
-                  <input value={f.slug} onChange={e=>upd("slug",e.target.value)} placeholder="yoga-flow-paris"
+                  <input value={f.slug} onChange={e=>upd("slug",e.target.value)} placeholder="yogaflowparis"
                     style={{...saInp(),border:"none",background:"transparent",flex:1}}/>
+                  <span style={{padding:"9px 12px",color:"#8C7B6C",fontSize:13,borderLeft:"1px solid #DDD5C8",whiteSpace:"nowrap"}}>.fydelys.fr</span>
                 </div>
                 {errors.slug&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{errors.slug}</div>}
                 <div style={{fontSize:11,color:"#B0A090",marginTop:4}}>✓ Autorisé : <code style={{color:"#A06838"}}>yoga-paris</code> · <code style={{color:"#A06838"}}>studio2</code> &nbsp; ✗ Interdit : points, espaces, majuscules, accents</div>

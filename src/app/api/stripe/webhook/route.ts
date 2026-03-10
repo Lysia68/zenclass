@@ -8,15 +8,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   apiVersion: "2024-06-20",
 })
 
-// Supabase admin client (service role) pour le webhook — pas de cookie d'user
-const supabaseAdmin = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!,
-)
-
 async function updateStudioBilling(studioId: string, patch: Record<string, any>) {
+  // Initialisé ici pour éviter l'erreur "supabaseKey is required" au build
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
   const { error } = await supabaseAdmin.from("studios").update(patch).eq("id", studioId)
   if (error) console.error("Supabase update error:", error)
+}
+
+async function getStudioBySubscription(subId: string) {
+  const supabaseAdmin = createClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+  )
+  const { data } = await supabaseAdmin
+    .from("studios").select("id, billing_status").eq("stripe_subscription_id", subId).single()
+  return data
 }
 
 export async function POST(req: NextRequest) {
@@ -95,8 +104,7 @@ export async function POST(req: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice
         const subId   = invoice.subscription as string
         if (!subId) break
-        const { data: studio } = await supabaseAdmin
-          .from("studios").select("id").eq("stripe_subscription_id", subId).single()
+        const studio = await getStudioBySubscription(subId)
         if (studio) {
           await updateStudioBilling(studio.id, { billing_status: "past_due" })
         }
@@ -108,8 +116,7 @@ export async function POST(req: NextRequest) {
         const invoice = event.data.object as Stripe.Invoice
         const subId   = invoice.subscription as string
         if (!subId) break
-        const { data: studio } = await supabaseAdmin
-          .from("studios").select("id, billing_status").eq("stripe_subscription_id", subId).single()
+        const studio = await getStudioBySubscription(subId)
         if (studio && studio.billing_status === "past_due") {
           await updateStudioBilling(studio.id, { billing_status: "active" })
         }

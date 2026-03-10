@@ -95,7 +95,6 @@ const ICG = ({children,size=16,color="currentColor",sw=1.5}) => (
 const IcoHome      = ({s,c}) => <ICG size={s} color={c}><path d="M3 9.5L12 3l9 6.5V20a1 1 0 01-1 1H4a1 1 0 01-1-1V9.5z"/><path d="M9 21V12h6v9"/></ICG>;
 const IcoCalendar  = ({s,c}) => <ICG size={s} color={c}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></ICG>;
 const IcoUsers     = ({s,c}) => <ICG size={s} color={c}><circle cx="9" cy="7" r="4"/><path d="M3 21v-2a4 4 0 014-4h4a4 4 0 014 4v2"/><path d="M16 3.13a4 4 0 010 7.75"/><path d="M21 21v-2a4 4 0 00-3-3.87"/></ICG>;
-const IcoUser      = ({s,c}) => <ICG size={s} color={c}><circle cx="12" cy="8" r="4"/><path d="M4 20v-2a4 4 0 014-4h8a4 4 0 014 4v2"/></ICG>;
 const IcoCreditCard= ({s,c}) => <ICG size={s} color={c}><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="2" y1="10" x2="22" y2="10"/></ICG>;
 const IcoTag       = ({s,c}) => <ICG size={s} color={c}><path d="M20.59 13.41l-7.17 7.17a2 2 0 01-2.83 0L2 12V2h10l8.59 8.59a2 2 0 010 2.82z"/><line x1="7" y1="7" x2="7.01" y2="7"/></ICG>;
 const IcoLayers    = ({s,c}) => <ICG size={s} color={c}><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></ICG>;
@@ -1036,96 +1035,30 @@ function Payments({ isMobile }) {
   );
 }
 
-const DAYS_FR = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
-
 function DisciplinesPage({ isMobile }) {
-  const [discs, setDiscs] = useState(DISCIPLINES.map(d=>({ ...d, slots:[] })));
-  const [nD, setND]       = useState({ name:"", icon:"🏃", color:C.accent });
-  const [editDisc, setEditDisc] = useState(null); // discipline en cours de config horaires
+  const [discs, setDiscs] = useState(DISCIPLINES);
+  const [nD, setND] = useState({ name:"", icon:"🏃", color:C.accent });
   const p = isMobile?16:28;
-
-  // Slots helpers
-  const addSlot = (id) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:[...(d.slots||[]),{day:"Lun",time:"09:00"}]}:d));
-  const rmSlot  = (id,si) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:d.slots.filter((_,j)=>j!==si)}:d));
-  const upSlot  = (id,si,field,val) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:d.slots.map((s,j)=>j===si?{...s,[field]:val}:s)}:d));
-
-  const ScheduleModal = ({ disc }) => (
-    <div onClick={e=>e.target===e.currentTarget&&setEditDisc(null)}
-      style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-      <div style={{background:C.surface,borderRadius:16,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,.18)",overflow:"hidden"}}>
-        <div style={{padding:"18px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",background:disc.color+"10"}}>
-          <div style={{display:"flex",alignItems:"center",gap:10}}>
-            <div style={{width:38,height:38,borderRadius:10,background:disc.color+"20",border:`1.5px solid ${disc.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
-              {(() => { const Ico = DISC_ICONS[disc.id]; return Ico ? <Ico s={20} c={disc.color}/> : null; })()}
-            </div>
-            <div>
-              <div style={{fontSize:15,fontWeight:800,color:C.text}}>{disc.name}</div>
-              <div style={{fontSize:12,color:C.textMuted}}>{disc.slots?.length||0} créneau{disc.slots?.length!==1?"x":""}</div>
-            </div>
-          </div>
-          <button onClick={()=>setEditDisc(null)} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:C.textSoft}}>✕</button>
-        </div>
-
-        <div style={{padding:"18px 22px",maxHeight:"55vh",overflowY:"auto"}}>
-          {(!disc.slots||disc.slots.length===0) ? (
-            <div style={{textAlign:"center",padding:"24px 0",color:C.textMuted,fontSize:13}}>
-              Aucun créneau — cliquez sur "Ajouter" pour commencer
-            </div>
-          ) : disc.slots.map((slot,si)=>(
-            <div key={si} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              <select value={slot.day} onChange={e=>upSlot(disc.id,si,"day",e.target.value)}
-                style={{padding:"9px 10px",borderRadius:9,border:`1.5px solid ${C.border}`,fontSize:13,color:C.text,background:C.surfaceWarm,flex:1,outline:"none"}}>
-                {DAYS_FR.map(d=><option key={d}>{d}</option>)}
-              </select>
-              <input type="time" value={slot.time} onChange={e=>upSlot(disc.id,si,"time",e.target.value)}
-                style={{padding:"9px 10px",borderRadius:9,border:`1.5px solid ${C.border}`,fontSize:13,color:C.text,background:C.surfaceWarm,flex:1,outline:"none"}}/>
-              <button onClick={()=>rmSlot(disc.id,si)}
-                style={{padding:"7px 11px",borderRadius:9,border:`1px solid ${C.border}`,background:C.surface,color:"#F87171",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
-            </div>
-          ))}
-          <button onClick={()=>addSlot(disc.id)}
-            style={{width:"100%",padding:"9px",borderRadius:9,border:"1.5px dashed #C4A87A",background:C.accentLight,color:C.accent,fontSize:13,fontWeight:600,cursor:"pointer",marginTop:8}}>
-            + Ajouter un créneau
-          </button>
-        </div>
-
-        <div style={{padding:"14px 22px",borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"flex-end",gap:10}}>
-          <Button variant="ghost" onClick={()=>setEditDisc(null)}>Fermer</Button>
-          <Button variant="primary" onClick={()=>setEditDisc(null)}>Enregistrer</Button>
-        </div>
-      </div>
-    </div>
-  );
-
   return (
     <div style={{ padding:p }}>
-      {editDisc && <ScheduleModal disc={editDisc}/>}
-
       <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:14, marginBottom:22 }}>
         {discs.map(d=>(
-          <Card key={d.id} style={{ textAlign:"center", borderTop:`3px solid ${d.color}`, padding:"16px 14px" }}>
+          <Card key={d.id} style={{ textAlign:"center", borderTop:`3px solid ${d.color}` }}>
             <div style={{ width:52, height:52, borderRadius:12, background:d.color+"18", border:`1.5px solid ${d.color}40`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10, marginLeft:"auto", marginRight:"auto" }}>
               {(() => { const Ico = DISC_ICONS[d.id]; return Ico ? <Ico s={26} c={d.color}/> : null; })()}
             </div>
-            <div style={{ fontWeight:700, fontSize:15, color:C.text, marginBottom:4 }}>{d.name}</div>
-            <div style={{ fontSize:11, color:C.textMuted, marginBottom:12 }}>
-              {d.slots?.length>0 ? `${d.slots.length} créneau${d.slots.length>1?"x":""}` : "Aucun horaire"}
-            </div>
-            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
-              <Button sm variant="primary" onClick={()=>setEditDisc(d)}>🗓 Horaires</Button>
-              <Button sm variant="danger" onClick={()=>setDiscs(prev=>prev.filter(x=>x.id!==d.id))}>Supprimer</Button>
-            </div>
+            <div style={{ fontWeight:700, fontSize:17, color:C.text, marginBottom:14 }}>{d.name}</div>
+            <Button sm variant="danger" onClick={()=>setDiscs(prev=>prev.filter(x=>x.id!==d.id))}>Supprimer</Button>
           </Card>
         ))}
       </div>
-
       <Card style={{ maxWidth:480 }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.accent, textTransform:"uppercase", marginBottom:16 }}>Ajouter une discipline</div>
         <div style={{ display:"grid", gridTemplateColumns:"56px 1fr auto", gap:10, alignItems:"end" }}>
           <Field label="Icône" value={nD.icon} onChange={v=>setND({...nD,icon:v})}/>
           <Field label="Nom" value={nD.name} onChange={v=>setND({...nD,name:v})} placeholder="Ex: Hot Yoga"/>
           <div style={{ paddingTop:22 }}>
-            <Button variant="primary" onClick={()=>{ if(!nD.name)return; setDiscs(prev=>[...prev,{id:Date.now(),...nD,slots:[]}]); setND({name:"",icon:"🏃",color:C.accent}); }}>＋</Button>
+            <Button variant="primary" onClick={()=>{ if(!nD.name)return; setDiscs(prev=>[...prev,{id:Date.now(),...nD}]); setND({name:"",icon:"🏃",color:C.accent}); }}>＋</Button>
           </div>
         </div>
       </Card>
@@ -1383,19 +1316,18 @@ function Settings({ isMobile }) {
   const tabs = [
     ...(isSA ? [{ key:"superadmin", label:"Super Admin", icon:<IcoLayers s={14} c="currentColor"/> }] : []),
     { key:"studio",  label:"Studio",       icon:<IcoSettings s={14} c="currentColor"/> },
-    { key:"team",    label:"Équipe",        icon:<IcoUsers s={14} c="currentColor"/> },
-    { key:"users",   label:"Utilisateurs", icon:<IcoTag s={14} c="currentColor"/> },
-    ...(isSA ? [{ key:"roles", label:"Rôles", icon:<IcoTag s={14} c="currentColor"/> }] : []),
+    { key:"users",   label:"Utilisateurs", icon:<IcoUsers s={14} c="currentColor"/> },
+    { key:"roles",   label:"Rôles",        icon:<IcoTag s={14} c="currentColor"/> },
     { key:"account", label:"Mon compte",   icon:<IcoHome s={14} c="currentColor"/> },
   ].filter(Boolean);
 
   // ── Preview role switcher (demo only) ────────────────────────────────────
   const RoleSwitcher = () => (
-    <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:C.cardAlt||"#F5EEE6", border:`1px solid ${C.border}`, borderRadius:10, marginBottom:16, flexWrap:"wrap" }}>
-      <span style={{ fontSize:12, color:C.accent, fontWeight:600 }}>👁 Aperçu rôle :</span>
+    <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:"#F3EEFF", border:"1px solid #C4A8F0", borderRadius:10, marginBottom:16, flexWrap:"wrap" }}>
+      <span style={{ fontSize:12, color:"#7C3AED", fontWeight:600 }}>👁 Aperçu rôle :</span>
       {["superadmin","admin","staff","adherent"].map(r=>(
         <button key={r} onClick={()=>{ setCurrentRole(r); setTab(r==="superadmin"?"superadmin":"studio"); }}
-          style={{ fontSize:11, padding:"3px 10px", borderRadius:8, border:`1.5px solid ${currentRole===r?C.accent:C.border}`, background:currentRole===r?C.accent:"white", color:currentRole===r?"white":C.textMid, fontWeight:700, cursor:"pointer" }}>
+          style={{ fontSize:11, padding:"3px 10px", borderRadius:8, border:`1.5px solid ${currentRole===r?"#7C3AED":C.border}`, background:currentRole===r?"#7C3AED":"white", color:currentRole===r?"white":C.textMid, fontWeight:700, cursor:"pointer" }}>
           {ROLES_DEF[r].label}
         </button>
       ))}
@@ -1607,196 +1539,7 @@ function Settings({ isMobile }) {
     </div>
   );
 
-  // ── Tab: Équipe — coachs et leurs disciplines ─────────────────────────────
-  const COACHES_INIT = [
-    { id:"c1", fn:"Sophie",  ln:"Laurent",  email:"sophie.l@studio.fr", isCoach:true,  disciplines:[1,4], status:"actif" },
-    { id:"c2", fn:"Marie",   ln:"Dubois",   email:"marie.d@studio.fr",  isCoach:true,  disciplines:[2],   status:"actif" },
-    { id:"c3", fn:"Camille", ln:"Morin",    email:"camille.m@studio.fr",isCoach:true,  disciplines:[3,1], status:"actif" },
-    { id:"c4", fn:"Emma",    ln:"Petit",    email:"emma.p@studio.fr",   isCoach:true,  disciplines:[1],   status:"actif" },
-  ];
-
-  const TabTeam = () => {
-    const [coaches, setCoaches]         = useState(COACHES_INIT);
-    const [editCoach, setEditCoach]     = useState(null); // coach en cours d'édition disciplines
-    const [inviteModal, setInviteModal] = useState(false);
-    const [inviteEmail, setInviteEmail] = useState("");
-    const [inviteName, setInviteName]   = useState({ fn:"", ln:"" });
-
-    // Sauvegarder disciplines d'un coach
-    const saveDisciplines = (coachId, discIds) => {
-      setCoaches(prev => prev.map(c => c.id===coachId ? {...c, disciplines:discIds} : c));
-      setEditCoach(null);
-      showToast("Disciplines mises à jour ✓");
-    };
-
-    // Modal affectation disciplines
-    const DiscModal = ({ coach }) => {
-      const [selected, setSelected] = useState([...coach.disciplines]);
-      const toggle = (id) => setSelected(prev =>
-        prev.includes(id) ? prev.filter(x=>x!==id) : [...prev, id]
-      );
-      return (
-        <div onClick={e=>e.target===e.currentTarget&&setEditCoach(null)}
-          style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-          <div style={{background:C.surface,borderRadius:16,padding:24,width:"100%",maxWidth:460,boxShadow:"0 24px 60px rgba(0,0,0,.18)"}}>
-            {/* Header */}
-            <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-              <div>
-                <div style={{fontSize:16,fontWeight:800,color:C.text}}>Disciplines de {coach.fn} {coach.ln}</div>
-                <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>Sélectionnez les disciplines que ce coach enseigne</div>
-              </div>
-              <button onClick={()=>setEditCoach(null)} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}>
-                <IcoX s={14} c={C.textSoft}/>
-              </button>
-            </div>
-            {/* Grid disciplines */}
-            <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
-              {DISCIPLINES.map(d => {
-                const on = selected.includes(d.id);
-                return (
-                  <div key={d.id} onClick={()=>toggle(d.id)}
-                    style={{display:"flex",alignItems:"center",gap:10,padding:"12px 14px",borderRadius:12,border:`2px solid ${on?d.color:C.border}`,background:on?`${d.color}14`:C.surface,cursor:"pointer",userSelect:"none",transition:"all .15s"}}>
-                    <div style={{width:32,height:32,borderRadius:8,background:on?d.color:C.bgDeep,display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0,transition:"all .15s"}}>
-                      {d.icon}
-                    </div>
-                    <div style={{flex:1}}>
-                      <div style={{fontSize:13,fontWeight:700,color:on?d.color:C.text}}>{d.name}</div>
-                    </div>
-                    <div style={{width:18,height:18,borderRadius:"50%",border:`2px solid ${on?d.color:C.border}`,background:on?d.color:"transparent",display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-                      {on && <span style={{color:"#fff",fontSize:10,fontWeight:800}}>✓</span>}
-                    </div>
-                  </div>
-                );
-              })}
-            </div>
-            {selected.length===0 && (
-              <div style={{padding:"8px 14px",background:C.warnBg,borderRadius:8,fontSize:12,color:C.warn,marginBottom:14}}>
-                ⚠ Ce coach n'aura aucune discipline affectée
-              </div>
-            )}
-            <div style={{display:"flex",gap:10}}>
-              <Button variant="primary" onClick={()=>saveDisciplines(coach.id, selected)}>
-                Enregistrer ({selected.length} discipline{selected.length!==1?"s":""})
-              </Button>
-              <Button variant="ghost" onClick={()=>setEditCoach(null)}>Annuler</Button>
-            </div>
-          </div>
-        </div>
-      );
-    };
-
-    // Modal inviter un coach
-    const InviteCoachModal = () => (
-      <div onClick={e=>e.target===e.currentTarget&&setInviteModal(false)}
-        style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{background:C.surface,borderRadius:16,padding:24,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,.18)"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-            <div style={{fontSize:16,fontWeight:800,color:C.text}}>Inviter un coach</div>
-            <button onClick={()=>setInviteModal(false)} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}><IcoX s={14} c={C.textSoft}/></button>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-            {[["Prénom","fn","Marie"],["Nom","ln","Laurent"]].map(([lbl,k,ph])=>(
-              <div key={k}>
-                <FieldLabel>{lbl}</FieldLabel>
-                <input value={inviteName[k]} onChange={e=>setInviteName(p=>({...p,[k]:e.target.value}))} placeholder={ph}
-                  style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
-                  onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
-              </div>
-            ))}
-          </div>
-          <div style={{marginBottom:16}}>
-            <FieldLabel>Email professionnel</FieldLabel>
-            <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="coach@studio.fr"
-              style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
-              onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
-          </div>
-          <div style={{padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accentDark,marginBottom:16}}>
-            🔗 Un magic link sera envoyé à <strong>{inviteEmail||"…"}</strong>. Le coach accédera au studio via <strong>slug.fydelys.fr</strong>
-          </div>
-          <div style={{display:"flex",gap:10}}>
-            <Button variant="primary" onClick={()=>{
-              if(!inviteEmail||!inviteName.fn) return;
-              const newCoach = { id:`c${Date.now()}`, fn:inviteName.fn, ln:inviteName.ln, email:inviteEmail, isCoach:true, disciplines:[], status:"invité" };
-              setCoaches(prev=>[...prev, newCoach]);
-              setInviteModal(false); setInviteEmail(""); setInviteName({fn:"",ln:""});
-              showToast(`Invitation envoyée à ${inviteEmail} ✓`);
-            }}>
-              <IcoMail s={14} c="white"/> Envoyer l'invitation
-            </Button>
-            <Button variant="ghost" onClick={()=>setInviteModal(false)}>Annuler</Button>
-          </div>
-        </div>
-      </div>
-    );
-
-    return (
-      <div>
-        {editCoach && <DiscModal coach={editCoach}/>}
-        {inviteModal && <InviteCoachModal/>}
-
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
-          <div>
-            <div style={{fontSize:18,fontWeight:800,color:C.text,letterSpacing:-0.3}}>Équipe & Coachs</div>
-            <div style={{fontSize:13,color:C.textMuted,marginTop:2}}>{coaches.length} intervenant{coaches.length!==1?"s":""} · Gérez les disciplines par coach</div>
-          </div>
-          <Button sm variant="primary" onClick={()=>setInviteModal(true)}>
-            + Inviter un coach
-          </Button>
-        </div>
-
-        {/* Liste des coachs */}
-        {coaches.map(coach => {
-          const assignedDiscs = DISCIPLINES.filter(d => coach.disciplines.includes(d.id));
-          const initials = (coach.fn[0]||"")+(coach.ln[0]||"");
-          return (
-            <div key={coach.id} style={{background:C.surface,borderRadius:14,border:`1px solid ${C.border}`,padding:"16px 18px",marginBottom:10}}>
-              <div style={{display:"flex",alignItems:"flex-start",gap:14,flexWrap:isMobile?"wrap":"nowrap"}}>
-                {/* Avatar */}
-                <div style={{width:44,height:44,borderRadius:"50%",background:`linear-gradient(135deg,${C.accent},${C.accentDark})`,display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:15,fontWeight:800,flexShrink:0}}>
-                  {initials}
-                </div>
-                {/* Infos */}
-                <div style={{flex:1,minWidth:0}}>
-                  <div style={{display:"flex",alignItems:"center",gap:8,flexWrap:"wrap"}}>
-                    <div style={{fontSize:15,fontWeight:700,color:C.text}}>{coach.fn} {coach.ln}</div>
-                    <span style={{fontSize:11,fontWeight:700,padding:"2px 8px",borderRadius:8,background:coach.status==="invité"?C.infoBg:C.okBg,color:coach.status==="invité"?C.info:C.ok}}>
-                      {coach.status==="invité"?"⏳ Invitation envoyée":"✓ Actif"}
-                    </span>
-                  </div>
-                  <div style={{fontSize:12,color:C.textMuted,marginTop:2}}>{coach.email}</div>
-                  {/* Disciplines assignées */}
-                  <div style={{display:"flex",flexWrap:"wrap",gap:6,marginTop:10}}>
-                    {assignedDiscs.length===0 ? (
-                      <span style={{fontSize:12,color:C.textMuted,fontStyle:"italic"}}>Aucune discipline affectée</span>
-                    ) : assignedDiscs.map(d=>(
-                      <span key={d.id} style={{display:"inline-flex",alignItems:"center",gap:4,padding:"4px 10px",borderRadius:20,background:`${d.color}18`,border:`1px solid ${d.color}40`,fontSize:12,fontWeight:600,color:d.color}}>
-                        {d.icon} {d.name}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-                {/* Action */}
-                <button onClick={()=>setEditCoach(coach)}
-                  style={{flexShrink:0,padding:"7px 14px",borderRadius:9,border:`1.5px solid ${C.border}`,background:C.surface,color:C.accent,fontSize:13,fontWeight:600,cursor:"pointer",display:"flex",alignItems:"center",gap:6}}>
-                  ✏ Disciplines
-                </button>
-              </div>
-            </div>
-          );
-        })}
-
-        {coaches.length===0 && (
-          <div style={{textAlign:"center",padding:"48px 16px",color:C.textMuted}}>
-            <div style={{fontSize:36,marginBottom:12}}>👥</div>
-            <div style={{fontSize:15,fontWeight:600,color:C.textSoft,marginBottom:8}}>Aucun coach dans l'équipe</div>
-            <Button sm variant="primary" onClick={()=>setInviteModal(true)}>+ Inviter le premier coach</Button>
-          </div>
-        )}
-      </div>
-    );
-  };
-
-  const TAB_CONTENT = { superadmin:<TabSuperAdmin/>, studio:<TabStudio/>, team:<TabTeam/>, users:<TabUsers/>, roles:<TabRoles/>, account:<TabAccount/> };
+  const TAB_CONTENT = { superadmin:<TabSuperAdmin/>, studio:<TabStudio/>, users:<TabUsers/>, roles:<TabRoles/>, account:<TabAccount/> };
 
   return (
     <div style={{ padding:p, maxWidth:isSA?"none":720 }}>
@@ -1833,301 +1576,69 @@ const PAGE_TITLES = { dashboard:"Tableau de bord", planning:"Planning", members:
 const PAGES = { dashboard:Dashboard, planning:Planning, members:Members, subscriptions:Subscriptions, payments:Payments, disciplines:DisciplinesPage, settings:Settings };
 
 // ─── TENANTS DATA (Super Admin) ───────────────────────────────────────────────
+const TENANTS_SA = [
+  { id:"t1", name:"Yogalate Paris",   plan:"Pro",     members:124, revenue:6240, status:"actif",    city:"Paris 1er",  since:"Jan 2025", growth:+12 },
+  { id:"t2", name:"Zen Studio Lyon",  plan:"Starter", members:48,  revenue:1890, status:"actif",    city:"Lyon 2e",    since:"Mar 2025", growth:+5  },
+  { id:"t3", name:"Flow Bordeaux",    plan:"Pro",     members:87,  revenue:4120, status:"actif",    city:"Bordeaux",   since:"Fév 2025", growth:+8  },
+  { id:"t4", name:"Pilates Nice",     plan:"Starter", members:31,  revenue:980,  status:"suspendu", city:"Nice",       since:"Avr 2025", growth:-2  },
+  { id:"t5", name:"Ashtanga Nantes",  plan:"Pro",     members:105, revenue:5100, status:"actif",    city:"Nantes",     since:"Nov 2024", growth:+18 },
+  { id:"t6", name:"Hatha Strasbourg", plan:"Starter", members:22,  revenue:720,  status:"actif",    city:"Strasbourg", since:"Fév 2026", growth:+22 },
+];
+
+// ─── MY HISTORY (Adhérent) ────────────────────────────────────────────────────
+const MY_HISTORY = [
+  { id:1, date:"2026-03-09", disc:"Yoga Vinyasa", teacher:"Sophie Laurent", status:"présent", duration:60 },
+  { id:2, date:"2026-03-05", disc:"Pilates",       teacher:"Marie Dubois",   status:"présent", duration:50 },
+  { id:3, date:"2026-02-28", disc:"Méditation",    teacher:"Camille Morin",  status:"présent", duration:45 },
+  { id:4, date:"2026-02-24", disc:"Yoga Vinyasa",  teacher:"Sophie Laurent", status:"absent",  duration:60 },
+  { id:5, date:"2026-02-18", disc:"Yin Yoga",      teacher:"Camille Morin",  status:"présent", duration:75 },
+  { id:6, date:"2026-02-10", disc:"Pilates",       teacher:"Marie Dubois",   status:"présent", duration:50 },
+];
+
 // ══════════════════════════════════════════════════════════════════════════════
 // SUPER ADMIN VIEW
 // ══════════════════════════════════════════════════════════════════════════════
-
-// Palette beige/marron Super Admin
-const SA_C = {
-  bg:"#F4EFE8", surface:"#FFFFFF", surfaceWarm:"#FBF8F4",
-  border:"#DDD5C8", borderSoft:"#EAE4DA",
-  text:"#2A1F14", textMid:"#5C4A38", textSoft:"#8C7B6C", textMuted:"#B0A090",
-  accent:"#A06838", accentDark:"#8C5E38", accentBg:"#F5EBE0", accentLight:"#FBF6EE",
-  ok:"#4E8A58", okBg:"#E6F2E8", warn:"#A85030", warnBg:"#F5EAE6",
-  info:"#3A6E90", infoBg:"#E6EFF5", gold:"#C4922A", goldBg:"#FDF4E3",
-};
-const saInp = (f=false,err=false) => ({
-  width:"100%", padding:"9px 12px",
-  border:`1.5px solid ${err?"#F87171":f?"#A06838":"#DDD5C8"}`,
-  borderRadius:9, fontSize:13, outline:"none",
-  color:"#2A1F14", background:"#FDFAF7",
-  boxSizing:"border-box",
-  boxShadow: f?"0 0 0 3px rgba(160,104,56,.07)":"none"
-});
-const TENANTS_INIT = [];
-
-// FieldSA / SelectSA définis HORS de SuperAdminView pour éviter la perte de focus
-// (React recrée les composants internes à chaque render sinon)
-function FieldSA({ label, k, placeholder, type="text", required, value, onChange, error }) {
-  return (
-    <div>
-      <label style={{ fontSize:11, fontWeight:700, color:"#8C7B6C", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
-        {label}{required&&<span style={{color:"#F87171"}}> *</span>}
-      </label>
-      <input type={type} value={value} onChange={e=>onChange(k,e.target.value)} placeholder={placeholder}
-        style={saInp(false,!!error)}/>
-      {error&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{error}</div>}
-    </div>
-  );
-}
-function SelectSA({ label, k, opts, required, value, onChange }) {
-  return (
-    <div>
-      <label style={{ fontSize:11, fontWeight:700, color:"#8C7B6C", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
-        {label}{required&&<span style={{color:"#F87171"}}> *</span>}
-      </label>
-      <select value={value} onChange={e=>onChange(k,e.target.value)} style={{...saInp(), appearance:"none"}}>
-        {opts.map(o=><option key={o.v} value={o.v} style={{background:"#FDFAF7"}}>{o.l}</option>)}
-      </select>
-    </div>
-  );
-}
-
 function SuperAdminView({ onSwitch, isMobile }) {
-  const [tenants, setTenants] = useState(TENANTS_INIT);
+  const [tenants, setTenants] = useState(TENANTS_SA);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("tous");
-  const [modal, setModal]     = useState(null); // null | {type:"new"} | {type:"edit",tenant} | {type:"delete",tenant}
+  const [modal, setModal]     = useState(null);
   const [toast, setToast]     = useState(null);
-  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3500); };
+  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3000); };
   const p = isMobile ? 16 : 28;
 
   const filtered = tenants
     .filter(t => filter==="tous" || t.status===filter)
-    .filter(t => (t.name+" "+t.city+" "+(t.contact||"")).toLowerCase().includes(search.toLowerCase()));
+    .filter(t => (t.name+" "+t.city).toLowerCase().includes(search.toLowerCase()));
 
-  const totalRev   = tenants.filter(t=>t.status==="actif").reduce((s,t)=>s+(t.revenue||0),0);
-  const totalMem   = tenants.reduce((s,t)=>s+(t.members||0),0);
-  const actifCount = tenants.filter(t=>t.status==="actif").length;
-  const suspCount  = tenants.filter(t=>t.status==="suspendu").length;
+  const totalRev  = tenants.filter(t=>t.status==="actif").reduce((s,t)=>s+t.revenue,0);
+  const totalMem  = tenants.reduce((s,t)=>s+t.members,0);
+  const actifCount= tenants.filter(t=>t.status==="actif").length;
+  const suspCount = tenants.filter(t=>t.status==="suspendu").length;
 
-  // ── Helpers slug ─────────────────────────────────────────────────────────────
-  const toSlug = (s) =>
-    s.toLowerCase()
-     .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-     .replace(/[^a-z0-9]/g,"");
-
-  const validateSlug = (s) => /^[a-z0-9]+$/.test(s);
-
-  // ── Shared styles ─────────────────────────────────────────────────────────────
-  const SA = saInp();
-
-  // ── Form Modal (New + Edit) ───────────────────────────────────────────────────
-  function TenantFormModal({ editing }) {
-    const emptyF = editing
-      ? { name:editing.name, slug:editing.slug||"", email:editing.email||"", firstName:editing.firstName||"", lastName:editing.lastName||"", phone:editing.phone||"", city:editing.city||"", zip:editing.zip||"", address:editing.address||"", plan:editing.plan||"Essentiel", type:editing.type||"Yoga", notes:editing.notes||"", isCoach:editing.isCoach||false }
-      : { name:"", slug:"", email:"", firstName:"", lastName:"", phone:"", city:"", zip:"", address:"", plan:"Essentiel", type:"Yoga", notes:"", isCoach:false };
-    const [f, setF] = useState(emptyF);
-    const [step, setStep] = useState(1);
-    const [errors, setErrors] = useState({});
-
-    const upd = (k, v) => {
-      const next = {...f, [k]:v};
-      if(k==="name" && !editing) next.slug = toSlug(v);
-      if(k==="slug") next.slug = v.toLowerCase().replace(/[^a-z0-9-]/g,"").replace(/\..*$/,"");
-      setF(next);
-      setErrors(e=>({...e,[k]:undefined}));
-    };
-
-    const validate1 = () => {
-      const e = {};
-      if(!f.name.trim())               e.name = "Obligatoire";
-      if(!f.city.trim())               e.city = "Obligatoire";
-      if(!f.slug.trim())               e.slug = "Obligatoire";
-      else if(!validateSlug(f.slug))   e.slug = "Uniquement lettres minuscules, chiffres et tirets (ex: yoga-paris)";
-      return e;
-    };
-    const validate2 = () => {
-      const e = {};
-      if(!f.email.trim()||!f.email.includes("@")) e.email = "Email invalide";
-      if(!f.firstName.trim()) e.firstName = "Obligatoire";
-      if(!f.lastName.trim())  e.lastName  = "Obligatoire";
-      if(!f.phone.trim())     e.phone     = "Obligatoire";
-      return e;
-    };
-
-    const nextStep = () => {
-      if(step===1){ const e=validate1(); if(Object.keys(e).length){ setErrors(e); return; } }
-      if(step===2){ const e=validate2(); if(Object.keys(e).length){ setErrors(e); return; } }
-      setStep(s=>s+1);
-    };
-
-    const save = () => {
-      const now = new Date();
-      const mois = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-      const since = `${mois[now.getMonth()]} ${now.getFullYear()}`;
-      if(editing) {
-        setTenants(prev=>prev.map(t=>t.id===editing.id ? {
-          ...t, name:f.name, slug:f.slug, city:f.city, zip:f.zip, address:f.address,
-          plan:f.plan, type:f.type, email:f.email,
-          contact:`${f.firstName} ${f.lastName}`,
-          firstName:f.firstName, lastName:f.lastName, phone:f.phone, notes:f.notes,
-          isCoach:f.isCoach
-        } : t));
-        showToast(`✅ "${f.name}" mis à jour`);
-      } else {
-        const newT = {
-          id:`t${Date.now()}`, name:f.name, slug:f.slug, city:f.city, zip:f.zip, address:f.address,
-          plan:f.plan, type:f.type, email:f.email,
-          contact:`${f.firstName} ${f.lastName}`,
-          firstName:f.firstName, lastName:f.lastName, phone:f.phone, notes:f.notes,
-          isCoach:f.isCoach,
-          members:0, revenue:f.plan==="Pro"?69:f.plan==="Standard"?29:9,
-          status:"actif", since, growth:0
-        };
-        setTenants(prev=>[newT, ...prev]);
-        showToast(`🚀 "${f.name}" créé — seed injecté !`);
-      }
-      setModal(null);
-    };
-
-    const STEPS = ["Studio", "Contact", "Confirmation"];
+  // Modal Nouveau Tenant — proper component
+  function NewTenantModalSA() {
+    const [f, setF] = useState({ name:"", city:"", plan:"Starter" });
     return (
       <div onClick={e=>e.target===e.currentTarget&&setModal(null)}
-        style={{position:"fixed",inset:0,background:"rgba(42,31,20,.5)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{background:"#FFFFFF",border:"1px solid rgba(167,139,250,.2)",borderRadius:20,padding:32,width:"100%",maxWidth:520,boxShadow:"0 32px 64px rgba(0,0,0,.5)",maxHeight:"90vh",overflowY:"auto"}}>
-
-          <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-            <div>
-              <div style={{fontSize:20,fontWeight:800,color:"#2A1F14",letterSpacing:-0.5}}>{editing?"Modifier le tenant":"Nouveau tenant"}</div>
-              <div style={{fontSize:12,color:"#8C7B6C",marginTop:2}}>Étape {step} / 3 — {STEPS[step-1]}</div>
-            </div>
-            <button onClick={()=>setModal(null)} style={{background:"#F4EFE8",border:"1px solid #DDD5C8",borderRadius:8,width:32,height:32,cursor:"pointer",color:"#8C7B6C",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
+        style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.5)", zIndex:800, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+        <div style={{ background:C.surface, borderRadius:16, padding:28, width:"100%", maxWidth:440, boxShadow:"0 24px 56px rgba(0,0,0,.2)" }}>
+          <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:20 }}>
+            <div style={{ fontSize:18, fontWeight:700, color:C.text }}>Nouveau tenant</div>
+            <button onClick={()=>setModal(null)} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:7, padding:"3px 8px", cursor:"pointer", color:C.textSoft, fontSize:15 }}>✕</button>
           </div>
-
-          <div style={{display:"flex",gap:6,marginBottom:28}}>
-            {STEPS.map((s,i)=>(
-              <div key={s} style={{flex:1,height:3,borderRadius:2,background:i+1<=step?"#A06838":"#EAE4DA"}}/>
-            ))}
+          <div style={{ display:"flex", flexDirection:"column", gap:14, marginBottom:20 }}>
+            <Field label="Nom du studio" value={f.name} onChange={v=>setF({...f,name:v})} placeholder="Ex: Hot Yoga Lyon"/>
+            <Field label="Ville" value={f.city} onChange={v=>setF({...f,city:v})} placeholder="Paris, Lyon…"/>
+            <Field label="Plan" value={f.plan} onChange={v=>setF({...f,plan:v})} opts={[{v:"Starter",l:"Starter — 29 €/mois"},{v:"Pro",l:"Pro — 79 €/mois"}]}/>
           </div>
-
-          {step===1&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <FieldSA label="Nom du studio / centre" k="name" placeholder="Ex: Yoga Flow Paris" required value={f.name} onChange={upd} error={errors.name}/>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:"#8C7B6C",textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:5}}>
-                  Sous-domaine <span style={{color:"#B0A090"}}>(lettres, chiffres, tirets)</span> <span style={{color:"#F87171"}}>*</span>
-                </label>
-                <div style={{display:"flex",alignItems:"center",background:"#FAFAF8",border:`1.5px solid ${errors.slug?"#F87171":"#DDD5C8"}`,borderRadius:9,overflow:"hidden"}}>
-                  <input value={f.slug} onChange={e=>upd("slug",e.target.value)} placeholder="yogaflowparis"
-                    style={{...saInp(),border:"none",background:"transparent",flex:1}}/>
-                  <span style={{padding:"9px 12px",color:"#8C7B6C",fontSize:13,borderLeft:"1px solid #DDD5C8",whiteSpace:"nowrap"}}>.fydelys.fr</span>
-                </div>
-                {errors.slug&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{errors.slug}</div>}
-                <div style={{fontSize:11,color:"#B0A090",marginTop:4}}>✓ Autorisé : <code style={{color:"#A06838"}}>yoga-paris</code> · <code style={{color:"#A06838"}}>studio2</code> &nbsp; ✗ Interdit : points, espaces, majuscules, accents</div>
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
-                <FieldSA label="Ville" k="city" placeholder="Paris, Lyon…" required value={f.city} onChange={upd} error={errors.city}/>
-                <FieldSA label="Code postal" k="zip" placeholder="75001" value={f.zip} onChange={upd}/>
-              </div>
-              <FieldSA label="Adresse" k="address" placeholder="12 rue de la Paix" value={f.address} onChange={upd}/>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <SelectSA label="Type de pratique" k="type" required value={f.type} onChange={upd} opts={[
-                  {v:"Yoga",l:"🧘 Yoga"},{v:"Pilates",l:"⚡ Pilates"},{v:"Danse",l:"💃 Danse"},
-                  {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi-disciplines"}
-                ]}/>
-                <SelectSA label="Plan Fydelys" k="plan" value={f.plan} onChange={upd} opts={[
-                  {v:"Essentiel",l:"Essentiel — 9 €/mois"},{v:"Standard",l:"Standard — 29 €/mois"},{v:"Pro",l:"Pro — 69 €/mois"}
-                ]}/>
-              </div>
-            </div>
-          )}
-
-          {step===2&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <div style={{padding:"12px 16px",background:"rgba(167,139,250,.08)",borderRadius:10,border:"1px solid rgba(167,139,250,.15)",fontSize:13,color:"#8C5E38"}}>
-                👤 Informations du gérant / responsable du studio
-              </div>
-              <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <FieldSA label="Prénom" k="firstName" placeholder="Marie" required value={f.firstName} onChange={upd} error={errors.firstName}/>
-                <FieldSA label="Nom" k="lastName" placeholder="Laurent" required value={f.lastName} onChange={upd} error={errors.lastName}/>
-              </div>
-              <FieldSA label="Email professionnel" k="email" type="email" placeholder="marie@studio.fr" required value={f.email} onChange={upd} error={errors.email}/>
-              <FieldSA label="Téléphone" k="phone" type="tel" placeholder="+33 6 12 34 56 78" required value={f.phone} onChange={upd} error={errors.phone}/>
-              {/* Toggle coach */}
-              <div onClick={()=>upd("isCoach",!f.isCoach)}
-                style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:f.isCoach?"#F5EBE0":"#FAFAF8",border:`1px solid ${f.isCoach?"rgba(160,104,56,.3)":"#DDD5C8"}`,borderRadius:10,cursor:"pointer",userSelect:"none"}}>
-                <div>
-                  <div style={{fontSize:13,fontWeight:700,color:f.isCoach?"#8C5E38":"#8C7B6C"}}>🎯 Aussi coach / intervenant</div>
-                  <div style={{fontSize:11,color:"#B0A090",marginTop:2}}>Le gérant donne également des cours dans son studio</div>
-                </div>
-                <div style={{width:40,height:22,borderRadius:11,background:f.isCoach?"#A06838":"rgba(160,104,56,.15)",position:"relative",flexShrink:0,transition:"background .2s"}}>
-                  <div style={{position:"absolute",top:3,left:f.isCoach?20:3,width:16,height:16,borderRadius:"50%",background:"#fff",transition:"left .2s"}}/>
-                </div>
-              </div>
-              <div>
-                <label style={{fontSize:11,fontWeight:700,color:"#8C7B6C",textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:5}}>Notes internes</label>
-                <textarea value={f.notes} onChange={e=>upd("notes",e.target.value)} placeholder="Informations complémentaires, source du lead…" rows={3}
-                  style={{...saInp(),resize:"vertical"}}/>
-              </div>
-            </div>
-          )}
-
-          {step===3&&(
-            <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <div style={{padding:"16px",background:"rgba(52,211,153,.06)",borderRadius:12,border:"1px solid rgba(52,211,153,.2)"}}>
-                <div style={{fontSize:13,fontWeight:700,color:"#34D399",marginBottom:12}}>✅ Récapitulatif</div>
-                {[
-                  ["Studio",       f.name],
-                  ["Sous-domaine", `${f.slug}.fydelys.fr`],
-                  ["Ville",        f.city],
-                  ["Code postal",  f.zip],
-                  ["Type",         f.type],
-                  ["Plan",         f.plan],
-                  ["Gérant",       `${f.firstName} ${f.lastName}`],
-                  ["Email",        f.email],
-                  ["Téléphone",    f.phone],
-                  ["Rôle gérant",  f.isCoach ? "Admin + Coach" : "Admin uniquement"],
-                ].map(([k,v])=>(
-                  <div key={k} style={{display:"flex",justifyContent:"space-between",padding:"6px 0",borderBottom:"1px solid #EDE6DC",fontSize:13}}>
-                    <span style={{color:"#8C7B6C"}}>{k}</span>
-                    <span style={{color:"#2A1F14",fontWeight:600}}>{v}</span>
-                  </div>
-                ))}
-              </div>
-              {!editing&&(
-                <div style={{padding:"12px 16px",background:"#FBF6EE",borderRadius:10,border:"1px solid rgba(160,104,56,.2)",fontSize:12,color:"#8C7B6C",lineHeight:1.6}}>
-                  🌱 <strong>Seed automatique :</strong> disciplines, abonnements et 1 séance de démo seront créés dans Supabase pour ce studio.
-                </div>
-              )}
-            </div>
-          )}
-
-          <div style={{display:"flex",gap:10,marginTop:24}}>
-            {step>1&&(
-              <button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#8C7B6C",fontSize:14,fontWeight:600,cursor:"pointer"}}>← Retour</button>
-            )}
-            {step<3?(
-              <button onClick={nextStep} style={{flex:2,padding:"11px",background:"linear-gradient(145deg,#B88050,#9A6030)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Continuer →</button>
-            ):(
-              <button onClick={save} style={{flex:2,padding:"11px",background:editing?"linear-gradient(135deg,#2563EB,#1D4ED8)":"linear-gradient(135deg,#059669,#047857)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-                {editing?"💾 Enregistrer":"🚀 Créer le tenant"}
-              </button>
-            )}
-            {step===1&&<button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#B0A090",fontSize:14,cursor:"pointer"}}>Annuler</button>}
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // ── Delete Confirm Modal ──────────────────────────────────────────────────────
-  function DeleteModal({ tenant }) {
-    return (
-      <div onClick={e=>e.target===e.currentTarget&&setModal(null)}
-        style={{position:"fixed",inset:0,background:"rgba(42,31,20,.5)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{background:"#FFFFFF",border:"1px solid rgba(248,113,113,.3)",borderRadius:20,padding:32,width:"100%",maxWidth:420,boxShadow:"0 32px 64px rgba(0,0,0,.5)"}}>
-          <div style={{fontSize:32,textAlign:"center",marginBottom:16}}>🗑</div>
-          <div style={{fontSize:18,fontWeight:800,color:"#2A1F14",textAlign:"center",marginBottom:8}}>Supprimer ce tenant ?</div>
-          <div style={{fontSize:14,color:"#8C7B6C",textAlign:"center",marginBottom:24,lineHeight:1.6}}>
-            <strong style={{color:"#F87171"}}>{tenant.name}</strong> et toutes ses données (membres, séances, paiements) seront supprimées définitivement.
-          </div>
-          <div style={{display:"flex",gap:10}}>
-            <button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#8C7B6C",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
-            <button onClick={()=>{ setTenants(prev=>prev.filter(t=>t.id!==tenant.id)); setModal(null); showToast(`"${tenant.name}" supprimé`,false); }}
-              style={{flex:1,padding:"11px",background:"linear-gradient(135deg,#DC2626,#B91C1C)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-              Supprimer définitivement
-            </button>
+          <div style={{ display:"flex", gap:10 }}>
+            <Button sm onClick={()=>{
+              if(!f.name) return;
+              setTenants(p=>[...p,{id:`t${Date.now()}`,name:f.name,city:f.city,plan:f.plan,members:0,revenue:f.plan==="Pro"?79:29,status:"actif",since:"Mars 2026",growth:0}]);
+              setModal(null); showToast(`"${f.name}" créé avec succès !`);
+            }}>Créer le tenant</Button>
+            <Button sm variant="ghost" onClick={()=>setModal(null)}>Annuler</Button>
           </div>
         </div>
       </div>
@@ -2135,543 +1646,121 @@ function SuperAdminView({ onSwitch, isMobile }) {
   }
 
   return (
-    <div style={{minHeight:"100vh",background:"#F4EFE8"}}>
+    <div style={{ minHeight:"100vh", background:"#0F0A1E" }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         * { box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }
         body { margin:0; }
-        ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-thumb { background:#C4A87A; border-radius:3px; }
+        ::-webkit-scrollbar { width:5px; } ::-webkit-scrollbar-thumb { background:#4A3870; border-radius:3px; }
       `}</style>
 
-      {toast&&(
-        <div style={{position:"fixed",top:20,right:20,zIndex:900,display:"flex",alignItems:"center",gap:10,padding:"12px 18px",background:toast.ok?"#059669":"#DC2626",borderRadius:10,color:"white",fontSize:14,fontWeight:600,boxShadow:"0 8px 24px rgba(0,0,0,.25)"}}>
-          {toast.msg}
+      {toast && (
+        <div style={{ position:"fixed", top:20, right:20, zIndex:900, display:"flex", alignItems:"center", gap:10, padding:"12px 18px", background:toast.ok?C.ok:C.warn, borderRadius:10, color:"white", fontSize:14, fontWeight:600, boxShadow:"0 8px 24px rgba(0,0,0,.25)" }}>
+          {toast.ok ? <IcoCheck s={16} c="white"/> : <IcoAlert s={16} c="white"/>} {toast.msg}
         </div>
       )}
-      {modal?.type==="new"    && <TenantFormModal/>}
-      {modal?.type==="edit"   && <TenantFormModal editing={modal.tenant}/>}
-      {modal?.type==="delete" && <DeleteModal tenant={modal.tenant}/>}
+      {modal?.type==="newTenant" && <NewTenantModalSA/>}
 
       {/* TopBar */}
-      <div style={{borderBottom:"1px solid #F4EFE8",padding:`14px ${p}px`,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
-        <div style={{display:"flex",alignItems:"center",gap:12}}>
-          <div style={{width:36,height:36,borderRadius:10,background:"#F5EBE0",border:"1.5px solid #DDD5C8",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,flexShrink:0}}>⚜️</div>
+      <div style={{ borderBottom:"1px solid rgba(255,255,255,.08)", padding:`14px ${p}px`, display:"flex", alignItems:"center", justifyContent:"space-between", flexWrap:"wrap", gap:10 }}>
+        <div style={{ display:"flex", alignItems:"center", gap:12 }}>
+          <div style={{ width:36, height:36, borderRadius:10, background:"#7C3AED", display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, flexShrink:0 }}>⚡</div>
           <div>
-            <div style={{fontSize:16,fontWeight:800,color:"#2A1F14",letterSpacing:-0.3}}>Fyde<span style={{color:"#A06838"}}>lys</span></div>
-            <div style={{fontSize:11,color:"#8C7B6C",textTransform:"uppercase",letterSpacing:1,fontWeight:600}}>Super Admin</div>
+            <div style={{ fontSize:16, fontWeight:800, color:"#fff", letterSpacing:-0.3 }}>Fyde<span style={{ color:"#A78BFA" }}>lys</span></div>
+            <div style={{ fontSize:11, color:"#A78BFA", textTransform:"uppercase", letterSpacing:1, fontWeight:600 }}>Super Admin</div>
           </div>
         </div>
-        <div style={{fontSize:12,color:"#B0A090"}}>Plateforme · {tenants.length} tenant{tenants.length!==1?"s":""}</div>
+        <div style={{ display:"flex", gap:8, alignItems:"center", flexWrap:"wrap" }}>
+          {!isMobile && <span style={{ fontSize:12, color:"#A78BFA", padding:"4px 12px", background:"rgba(124,58,237,.2)", borderRadius:16, border:"1px solid rgba(167,139,250,.2)" }}>👁 Changer de vue :</span>}
+          {[["admin","🏠 Studio"],["adherent","🧘 Adhérent"]].map(([r,l])=>(
+            <button key={r} onClick={()=>onSwitch(r)} style={{ fontSize:12, padding:"5px 14px", borderRadius:16, border:"1px solid rgba(167,139,250,.25)", background:"rgba(255,255,255,.06)", color:"#C4B5FD", fontWeight:600, cursor:"pointer" }}>{l}</button>
+          ))}
+        </div>
       </div>
 
-      <div style={{padding:`${p}px`}}>
+      <div style={{ padding:`${p}px` }}>
         {/* KPIs */}
-        <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`,gap:isMobile?10:16,marginBottom:24}}>
+        <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:isMobile?10:16, marginBottom:24 }}>
           {[
-            {l:"Tenants actifs", v:actifCount, sub:`/ ${tenants.length} total`,        c:"#A06838", bg:"rgba(167,139,250,.1)", icon:"🏢"},
-            {l:"Total membres",  v:totalMem,   sub:"tous studios",                     c:"#34D399", bg:"rgba(52,211,153,.1)",  icon:"👥"},
-            {l:"CA mensuel",     v:totalRev>0?`${(totalRev/1000).toFixed(1)}k €`:"—", sub:"tenants actifs", c:"#FBBF24", bg:"rgba(251,191,36,.1)", icon:"💰"},
-            {l:"Suspendus",      v:suspCount,  sub:suspCount?"action requise":"aucun", c:"#F87171", bg:"rgba(248,113,113,.1)", icon:"⚠"},
+            { l:"Tenants actifs",  v:actifCount, sub:`/ ${tenants.length} total`,   c:"#A78BFA", bg:"rgba(167,139,250,.1)", icon:"🏢" },
+            { l:"Total membres",   v:totalMem,   sub:"tous studios",                c:"#34D399", bg:"rgba(52,211,153,.1)",  icon:"👥" },
+            { l:"CA mensuel",      v:`${(totalRev/1000).toFixed(1)}k €`, sub:"actifs", c:"#FBBF24", bg:"rgba(251,191,36,.1)", icon:"💰" },
+            { l:"Suspendus",       v:suspCount,  sub:"action requise",              c:"#F87171", bg:"rgba(248,113,113,.1)", icon:"⚠" },
           ].map(k=>(
-            <div key={k.l} style={{background:k.bg,borderRadius:14,padding:isMobile?"14px 12px":"20px",border:`1px solid ${k.c}20`}}>
-              <div style={{fontSize:22,marginBottom:6}}>{k.icon}</div>
-              <div style={{fontSize:isMobile?22:30,fontWeight:800,color:k.c,lineHeight:1}}>{k.v}</div>
-              <div style={{fontSize:11,color:"#8C7B6C",marginTop:4}}>{k.l}</div>
-              <div style={{fontSize:10,color:"#B0A090"}}>{k.sub}</div>
+            <div key={k.l} style={{ background:k.bg, borderRadius:14, padding:isMobile?"14px 12px":"20px", border:`1px solid ${k.c}20` }}>
+              <div style={{ fontSize:22, marginBottom:6 }}>{k.icon}</div>
+              <div style={{ fontSize:isMobile?22:30, fontWeight:800, color:k.c, lineHeight:1 }}>{k.v}</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,.5)", marginTop:4 }}>{k.l}</div>
+              <div style={{ fontSize:10, color:"rgba(255,255,255,.3)" }}>{k.sub}</div>
             </div>
           ))}
         </div>
 
-        {/* Table */}
-        <div style={{background:"#FAFAF8",borderRadius:14,border:"1px solid #DDD5C8",overflow:"hidden"}}>
-          <div style={{padding:"14px 18px",borderBottom:"1px solid #EAE4DA",display:"flex",gap:10,flexWrap:"wrap",alignItems:"center"}}>
-            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher…"
-              style={{flex:1,minWidth:160,padding:"8px 14px",background:"#FDFAF7",border:"1px solid #DDD5C8",borderRadius:8,color:"#2A1F14",fontSize:13,outline:"none",boxSizing:"border-box"}}/>
-            <div style={{display:"flex",gap:6}}>
+        {/* Table tenants */}
+        <div style={{ background:"rgba(255,255,255,.04)", borderRadius:14, border:"1px solid rgba(255,255,255,.08)", overflow:"hidden" }}>
+          {/* Filtres */}
+          <div style={{ padding:"14px 18px", borderBottom:"1px solid rgba(255,255,255,.06)", display:"flex", gap:10, flexWrap:"wrap", alignItems:"center" }}>
+            <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un studio…"
+              style={{ flex:1, minWidth:160, padding:"8px 14px", background:"rgba(255,255,255,.07)", border:"1px solid rgba(255,255,255,.12)", borderRadius:8, color:"#fff", fontSize:13, outline:"none", boxSizing:"border-box" }}/>
+            <div style={{ display:"flex", gap:6 }}>
               {["tous","actif","suspendu"].map(f=>(
-                <button key={f} onClick={()=>setFilter(f)} style={{fontSize:12,padding:"5px 12px",borderRadius:16,border:`1px solid ${filter===f?"#A06838":"#DDD5C8"}`,background:filter===f?"#A06838":"transparent",color:filter===f?"#fff":"#8C7B6C",fontWeight:600,cursor:"pointer"}}>
+                <button key={f} onClick={()=>setFilter(f)} style={{ fontSize:12, padding:"5px 12px", borderRadius:16, border:`1px solid ${filter===f?"#7C3AED":"rgba(255,255,255,.15)"}`, background:filter===f?"#7C3AED":"transparent", color:filter===f?"#fff":"rgba(255,255,255,.6)", fontWeight:600, cursor:"pointer" }}>
                   {f.charAt(0).toUpperCase()+f.slice(1)}
                 </button>
               ))}
             </div>
-            <button onClick={()=>setModal({type:"new"})} style={{fontSize:13,padding:"7px 16px",borderRadius:8,border:"none",background:"#A06838",color:"#fff",fontWeight:700,cursor:"pointer"}}>＋ Nouveau tenant</button>
+            <Button sm onClick={()=>setModal({type:"newTenant"})}>＋ Nouveau tenant</Button>
           </div>
-
-          {/* Empty state */}
-          {tenants.length===0&&(
-            <div style={{padding:"56px 24px",textAlign:"center"}}>
-              <div style={{fontSize:40,marginBottom:12}}>🏢</div>
-              <div style={{fontSize:16,fontWeight:700,color:"#5C4A38",marginBottom:6}}>Aucun tenant pour l'instant</div>
-              <div style={{fontSize:13,color:"#B0A090",marginBottom:20}}>Créez votre premier studio client</div>
-              <button onClick={()=>setModal({type:"new"})} style={{padding:"10px 24px",background:"#A06838",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>＋ Créer le premier tenant</button>
-            </div>
-          )}
 
           {/* Rows */}
           {filtered.map(t=>(
-            <div key={t.id} style={{padding:"13px 18px",borderBottom:"1px solid #EAE4DA",display:"flex",alignItems:"center",gap:14,flexWrap:isMobile?"wrap":"nowrap"}}
-              onMouseEnter={e=>e.currentTarget.style.background="#FBF8F4"}
+            <div key={t.id} style={{ padding:"13px 18px", borderBottom:"1px solid rgba(255,255,255,.05)", display:"flex", alignItems:"center", gap:14, flexWrap:isMobile?"wrap":"nowrap" }}
+              onMouseEnter={e=>e.currentTarget.style.background="rgba(255,255,255,.03)"}
               onMouseLeave={e=>e.currentTarget.style.background=""}>
-              <div style={{width:34,height:34,borderRadius:8,background:"#F5EBE0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🏛</div>
-              <div style={{flex:1,minWidth:100}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#2A1F14"}}>{t.name}</div>
-                <div style={{fontSize:11,color:"#8C7B6C"}}>{t.city} · {t.slug}.fydelys.fr · depuis {t.since}</div>
-                {t.contact&&<div style={{fontSize:11,color:"#A06838"}}>{t.contact} · {t.email}</div>}
+              <div style={{ width:34, height:34, borderRadius:8, background:"rgba(124,58,237,.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, flexShrink:0 }}>🏛</div>
+              <div style={{ flex:1, minWidth:100 }}>
+                <div style={{ fontSize:14, fontWeight:700, color:"#fff" }}>{t.name}</div>
+                <div style={{ fontSize:11, color:"rgba(255,255,255,.4)" }}>{t.city} · depuis {t.since}</div>
               </div>
-              {!isMobile&&<>
-                <div style={{textAlign:"center",minWidth:56}}>
-                  <div style={{fontSize:15,fontWeight:800,color:"#34D399"}}>{t.members}</div>
-                  <div style={{fontSize:10,color:"#B0A090"}}>membres</div>
+              {!isMobile && <>
+                <div style={{ textAlign:"center", minWidth:56 }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:"#34D399" }}>{t.members}</div>
+                  <div style={{ fontSize:10, color:"rgba(255,255,255,.4)" }}>membres</div>
                 </div>
-                <div style={{textAlign:"center",minWidth:70}}>
-                  <div style={{fontSize:15,fontWeight:800,color:"#FBBF24"}}>{(t.revenue||0).toLocaleString()} €</div>
-                  <div style={{fontSize:10,color:"#B0A090"}}>/mois</div>
+                <div style={{ textAlign:"center", minWidth:70 }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:"#FBBF24" }}>{t.revenue.toLocaleString()} €</div>
+                  <div style={{ fontSize:10, color:"rgba(255,255,255,.4)" }}>/mois</div>
+                </div>
+                <div style={{ textAlign:"center", minWidth:50 }}>
+                  <div style={{ fontSize:13, fontWeight:700, color:t.growth>=0?"#34D399":"#F87171" }}>{t.growth>=0?"+":""}{t.growth}%</div>
+                  <div style={{ fontSize:10, color:"rgba(255,255,255,.4)" }}>croiss.</div>
                 </div>
               </>}
-              <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-                <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.plan==="Pro"?"rgba(160,104,56,.2)":t.plan==="Business"?"rgba(251,191,36,.2)":"#F4EFE8",color:t.plan==="Pro"?"#8C5E38":t.plan==="Business"?"#FCD34D":"#8C7B6C"}}>{t.plan}</span>
-                <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.status==="actif"?"rgba(52,211,153,.15)":"rgba(248,113,113,.15)",color:t.status==="actif"?"#34D399":"#F87171"}}>{t.status==="actif"?"Actif":"Suspendu"}</span>
+              <div style={{ display:"flex", gap:6, alignItems:"center", flexShrink:0 }}>
+                <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:10, background:t.plan==="Pro"?"rgba(124,58,237,.3)":"rgba(255,255,255,.08)", color:t.plan==="Pro"?"#C4B5FD":"rgba(255,255,255,.5)" }}>{t.plan}</span>
+                <span style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:10, background:t.status==="actif"?"rgba(52,211,153,.15)":"rgba(248,113,113,.15)", color:t.status==="actif"?"#34D399":"#F87171" }}>{t.status.charAt(0).toUpperCase()+t.status.slice(1)}</span>
               </div>
-              <div style={{display:"flex",gap:6,flexShrink:0}}>
-                <button onClick={()=>setModal({type:"edit",tenant:t})}
-                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(167,139,250,.3)",background:"rgba(167,139,250,.1)",color:"#8C5E38",cursor:"pointer",fontWeight:600}}>✏ Modifier</button>
+              <div style={{ display:"flex", gap:6, flexShrink:0 }}>
+                <button onClick={()=>showToast(`Accès simulé : ${t.name}`)} style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid rgba(255,255,255,.15)", background:"rgba(255,255,255,.06)", color:"rgba(255,255,255,.7)", cursor:"pointer", fontWeight:600 }}>Accéder</button>
                 {t.status==="actif"
-                  ? <button onClick={()=>{ setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"suspendu"}:x)); showToast(`"${t.name}" suspendu`,false); }}
-                      style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.1)",color:"#F87171",cursor:"pointer",fontWeight:600}}>Suspendre</button>
-                  : <button onClick={()=>{ setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"actif"}:x)); showToast(`"${t.name}" réactivé`); }}
-                      style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(52,211,153,.3)",background:"rgba(52,211,153,.1)",color:"#34D399",cursor:"pointer",fontWeight:600}}>Réactiver</button>
+                  ? <button onClick={()=>{setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"suspendu"}:x)); showToast(`"${t.name}" suspendu`,false);}} style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid rgba(248,113,113,.3)", background:"rgba(248,113,113,.1)", color:"#F87171", cursor:"pointer", fontWeight:600 }}>Suspendre</button>
+                  : <button onClick={()=>{setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"actif"}:x)); showToast(`"${t.name}" réactivé`);}} style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid rgba(52,211,153,.3)", background:"rgba(52,211,153,.1)", color:"#34D399", cursor:"pointer", fontWeight:600 }}>Réactiver</button>
                 }
-                <button onClick={()=>setModal({type:"delete",tenant:t})}
-                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,.2)",background:"rgba(248,113,113,.07)",color:"#F87171",cursor:"pointer",fontWeight:600}}>🗑</button>
               </div>
             </div>
           ))}
-
-          {filtered.length===0&&tenants.length>0&&(
-            <div style={{padding:"32px",textAlign:"center",color:"#B0A090",fontSize:13}}>Aucun résultat pour « {search} »</div>
-          )}
         </div>
 
         {/* Stats bar */}
-        {tenants.length>0&&(
-          <div style={{marginTop:16,padding:"14px 18px",background:"#FFFFFF",borderRadius:12,border:"1px solid #DDD5C8",display:"grid",gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)",gap:14}}>
-            {[
-              {l:"Taux occupation moyen", v:"—",  c:"#A06838"},
-              {l:"Séances / semaine",     v:"—",  c:"#34D399"},
-              {l:"Taux renouvellement",   v:"—",  c:"#FBBF24"},
-              {l:"Tickets support",       v:"0",  c:"#F87171"},
-            ].map(s=>(
-              <div key={s.l}>
-                <div style={{fontSize:20,fontWeight:800,color:s.c}}>{s.v}</div>
-                <div style={{fontSize:11,color:"#8C7B6C",marginTop:2}}>{s.l}</div>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
-  );
-}
-
-
-// ══════════════════════════════════════════════════════════════════════════════
-// COACH VIEW — uniquement ses cours, inscrits, profil
-// ══════════════════════════════════════════════════════════════════════════════
-const COACH_NAV = [
-  { key:"planning",  label:"Mes cours",     icon:IcoCalendar  },
-  { key:"students",  label:"Mes inscrits",  icon:IcoUsers     },
-  { key:"profile",   label:"Mon profil",    icon:IcoUser      },
-];
-
-// Données mock — le coach voit uniquement ses propres séances
-const MY_COACH_NAME = "Sophie Laurent"; // sera remplacé par le profil réel
-const MY_SESSIONS = SESSIONS_INIT.filter(s => s.teacher === MY_COACH_NAME);
-
-function CoachView({ onSwitch, isMobile, coachName = MY_COACH_NAME, coachDisciplines = [] }) {
-  const [page, setPage]  = useState("planning");
-  const [toast, setToast] = useState(null);
-  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3000); };
-  const p = isMobile ? 16 : 28;
-
-  // Séances du coach uniquement
-  const [sessions, setSessions] = useState(
-    SESSIONS_INIT.filter(s => s.teacher === coachName)
-  );
-  const [selectedSession, setSelectedSession] = useState(null);
-
-  const initials = coachName.split(" ").map(n=>n[0]).join("").toUpperCase();
-  const totalStudents = sessions.reduce((sum,s)=>sum+s.booked, 0);
-  const nextSession = [...sessions]
-    .filter(s=>s.date >= new Date().toISOString().split("T")[0])
-    .sort((a,b)=>a.date.localeCompare(b.date)||a.time.localeCompare(b.time))[0];
-
-  // ── Nav bar ──────────────────────────────────────────────────────────────────
-  const NavBar = () => (
-    isMobile ? (
-      <div style={{ position:"fixed", bottom:0, left:0, right:0, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex", zIndex:100, paddingBottom:"env(safe-area-inset-bottom)" }}>
-        {COACH_NAV.map(n=>{
-          const Ic = n.icon;
-          const active = page === n.key;
-          return (
-            <button key={n.key} onClick={()=>setPage(n.key)}
-              style={{ flex:1, display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:"10px 0", background:"none", border:"none", cursor:"pointer", gap:3 }}>
-              <Ic s={20} c={active ? C.accent : C.textMuted}/>
-              <span style={{ fontSize:10, fontWeight:active?700:500, color:active?C.accent:C.textMuted }}>{n.label}</span>
-            </button>
-          );
-        })}
-      </div>
-    ) : (
-      <div style={{ width:220, minHeight:"100vh", background:C.surface, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", flexShrink:0 }}>
-        {/* Logo */}
-        <div style={{ padding:"24px 20px 20px", borderBottom:`1px solid ${C.borderSoft}` }}>
-          <div style={{ fontSize:22, fontWeight:800, color:C.text, letterSpacing:-0.5 }}>
-            Fyde<span style={{ color:C.accent }}>lys</span>
-          </div>
-          <div style={{ fontSize:11, color:C.textMuted, fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginTop:2 }}>Espace Coach</div>
-        </div>
-        {/* Profil mini */}
-        <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.borderSoft}`, display:"flex", alignItems:"center", gap:10 }}>
-          <div style={{ width:38, height:38, borderRadius:"50%", background:`linear-gradient(135deg,${C.accent},${C.accentDark})`, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:14, fontWeight:700, flexShrink:0 }}>{initials}</div>
-          <div>
-            <div style={{ fontSize:13, fontWeight:700, color:C.text, lineHeight:1.2 }}>{coachName}</div>
-            <div style={{ fontSize:11, color:C.textMuted }}>🎯 Coach</div>
-          </div>
-        </div>
-        {/* Nav links */}
-        <nav style={{ padding:"12px 10px", flex:1 }}>
-          {COACH_NAV.map(n=>{
-            const Ic = n.icon;
-            const active = page === n.key;
-            return (
-              <button key={n.key} onClick={()=>setPage(n.key)}
-                style={{ display:"flex", alignItems:"center", gap:10, width:"100%", padding:"10px 12px", borderRadius:10, border:"none", background:active?C.accentLight:"transparent", color:active?C.accentDark:C.textMid, fontWeight:active?700:500, fontSize:14, cursor:"pointer", marginBottom:2, textAlign:"left" }}>
-                <Ic s={18} c={active?C.accent:C.textMuted}/>
-                {n.label}
-              </button>
-            );
-          })}
-        </nav>
-      </div>
-    )
-  );
-
-  // ── Header ────────────────────────────────────────────────────────────────────
-  const Header = ({ title, sub }) => (
-    <div style={{ padding:`${p}px ${p}px 0`, marginBottom:20 }}>
-      {isMobile && (
-        <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-          <div style={{ fontSize:18, fontWeight:800, color:C.text, letterSpacing:-0.3 }}>Fyde<span style={{ color:C.accent }}>lys</span></div>
-          <div style={{ width:32, height:32, borderRadius:"50%", background:C.accentLight, display:"flex", alignItems:"center", justifyContent:"center", color:C.accent, fontSize:13, fontWeight:700 }}>{initials}</div>
-        </div>
-      )}
-      <div style={{ fontSize:isMobile?20:24, fontWeight:800, color:C.text, letterSpacing:-0.5 }}>{title}</div>
-      {sub && <div style={{ fontSize:13, color:C.textSoft, marginTop:3 }}>{sub}</div>}
-    </div>
-  );
-
-  // ── VUE PLANNING COACH ─────────────────────────────────────────────────────
-  function CoachPlanning() {
-    const grouped = sessions.reduce((acc,s)=>{
-      (acc[s.date]=acc[s.date]||[]).push(s); return acc;
-    }, {});
-    const dates = Object.keys(grouped).sort();
-
-    const fillColor = (booked, spots) => {
-      const pct = booked / spots;
-      if (pct >= 1)    return C.warn;
-      if (pct >= 0.75) return C.ok;
-      return C.accent;
-    };
-
-    return (
-      <>
-        <Header title="Mes cours" sub={`${sessions.length} séance${sessions.length>1?"s":""} à venir`}/>
-
-        {/* KPIs rapides */}
-        <div style={{ padding:`0 ${p}px`, display:"grid", gridTemplateColumns:"repeat(3,1fr)", gap:10, marginBottom:20 }}>
-          {[
-            { label:"Séances", value:sessions.length, icon:"📅", color:C.accent, bg:C.accentLight },
-            { label:"Inscrits total", value:totalStudents, icon:"👥", color:C.ok, bg:C.okBg },
-            { label:"Prochain cours", value:nextSession ? nextSession.time : "—", icon:"⏰", color:C.info, bg:C.infoBg },
-          ].map(k=>(
-            <div key={k.label} style={{ background:k.bg, borderRadius:12, padding:"12px 10px", border:`1px solid ${k.color}22` }}>
-              <div style={{ fontSize:20, marginBottom:4 }}>{k.icon}</div>
-              <div style={{ fontSize:isMobile?18:22, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</div>
-              <div style={{ fontSize:10, color:C.textMuted, marginTop:3 }}>{k.label}</div>
+        <div style={{ marginTop:16, padding:"14px 18px", background:"rgba(255,255,255,.03)", borderRadius:12, border:"1px solid rgba(255,255,255,.06)", display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:14 }}>
+          {[{l:"Taux occupation moyen",v:"74%",c:"#A78BFA"},{l:"Séances / semaine",v:"142",c:"#34D399"},{l:"Taux renouvellement",v:"88%",c:"#FBBF24"},{l:"Tickets support",v:"3",c:"#F87171"}].map(s=>(
+            <div key={s.l}>
+              <div style={{ fontSize:20, fontWeight:800, color:s.c }}>{s.v}</div>
+              <div style={{ fontSize:11, color:"rgba(255,255,255,.4)", marginTop:2 }}>{s.l}</div>
             </div>
           ))}
         </div>
-
-        {/* Liste séances par date */}
-        <div style={{ padding:`0 ${p}px ${isMobile?90:p}px` }}>
-          {dates.length === 0 && (
-            <div style={{ textAlign:"center", padding:"48px 16px", color:C.textMuted }}>
-              <div style={{ fontSize:36, marginBottom:12 }}>📭</div>
-              <div style={{ fontSize:16, fontWeight:600, color:C.textSoft }}>Aucun cours planifié</div>
-            </div>
-          )}
-          {dates.map(date=>(
-            <div key={date} style={{ marginBottom:20 }}>
-              <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:1, marginBottom:8 }}>
-                {new Date(date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}
-              </div>
-              <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
-                {grouped[date].sort((a,b)=>a.time.localeCompare(b.time)).map(s=>{
-                  const disc = DISCIPLINES.find(d=>d.id===s.disciplineId);
-                  const pct  = Math.round(s.booked/s.spots*100);
-                  const fc   = fillColor(s.booked, s.spots);
-                  return (
-                    <div key={s.id} onClick={()=>setSelectedSession(s)}
-                      style={{ background:C.surface, borderRadius:12, padding:"14px 16px", border:`1px solid ${C.border}`, cursor:"pointer", display:"flex", alignItems:"center", gap:14 }}
-                      onMouseEnter={e=>e.currentTarget.style.borderColor=C.accent}
-                      onMouseLeave={e=>e.currentTarget.style.borderColor=C.border}>
-                      {/* Heure */}
-                      <div style={{ textAlign:"center", minWidth:44, flexShrink:0 }}>
-                        <div style={{ fontSize:16, fontWeight:800, color:C.text }}>{s.time}</div>
-                        <div style={{ fontSize:10, color:C.textMuted }}>{s.duration}min</div>
-                      </div>
-                      {/* Barre séparatrice colorée */}
-                      <div style={{ width:3, height:40, borderRadius:2, background:disc?.color||C.accent, flexShrink:0 }}/>
-                      {/* Infos */}
-                      <div style={{ flex:1, minWidth:0 }}>
-                        <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{disc?.name || "Cours"}</div>
-                        <div style={{ fontSize:12, color:C.textSoft }}>{s.room} · {s.level}</div>
-                      </div>
-                      {/* Taux remplissage */}
-                      <div style={{ textAlign:"right", flexShrink:0 }}>
-                        <div style={{ fontSize:15, fontWeight:800, color:fc }}>{s.booked}/{s.spots}</div>
-                        <div style={{ width:56, height:4, background:C.bgDeep, borderRadius:2, marginTop:4, overflow:"hidden" }}>
-                          <div style={{ height:"100%", width:`${pct}%`, background:fc, borderRadius:2 }}/>
-                        </div>
-                        {s.waitlist>0 && <div style={{ fontSize:10, color:C.warn, marginTop:2 }}>+{s.waitlist} liste att.</div>}
-                      </div>
-                      <div style={{ color:C.textMuted, fontSize:12 }}>›</div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* Modal détail séance + inscrits */}
-        {selectedSession && (() => {
-          const s    = selectedSession;
-          const disc = DISCIPLINES.find(d=>d.id===s.disciplineId);
-          const bks  = BOOKINGS_INIT[s.id] || [];
-          const confirmed = bks.filter(b=>b.st==="confirmed");
-          const waiting   = bks.filter(b=>b.st==="waitlist");
-          return (
-            <div onClick={e=>e.target===e.currentTarget&&setSelectedSession(null)}
-              style={{ position:"fixed", inset:0, background:"rgba(42,31,20,.45)", zIndex:800, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
-              <div style={{ background:C.surface, borderRadius:20, width:"100%", maxWidth:500, maxHeight:"88vh", overflowY:"auto", boxShadow:"0 24px 56px rgba(42,31,20,.18)" }}>
-                {/* En-tête */}
-                <div style={{ padding:"20px 22px 16px", borderBottom:`1px solid ${C.borderSoft}`, position:"sticky", top:0, background:C.surface, zIndex:1 }}>
-                  <div style={{ display:"flex", justifyContent:"space-between", alignItems:"flex-start" }}>
-                    <div>
-                      <div style={{ fontSize:18, fontWeight:800, color:C.text }}>{disc?.name}</div>
-                      <div style={{ fontSize:13, color:C.textSoft, marginTop:2 }}>
-                        {new Date(s.date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})} · {s.time} · {s.duration} min
-                      </div>
-                      <div style={{ fontSize:12, color:C.textMuted, marginTop:1 }}>{s.room} · {s.level}</div>
-                    </div>
-                    <button onClick={()=>setSelectedSession(null)} style={{ background:C.bgDeep, border:`1px solid ${C.border}`, borderRadius:8, padding:"4px 10px", cursor:"pointer", color:C.textSoft, fontSize:15 }}>✕</button>
-                  </div>
-                  {/* Barre remplissage */}
-                  <div style={{ marginTop:12, padding:"10px 14px", background:C.accentLight, borderRadius:10, display:"flex", alignItems:"center", gap:10 }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:12, color:C.textSoft, marginBottom:5 }}>Remplissage</div>
-                      <div style={{ height:6, background:C.bgDeep, borderRadius:3, overflow:"hidden" }}>
-                        <div style={{ height:"100%", width:`${Math.min(100,Math.round(s.booked/s.spots*100))}%`, background:s.booked>=s.spots?C.warn:C.ok, borderRadius:3 }}/>
-                      </div>
-                    </div>
-                    <div style={{ fontSize:18, fontWeight:800, color:C.text, flexShrink:0 }}>{s.booked}/{s.spots}</div>
-                  </div>
-                </div>
-
-                {/* Liste inscrits confirmés */}
-                <div style={{ padding:"16px 22px" }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:C.textMid, marginBottom:10 }}>
-                    ✅ Inscrits confirmés ({confirmed.length})
-                  </div>
-                  {confirmed.length === 0 && (
-                    <div style={{ padding:"16px 0", color:C.textMuted, fontSize:13 }}>Aucun inscrit pour l'instant</div>
-                  )}
-                  {confirmed.map((b,i)=>(
-                    <div key={b.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 0", borderBottom:i<confirmed.length-1?`1px solid ${C.borderSoft}`:"none" }}>
-                      <div style={{ width:32, height:32, borderRadius:"50%", background:C.accentLight, display:"flex", alignItems:"center", justifyContent:"center", color:C.accent, fontSize:12, fontWeight:700, flexShrink:0 }}>
-                        {(b.fn[0]||"")+( b.ln[0]||"")}
-                      </div>
-                      <div style={{ flex:1 }}>
-                        <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{b.fn} {b.ln}</div>
-                        <div style={{ fontSize:11, color:C.textMuted }}>{b.sub}{b.credits!=null ? ` · ${b.credits}/${b.total} crédits` : ""}</div>
-                      </div>
-                      <div style={{ fontSize:11, color:C.textMuted }}>{b.phone}</div>
-                    </div>
-                  ))}
-
-                  {/* Liste d'attente */}
-                  {waiting.length > 0 && (
-                    <>
-                      <div style={{ fontSize:13, fontWeight:700, color:C.textMid, marginTop:18, marginBottom:10 }}>
-                        ⏳ Liste d'attente ({waiting.length})
-                      </div>
-                      {waiting.map((b,i)=>(
-                        <div key={b.id} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 0", borderBottom:i<waiting.length-1?`1px solid ${C.borderSoft}`:"none", opacity:.7 }}>
-                          <div style={{ width:32, height:32, borderRadius:"50%", background:"#F5EBE0", display:"flex", alignItems:"center", justifyContent:"center", color:C.warn, fontSize:12, fontWeight:700, flexShrink:0 }}>
-                            {(b.fn[0]||"")+(b.ln[0]||"")}
-                          </div>
-                          <div style={{ flex:1 }}>
-                            <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{b.fn} {b.ln}</div>
-                            <div style={{ fontSize:11, color:C.textMuted }}>{b.sub}</div>
-                          </div>
-                        </div>
-                      ))}
-                    </>
-                  )}
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-      </>
-    );
-  }
-
-  // ── VUE INSCRITS COACH ────────────────────────────────────────────────────
-  function CoachStudents() {
-    // Tous les inscrits uniques sur les séances du coach
-    const allStudents = Object.entries(BOOKINGS_INIT)
-      .filter(([sid]) => sessions.some(s=>String(s.id)===String(sid)))
-      .flatMap(([sid, bks]) => bks.filter(b=>b.st==="confirmed").map(b=>({...b, sessionId:Number(sid)})))
-
-    const uniqueEmails = new Set();
-    const unique = allStudents.filter(b=>{
-      const key = `${b.fn}${b.ln}`;
-      if(uniqueEmails.has(key)) return false;
-      uniqueEmails.add(key); return true;
-    });
-
-    const [search, setSearch] = useState("");
-    const filtered = unique.filter(b=>`${b.fn} ${b.ln}`.toLowerCase().includes(search.toLowerCase()));
-
-    return (
-      <>
-        <Header title="Mes inscrits" sub={`${unique.length} élève${unique.length>1?"s":""} uniques sur mes cours`}/>
-        <div style={{ padding:`0 ${p}px ${isMobile?90:p}px` }}>
-          <input value={search} onChange={e=>setSearch(e.target.value)} placeholder="🔍 Rechercher un élève…"
-            style={{ width:"100%", padding:"10px 14px", border:`1.5px solid ${C.border}`, borderRadius:10, fontSize:14, outline:"none", color:C.text, background:C.surface, boxSizing:"border-box", marginBottom:16 }}/>
-          {filtered.map((b,i)=>{
-            const nbSessions = allStudents.filter(x=>`${x.fn}${x.ln}`===`${b.fn}${b.ln}`).length;
-            return (
-              <div key={`${b.fn}${b.ln}`} style={{ display:"flex", alignItems:"center", gap:12, padding:"12px 14px", background:C.surface, borderRadius:12, border:`1px solid ${C.border}`, marginBottom:8 }}>
-                <div style={{ width:38, height:38, borderRadius:"50%", background:C.accentLight, display:"flex", alignItems:"center", justifyContent:"center", color:C.accent, fontSize:14, fontWeight:700, flexShrink:0 }}>
-                  {(b.fn[0]||"")+(b.ln[0]||"")}
-                </div>
-                <div style={{ flex:1 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{b.fn} {b.ln}</div>
-                  <div style={{ fontSize:12, color:C.textMuted }}>{b.sub}</div>
-                </div>
-                <div style={{ textAlign:"right", flexShrink:0 }}>
-                  <div style={{ fontSize:14, fontWeight:700, color:C.accent }}>{nbSessions}</div>
-                  <div style={{ fontSize:10, color:C.textMuted }}>séance{nbSessions>1?"s":""}</div>
-                </div>
-              </div>
-            );
-          })}
-          {filtered.length===0 && <div style={{ textAlign:"center", padding:"32px", color:C.textMuted }}>Aucun résultat pour « {search} »</div>}
-        </div>
-      </>
-    );
-  }
-
-  // ── VUE PROFIL COACH ──────────────────────────────────────────────────────
-  function CoachProfile() {
-    const totalHours = sessions.reduce((sum,s)=>sum+s.duration, 0);
-    const avgFill = sessions.length
-      ? Math.round(sessions.reduce((sum,s)=>sum+s.booked/s.spots*100, 0) / sessions.length)
-      : 0;
-    return (
-      <>
-        <Header title="Mon profil"/>
-        <div style={{ padding:`0 ${p}px ${isMobile?90:p}px` }}>
-          {/* Carte profil */}
-          <div style={{ background:C.surface, borderRadius:16, border:`1px solid ${C.border}`, overflow:"hidden", marginBottom:16 }}>
-            <div style={{ height:60, background:`linear-gradient(135deg,${C.accentLight},${C.accentBg})` }}/>
-            <div style={{ padding:"0 20px 20px", marginTop:-24 }}>
-              <div style={{ width:48, height:48, borderRadius:"50%", background:`linear-gradient(135deg,${C.accent},${C.accentDark})`, display:"flex", alignItems:"center", justifyContent:"center", color:"#fff", fontSize:18, fontWeight:800, border:`3px solid ${C.surface}` }}>{initials}</div>
-              <div style={{ fontSize:20, fontWeight:800, color:C.text, marginTop:10 }}>{coachName}</div>
-              <div style={{ fontSize:13, color:C.textMuted, marginTop:2 }}>🎯 Coach · Fydelys Studio</div>
-            </div>
-          </div>
-
-          {/* Stats */}
-          <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:10, marginBottom:16 }}>
-            {[
-              { label:"Séances planifiées", value:sessions.length, icon:"📅", color:C.accent, bg:C.accentLight },
-              { label:"Élèves suivis",       value:totalStudents,   icon:"👥", color:C.ok,     bg:C.okBg },
-              { label:"Heures de cours",     value:`${Math.round(totalHours/60)}h`, icon:"⏱", color:C.info, bg:C.infoBg },
-              { label:"Taux remplissage",    value:`${avgFill}%`,   icon:"📊", color:C.accent, bg:C.accentLight },
-            ].map(k=>(
-              <div key={k.label} style={{ background:k.bg, borderRadius:12, padding:"14px", border:`1px solid ${k.color}22` }}>
-                <div style={{ fontSize:22, marginBottom:6 }}>{k.icon}</div>
-                <div style={{ fontSize:24, fontWeight:800, color:k.color, lineHeight:1 }}>{k.value}</div>
-                <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>{k.label}</div>
-              </div>
-            ))}
-          </div>
-
-          {/* Disciplines affectées par l'admin */}
-          <div style={{ background:C.surface, borderRadius:14, border:`1px solid ${C.border}`, padding:"16px 18px" }}>
-            <div style={{ fontSize:13, fontWeight:700, color:C.textMid, marginBottom:12 }}>Mes disciplines</div>
-            <div style={{ display:"flex", flexWrap:"wrap", gap:8 }}>
-              {coachDisciplines.length > 0
-                ? coachDisciplines.map(disc => (
-                    <span key={disc.id} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, background:`${disc.color}18`, border:`1.5px solid ${disc.color}40`, fontSize:13, fontWeight:600, color:disc.color }}>
-                      {disc.icon} {disc.name}
-                    </span>
-                  ))
-                // Fallback : disciplines inférées depuis les séances
-                : [...new Set(sessions.map(s=>s.disciplineId))].map(id => {
-                    const disc = DISCIPLINES.find(d=>d.id===id);
-                    return disc ? (
-                      <span key={id} style={{ display:"inline-flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:20, background:`${disc.color}18`, border:`1.5px solid ${disc.color}40`, fontSize:13, fontWeight:600, color:disc.color }}>
-                        {disc.icon} {disc.name}
-                      </span>
-                    ) : null;
-                  })
-              }
-              {coachDisciplines.length===0 && sessions.length===0 && (
-                <span style={{ color:C.textMuted, fontSize:13 }}>Aucune discipline affectée — contactez l'administrateur</span>
-              )}
-            </div>
-          </div>
-        </div>
-      </>
-    );
-  }
-
-  // ── Rendu principal ────────────────────────────────────────────────────────
-  const CurrentPage = { planning:CoachPlanning, students:CoachStudents, profile:CoachProfile }[page] || CoachPlanning;
-
-  return (
-    <div style={{ display:"flex", minHeight:"100vh", background:C.bg }}>
-      <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
-        * { box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }
-        body { margin:0; }
-      `}</style>
-      {!isMobile && <NavBar/>}
-      <div style={{ flex:1, overflowY:"auto" }}>
-        {toast && (
-          <div style={{ position:"fixed", top:20, right:20, zIndex:900, display:"flex", alignItems:"center", gap:8, padding:"11px 18px", background:toast.ok?C.ok:C.warn, borderRadius:10, color:"white", fontSize:14, fontWeight:600, boxShadow:"0 8px 24px rgba(0,0,0,.12)" }}>
-            {toast.msg}
-          </div>
-        )}
-        <CurrentPage/>
       </div>
-      {isMobile && <NavBar/>}
     </div>
   );
 }
@@ -3103,23 +2192,16 @@ function AdherentView({ onSwitch, isMobile }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // ROOT — switch automatique par rôle
 // ══════════════════════════════════════════════════════════════════════════════
-export default function App({ initialRole = "admin", studioSlug = "", coachName = "", coachDisciplines = [], billingStatus = "trialing", trialEndsAt = null }) {
-  const [role, setRole] = useState(initialRole); // "superadmin" | "admin" | "coach" | "adherent"
+export default function App() {
+  const [role, setRole] = useState("admin"); // "superadmin" | "admin" | "adherent"
   const [page, setPage] = useState("planning");
   const width = useWidth();
   const isMobile = width < 768;
 
-  // Calcul jours trial restants
-  const trialDaysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
-    : 0;
-  const showTrialBanner  = billingStatus === "trialing" && trialDaysLeft <= 7;
-  const showPastDueBanner = billingStatus === "past_due";
-
   if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile}/>;
-  if (role === "coach")      return <CoachView      onSwitch={setRole} isMobile={isMobile} coachName={coachName||MY_COACH_NAME} coachDisciplines={coachDisciplines}/>;
   if (role === "adherent")   return <AdherentView   onSwitch={setRole} isMobile={isMobile}/>;
-  // admin avec is_coach → vue admin normale (ils ont accès à tout)
+
+  // ── Vue Studio (admin/staff) = v3 intact ──────────────────────────────────
   const Page = PAGES[page] || Dashboard;
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.bg }}>
@@ -3136,28 +2218,6 @@ export default function App({ initialRole = "admin", studioSlug = "", coachName 
       {!isMobile && <Sidebar active={page} onNav={setPage}/>}
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?60:0 }}>
         <TopBar title={PAGE_TITLES[page]} isMobile={isMobile}/>
-        {/* Bannière trial expiration */}
-        {showTrialBanner && (
-          <div style={{ background:trialDaysLeft<=3?"#F5EAE6":"#FDF4E3", borderBottom:`1px solid ${trialDaysLeft<=3?"#F5C2B5":"rgba(196,146,42,.25)"}`, padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-            <div style={{ fontSize:13, color:trialDaysLeft<=3?"#A85030":"#C4922A", fontWeight:600 }}>
-              ⏳ {trialDaysLeft > 0 ? `${trialDaysLeft} jour${trialDaysLeft>1?"s":""} d'essai restant${trialDaysLeft>1?"s":""}` : "Essai expiré"} — Choisissez votre formule pour continuer
-            </div>
-            <a href="/billing" style={{ fontSize:12, fontWeight:700, padding:"6px 14px", borderRadius:8, background:trialDaysLeft<=3?"#A85030":"#C4922A", color:"#fff", textDecoration:"none", whiteSpace:"nowrap" }}>
-              Choisir une formule →
-            </a>
-          </div>
-        )}
-        {/* Bannière paiement échoué */}
-        {showPastDueBanner && (
-          <div style={{ background:"#F5EAE6", borderBottom:"1px solid #F5C2B5", padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
-            <div style={{ fontSize:13, color:"#A85030", fontWeight:600 }}>
-              ⚠️ Paiement échoué — Mettez à jour votre carte bancaire pour éviter la suspension
-            </div>
-            <a href="/billing" style={{ fontSize:12, fontWeight:700, padding:"6px 14px", borderRadius:8, background:"#A85030", color:"#fff", textDecoration:"none", whiteSpace:"nowrap" }}>
-              Mettre à jour →
-            </a>
-          </div>
-        )}
         {isMobile && (
           <div style={{ padding:"16px 16px 4px", fontSize:28, fontWeight:800, color:C.text, letterSpacing:-0.6 }}>
             {PAGE_TITLES[page]}

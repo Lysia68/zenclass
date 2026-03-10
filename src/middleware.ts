@@ -61,9 +61,32 @@ export async function middleware(request: NextRequest) {
   // SuperAdmin sur domaine tenant → rediriger vers app.fydelys.fr
   if (user && isTenant && isProtected) {
     const { data: profile } = await supabase
-      .from("profiles").select("role").eq("id", user.id).single()
+      .from("profiles").select("role, studio_id").eq("id", user.id).single()
     if (profile?.role === "superadmin") {
       return NextResponse.redirect(new URL(`https://app.fydelys.fr/dashboard`, request.url))
+    }
+
+    // ── Billing guard : vérifier l'accès du studio ──────────────────────────
+    // (uniquement pour les admins sur pages protégées, hors /billing lui-même)
+    if (profile?.role === "admin" && !pathname.startsWith("/billing")) {
+      const { data: studio } = await supabase
+        .from("studios")
+        .select("billing_status, trial_ends_at")
+        .eq("id", profile.studio_id)
+        .single()
+
+      if (studio) {
+        const { billing_status, trial_ends_at } = studio
+        const trialExpired = billing_status === "trialing" &&
+          trial_ends_at && new Date(trial_ends_at) < new Date()
+        const isBlocked = ["canceled","suspended"].includes(billing_status) || trialExpired
+
+        if (isBlocked) {
+          const billingUrl = new URL("/billing", request.url)
+          billingUrl.searchParams.set("reason", trialExpired ? "trial_expired" : billing_status)
+          return NextResponse.redirect(billingUrl)
+        }
+      }
     }
   }
 

@@ -15,6 +15,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [coachName, setCoachName]               = useState<string>("")
   const [coachDisciplines, setCoachDisciplines] = useState<any[]>([])
   const [isApp, setIsApp]                       = useState(false) // pour la couleur de fond loading
+  const [billingStatus, setBillingStatus]       = useState<string>("trialing")
+  const [trialEndsAt, setTrialEndsAt]           = useState<string | null>(null)
 
   useEffect(() => {
     // Tout accès à window EST dans useEffect — jamais au niveau module/rendu
@@ -69,6 +71,18 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
           window.location.href = "https://app.fydelys.fr/dashboard"
           return
         }
+        // Charger le billing status pour les admins
+        if (role === "admin" && profile?.studio_id) {
+          const { data: studioData } = await supabase
+            .from("studios")
+            .select("billing_status, trial_ends_at")
+            .eq("id", profile.studio_id)
+            .single()
+          if (studioData) {
+            setBillingStatus(studioData.billing_status || "trialing")
+            setTrialEndsAt(studioData.trial_ends_at || null)
+          }
+        }
         setInitialRole(role)
       } else {
         setInitialRole(role)
@@ -95,6 +109,8 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       studioSlug={studioSlug}
       coachName={coachName}
       coachDisciplines={coachDisciplines}
+      billingStatus={billingStatus}
+      trialEndsAt={trialEndsAt}
     />
   )
 }

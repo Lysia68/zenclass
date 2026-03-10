@@ -204,7 +204,7 @@ export default function LoginPage() {
   const [error, setError]       = useState<string|null>(null)
   const [focused, setFocused]   = useState(false)
   const [reg, setReg] = useState({
-    studioName:"", slug:"", city:"", address:"",
+    studioName:"", slug:"", city:"", zip:"", address:"",
     type:"Yoga", firstName:"", lastName:"", email:"", phone:"",
     isCoach:false, disciplines:[] as DisciplineConfig[],
   })
@@ -413,10 +413,11 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+                  <div style={{display:"grid",gridTemplateColumns:"2fr 1fr",gap:12}}>
                     <FR label="Ville" k="city" placeholder="Paris" required value={reg.city} onChange={updReg} error={regErrors.city}/>
-                    <FR label="Adresse" k="address" placeholder="12 rue de la Paix" value={reg.address} onChange={updReg}/>
+                    <FR label="Code postal" k="zip" placeholder="75001" value={reg.zip} onChange={updReg}/>
                   </div>
+                  <FR label="Adresse" k="address" placeholder="12 rue de la Paix" value={reg.address} onChange={updReg}/>
                   <SR label="Type de pratique" k="type" value={reg.type} onChange={updReg} opts={[
                     {v:"Yoga",l:"🧘 Yoga"},{v:"Pilates",l:"⚡ Pilates"},{v:"Danse",l:"💃 Danse"},
                     {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi"}
@@ -468,6 +469,7 @@ export default function LoginPage() {
                       ["Studio",      reg.studioName],
                       ["URL",         `${reg.slug||"—"}.fydelys.fr`],
                       ["Ville",       reg.city],
+                      ["Code postal",  reg.zip],
                       ["Type",        reg.type],
                       ["Plan",        "À choisir après l'activation (9 · 29 · 69 €/mois)"],
                       ["Gérant",      `${reg.firstName} ${reg.lastName}`],

@@ -307,3 +307,190 @@ insert into subscriptions (studio_id, name, price, period, description, popular,
   ('00000000-0000-0000-0000-000000000001', 'Séance découverte', 20,  'séance',    'Première venue pour les nouveaux',    false, '#6A8FAE'),
   ('00000000-0000-0000-0000-000000000001', 'Trimestriel',       240, 'trimestre', '3 mois d''accès illimité',             false, '#AE7A7A');
 */
+
+-- ══════════════════════════════════════════════════════════════
+-- FONCTION SEED PAR TENANT
+-- Appelée automatiquement à la création d'un studio
+-- Insère disciplines, abonnements et 1 séance de démo
+-- ══════════════════════════════════════════════════════════════
+create or replace function seed_new_tenant(
+  p_studio_id uuid,
+  p_type text default 'Yoga'  -- 'Yoga' | 'Pilates' | 'Danse' | 'Fitness' | 'Méditation' | 'Multi'
+)
+returns void language plpgsql security definer as $$
+declare
+  v_disc1 uuid; v_disc2 uuid; v_disc3 uuid;
+begin
+
+  -- ── Disciplines selon le type ─────────────────────────────
+  if p_type = 'Yoga' then
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Yoga Vinyasa',  '🧘', '#C4956A') returning id into v_disc1;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Yin Yoga',      '🌙', '#AE7A7A') returning id into v_disc2;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Méditation',    '☯',  '#6A8FAE') returning id into v_disc3;
+
+  elsif p_type = 'Pilates' then
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Pilates Mat',   '⚡', '#6B9E7A') returning id into v_disc1;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Pilates Réformateur', '🏋', '#9E7A6B') returning id into v_disc2;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Stretching',    '🤸', '#7A9E8A') returning id into v_disc3;
+
+  elsif p_type = 'Danse' then
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Danse Contemporaine', '💃', '#C47A9E') returning id into v_disc1;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Hip-Hop',       '🎵', '#7A8EC4') returning id into v_disc2;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Classique',     '🩰', '#C4B87A') returning id into v_disc3;
+
+  elsif p_type = 'Fitness' then
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'HIIT',          '🔥', '#C47A7A') returning id into v_disc1;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Cardio',        '❤️', '#C4956A') returning id into v_disc2;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Musculation',   '💪', '#8A9EC4') returning id into v_disc3;
+
+  else -- Multi / Méditation / défaut
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Yoga',          '🧘', '#C4956A') returning id into v_disc1;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Pilates',       '⚡', '#6B9E7A') returning id into v_disc2;
+    insert into disciplines (studio_id, name, icon, color) values
+      (p_studio_id, 'Méditation',    '☯',  '#6A8FAE') returning id into v_disc3;
+  end if;
+
+  -- ── Abonnements standard ─────────────────────────────────
+  insert into subscriptions (studio_id, name, price, period, description, popular, color) values
+    (p_studio_id, 'Séance à l''unité',   25,  'séance',    'Idéal pour découvrir',                false, '#6A8FAE'),
+    (p_studio_id, 'Carnet 10 séances',  120,  'carnet',    'Valable 6 mois, toutes disciplines',  false, '#6B9E7A'),
+    (p_studio_id, 'Mensuel illimité',    89,  'mois',      'Accès illimité à toutes les séances', true,  '#C4956A'),
+    (p_studio_id, 'Trimestriel',        240,  'trimestre', '3 mois d''accès illimité, -10%',       false, '#AE7A7A');
+
+  -- ── Séance de démo (demain à 10h) ────────────────────────
+  insert into sessions (studio_id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots)
+  values (
+    p_studio_id, v_disc1, 'Professeur à définir', 'Salle principale',
+    'Tous niveaux', current_date + interval '1 day', '10:00', 60, 12
+  );
+
+  -- ── Adhérent de démo ────────────────────────────────────
+  insert into members (studio_id, first_name, last_name, email, phone, status, credits, credits_total, joined_at)
+  values (p_studio_id, 'Sophie', 'Exemple', 'sophie.exemple@email.com', '+33 6 00 00 00 00', 'actif', 4, 10, current_date);
+
+end;
+$$;
+
+-- ── Trigger : appel automatique à la création d'un studio ──
+create or replace function trigger_seed_new_studio()
+returns trigger language plpgsql security definer as $$
+begin
+  perform seed_new_tenant(new.id, 'Multi');
+  return new;
+end;
+$$;
+-- Note : commenté par défaut — activer si on veut seed auto
+-- create trigger on_studio_created after insert on studios
+--   for each row execute procedure trigger_seed_new_studio();
+
+-- ══════════════════════════════════════════════════════════════
+-- INVITATIONS COACH (ajout v4.1)
+-- ══════════════════════════════════════════════════════════════
+create table if not exists invitations (
+  id          uuid primary key default uuid_generate_v4(),
+  studio_id   uuid references studios(id) on delete cascade not null,
+  email       text not null,
+  role        text default 'coach' check (role in ('coach','admin')),
+  token       text unique not null default encode(gen_random_bytes(32), 'hex'),
+  used        boolean default false,
+  created_at  timestamptz default now(),
+  expires_at  timestamptz default now() + interval '7 days'
+);
+
+alter table invitations enable row level security;
+create policy "invitations_studio" on invitations for all
+  using (studio_id = my_studio_id() and my_role() in ('admin','superadmin'));
+
+-- Mettre à jour le check role dans profiles pour inclure coach et adherent
+alter table profiles drop constraint if exists profiles_role_check;
+alter table profiles add constraint profiles_role_check
+  check (role in ('superadmin','admin','coach','adherent'));
+
+-- ══════════════════════════════════════════════════════════════
+-- TENANT INVITATIONS (admin invité par SuperAdmin)
+-- ══════════════════════════════════════════════════════════════
+create table if not exists tenant_invitations (
+  id          uuid primary key default uuid_generate_v4(),
+  studio_id   uuid references studios(id) on delete cascade not null,
+  email       text not null,
+  role        text default 'admin' check (role in ('admin','coach')),
+  token       text unique not null default encode(gen_random_bytes(32), 'hex'),
+  used        boolean default false,
+  created_at  timestamptz default now(),
+  expires_at  timestamptz default now() + interval '7 days',
+  unique(studio_id, email)
+);
+
+alter table tenant_invitations enable row level security;
+create policy "tenant_invitations_superadmin" on tenant_invitations for all
+  using (my_role() = 'superadmin');
+create policy "tenant_invitations_admin" on tenant_invitations for select
+  using (studio_id = my_studio_id() and my_role() = 'admin');
+
+-- ══════════════════════════════════════════════════════════════
+-- PENDING REGISTRATIONS (données d'inscription en attente)
+-- Supprimées automatiquement après confirmation du compte
+-- ══════════════════════════════════════════════════════════════
+create table if not exists pending_registrations (
+  id          uuid primary key default uuid_generate_v4(),
+  email       text unique not null,
+  data        jsonb not null,
+  created_at  timestamptz default now(),
+  expires_at  timestamptz default now() + interval '24 hours'
+);
+-- Pas de RLS — accès uniquement via service_role dans le callback
+alter table pending_registrations enable row level security;
+
+-- Policy pending_registrations : insert/update public (nécessaire avant auth)
+create policy "pending_reg_insert" on pending_registrations
+  for insert with check (true);
+create policy "pending_reg_update" on pending_registrations
+  for update using (true);
+-- Select/delete réservé au service_role (callback côté serveur)
+
+-- ══════════════════════════════════════════════════════════════
+-- FLAG is_coach sur profiles (v4.2)
+-- Un admin peut aussi être coach (donne des cours)
+-- Un coach pur n'a pas de droits admin
+-- ══════════════════════════════════════════════════════════════
+alter table profiles add column if not exists is_coach boolean default false;
+
+-- Fonction utilitaire : est-ce que l'utilisateur courant donne des cours ?
+create or replace function my_is_coach()
+returns boolean language sql stable security definer as $$
+  select coalesce(
+    (select is_coach from profiles where id = auth.uid()),
+    false
+  )
+$$;
+
+-- ══════════════════════════════════════════════════════════════
+-- COACH_DISCIPLINES — affectation disciplines aux coachs (v4.3)
+-- ══════════════════════════════════════════════════════════════
+create table if not exists coach_disciplines (
+  id            uuid primary key default uuid_generate_v4(),
+  profile_id    uuid references profiles(id) on delete cascade not null,
+  discipline_id uuid references disciplines(id) on delete cascade not null,
+  studio_id     uuid references studios(id) on delete cascade not null,
+  created_at    timestamptz default now(),
+  unique(profile_id, discipline_id)
+);
+alter table coach_disciplines enable row level security;
+create policy "coach_disciplines_studio" on coach_disciplines for all
+  using (studio_id = my_studio_id() and my_role() in ('admin','superadmin'));
+create policy "coach_disciplines_self" on coach_disciplines for select
+  using (profile_id = auth.uid());

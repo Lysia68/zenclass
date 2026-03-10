@@ -106,7 +106,7 @@ export async function middleware(request: NextRequest) {
       const { data: studio } = await supabase
         .from("studios").select("slug").eq("id", profile.studio_id).single()
       if (studio?.slug) {
-        return NextResponse.redirect(new URL(\`https://\${studio.slug}.fydelys.fr/dashboard\`))
+        return NextResponse.redirect(new URL("https://" + studio.slug + ".fydelys.fr/dashboard"))
       }
     }
   }

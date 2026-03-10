@@ -1,5 +1,29 @@
 import { useState, useEffect } from "react";
 
+// ── ConfirmModal — remplace window.confirm ────────────────────────────────────
+function ConfirmModal({ message, onConfirm, onCancel }) {
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onCancel()}
+      style={{ position:"fixed", inset:0, background:"rgba(42,31,20,.45)", zIndex:9999, display:"flex", alignItems:"center", justifyContent:"center", padding:24 }}>
+      <div style={{ background:"#FDFAF7", border:"1.5px solid #DDD5C8", borderRadius:16, padding:"28px 28px 24px", maxWidth:340, width:"100%", boxShadow:"0 24px 48px rgba(42,31,20,.15)", textAlign:"center" }}>
+        <div style={{ fontSize:32, marginBottom:14 }}>🚪</div>
+        <div style={{ fontSize:16, fontWeight:700, color:"#2A1F14", marginBottom:8 }}>Déconnexion</div>
+        <div style={{ fontSize:14, color:"#8C7B6C", lineHeight:1.6, marginBottom:24 }}>{message}</div>
+        <div style={{ display:"flex", gap:10 }}>
+          <button onClick={onCancel}
+            style={{ flex:1, padding:"10px", background:"transparent", border:"1.5px solid #DDD5C8", borderRadius:9, color:"#8C7B6C", fontSize:14, fontWeight:600, cursor:"pointer" }}>
+            Annuler
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex:1, padding:"10px", background:"linear-gradient(145deg,#B88050,#9A6030)", border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+            Se déconnecter
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const MEMBERS = [
   { id:1, firstName:"Claire",  lastName:"Martin",   email:"claire.m@email.com",  phone:"06 12 34 56 78", joined:"2026-01-10", subscription:"Mensuel illimité",  status:"actif",    credits:0, nextPayment:"2026-04-10", avatar:"CM" },
   { id:2, firstName:"Sophie",  lastName:"Leroux",   email:"sophie.l@email.com",  phone:"06 23 45 67 89", joined:"2025-11-05", subscription:"Carnet 10 séances", status:"actif",    credits:4, nextPayment:null,         avatar:"SL" },
@@ -292,35 +316,37 @@ function IcoLogOut({s,c}) {
 }
 
 function TopBar({ title, isMobile, onSignOut, isSuperAdmin }) {
+  const [confirmLogout, setConfirmLogout] = useState(false);
   return (
-    <div style={{ background:C.surface, borderBottom:`1.5px solid ${C.border}`, padding:`0 ${isMobile?16:28}px`, height:isMobile?48:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
-      <div style={{ fontSize:isMobile?18:20, fontWeight:700, color:C.text, letterSpacing:isMobile?-0.3:0 }}>
-        {isMobile ? <>Fyde<span style={{ color:C.accent }}>lys</span></> : title}
-      </div>
-      <div style={{ display:"flex", alignItems:"center", gap:8 }}>
-        {!isMobile && <Pill color={C.textSoft} bg={C.bg}>Yogalate Paris</Pill>}
-        {isSuperAdmin && (
-          <a href="https://fydelys.fr/dashboard"
-            style={{ fontSize:11, padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, color:C.textSoft, textDecoration:"none", fontWeight:600, display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap" }}>
-            ⬅ SuperAdmin
-          </a>
-        )}
-        {/* Avatar + nom */}
-        <div style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 10px 4px 5px", background:C.bg, border:`1px solid ${C.border}`, borderRadius:20 }}>
-          <div style={{ width:24, height:24, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:C.accent, flexShrink:0 }}>ML</div>
-          <span style={{ fontSize:13, fontWeight:600, color:C.text, whiteSpace:"nowrap" }}>Marie Laurent</span>
+    <>
+      {confirmLogout && <ConfirmModal message="Voulez-vous vous déconnecter de Fydelys ?" onConfirm={()=>{ setConfirmLogout(false); onSignOut?.(); }} onCancel={()=>setConfirmLogout(false)}/>}
+      <div style={{ background:C.surface, borderBottom:`1.5px solid ${C.border}`, padding:`0 ${isMobile?16:28}px`, height:isMobile?48:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
+        <div style={{ fontSize:isMobile?18:20, fontWeight:700, color:C.text, letterSpacing:isMobile?-0.3:0 }}>
+          {isMobile ? <>Fyde<span style={{ color:C.accent }}>lys</span></> : title}
         </div>
-        {/* Bouton déconnexion */}
-        <button
-          title="Se déconnecter"
-          onClick={()=>{ if(window.confirm("Se déconnecter de Fydelys ?")) onSignOut?.() }}
-          style={{ display:"flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, cursor:"pointer", flexShrink:0, transition:"all .15s" }}
-          onMouseEnter={e=>{e.currentTarget.style.background=C.warnBg; e.currentTarget.style.borderColor="#EFC8BC";}}
-          onMouseLeave={e=>{e.currentTarget.style.background=C.bg; e.currentTarget.style.borderColor=C.border;}}>
-          <IcoLogOut s={15} c={C.warn}/>
-        </button>
+        <div style={{ display:"flex", alignItems:"center", gap:8 }}>
+          {!isMobile && <Pill color={C.textSoft} bg={C.bg}>Yogalate Paris</Pill>}
+          {isSuperAdmin && (
+            <a href="https://fydelys.fr/dashboard"
+              style={{ fontSize:11, padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, color:C.textSoft, textDecoration:"none", fontWeight:600, display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap" }}>
+              ⬅ SuperAdmin
+            </a>
+          )}
+          <div style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 10px 4px 5px", background:C.bg, border:`1px solid ${C.border}`, borderRadius:20 }}>
+            <div style={{ width:24, height:24, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:C.accent, flexShrink:0 }}>ML</div>
+            <span style={{ fontSize:13, fontWeight:600, color:C.text, whiteSpace:"nowrap" }}>Marie Laurent</span>
+          </div>
+          <button
+            title="Se déconnecter"
+            onClick={()=>setConfirmLogout(true)}
+            style={{ display:"flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, cursor:"pointer", flexShrink:0, transition:"all .15s" }}
+            onMouseEnter={e=>{e.currentTarget.style.background=C.warnBg; e.currentTarget.style.borderColor="#EFC8BC";}}
+            onMouseLeave={e=>{e.currentTarget.style.background=C.bg; e.currentTarget.style.borderColor=C.border;}}>
+            <IcoLogOut s={15} c={C.warn}/>
+          </button>
+        </div>
       </div>
-    </div>
+    </>
   );
 }
 
@@ -1895,6 +1921,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
   const [filter, setFilter]   = useState("tous");
   const [modal, setModal]     = useState(null); // null | {type:"new"} | {type:"edit",tenant} | {type:"delete",tenant}
   const [toast, setToast]     = useState(null);
+  const [confirmLogout, setConfirmLogout] = useState(false);
   const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3500); };
   const p = isMobile ? 16 : 28;
 
@@ -2158,6 +2185,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
       {modal?.type==="edit"   && <TenantFormModal editing={modal.tenant}/>}
       {modal?.type==="delete" && <DeleteModal tenant={modal.tenant}/>}
 
+      {confirmLogout && <ConfirmModal message="Voulez-vous vous déconnecter de Fydelys ?" onConfirm={()=>{ setConfirmLogout(false); onSignOut?.(); }} onCancel={()=>setConfirmLogout(false)}/>}
       {/* TopBar */}
       <div style={{borderBottom:"1px solid #F4EFE8",padding:`14px ${p}px`,display:"flex",alignItems:"center",justifyContent:"space-between",flexWrap:"wrap",gap:10}}>
         <div style={{display:"flex",alignItems:"center",gap:12}}>
@@ -2170,7 +2198,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
         <div style={{display:"flex",alignItems:"center",gap:10}}>
           <div style={{fontSize:12,color:"#B0A090"}}>Plateforme · {tenants.length} tenant{tenants.length!==1?"s":""}</div>
           <button
-            onClick={()=>{ if(window.confirm("Se déconnecter de Fydelys ?")) onSignOut?.() }}
+            onClick={()=>setConfirmLogout(true)}
             style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1px solid #DDD5C8",background:"transparent",color:"#8C7B6C",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
             🚪 Déconnexion
           </button>

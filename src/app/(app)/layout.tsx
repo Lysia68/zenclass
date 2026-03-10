@@ -14,7 +14,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   const [studioSlug, setStudioSlug]             = useState<string>("")
   const [coachName, setCoachName]               = useState<string>("")
   const [coachDisciplines, setCoachDisciplines] = useState<any[]>([])
-  const [isApp, setIsApp]                       = useState(false) // pour la couleur de fond loading
   const [billingStatus, setBillingStatus]       = useState<string>("trialing")
   const [trialEndsAt, setTrialEndsAt]           = useState<string | null>(null)
 
@@ -25,7 +24,6 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
     const tenantMatch = hostname.match(/^([a-z0-9-]+)\.fydelys\.fr/)
     const slug        = tenantMatch ? tenantMatch[1] : ""
 
-    setIsApp(isAppHost)
     setStudioSlug(slug)
 
     supabase.auth.getUser().then(async ({ data: { user } }) => {
@@ -94,7 +92,7 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
   if (!initialRole) return (
     <div style={{
       minHeight: "100vh",
-      background: isApp ? "#0F0A1E" : "#F4EFE8",
+      background: "#F4EFE8",
       display: "flex", alignItems: "center", justifyContent: "center"
     }}>
       <div style={{ fontFamily: "Arial", color: "#A06838", fontSize: 16, fontWeight: 600 }}>

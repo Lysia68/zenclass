@@ -1,4 +1,4 @@
-import { createServerSupabase } from "@/lib/supabase-server"
+import { createServerSupabase, createServiceSupabase } from "@/lib/supabase-server"
 import { NextResponse, type NextRequest } from "next/server"
 
 export async function GET(request: NextRequest) {
@@ -15,36 +15,37 @@ export async function GET(request: NextRequest) {
 
   if (!code) return NextResponse.redirect(new URL("/", request.url))
 
+  // anon client pour échanger le code → session cookie
   const supabase = await createServerSupabase()
   const { data, error } = await supabase.auth.exchangeCodeForSession(code)
   if (error || !data.user) return NextResponse.redirect(new URL("/?error=auth", request.url))
+
+  // service_role pour toutes les opérations DB (bypass RLS sans policy SELECT)
+  const db = createServiceSupabase()
 
   const userId    = data.user.id
   const userEmail = data.user.email || ""
 
   // ── Profil existant → rediriger selon rôle ───────────────────────────────
-  const { data: existing } = await supabase
+  const { data: existing } = await db
     .from("profiles").select("id,role,studio_id").eq("id", userId).single()
 
   if (existing) {
-    // SuperAdmin → toujours fydelys.fr
     if (existing.role === "superadmin") {
       return NextResponse.redirect(new URL("https://fydelys.fr/dashboard"))
     }
-    // Admin → toujours slug.fydelys.fr (jamais app)
     if (existing.role === "admin") {
       let slugToUse: string | null = null
       if (existing.studio_id) {
-        const { data: studio } = await supabase
+        const { data: studio } = await db
           .from("studios").select("slug").eq("id", existing.studio_id).single()
         slugToUse = studio?.slug ?? null
       }
-      // Fallback : chercher le studio par email admin
       if (!slugToUse) {
-        const { data: studio } = await supabase
+        const { data: studio } = await db
           .from("studios").select("id,slug").eq("email", userEmail).single()
         if (studio) {
-          await supabase.from("profiles").update({ studio_id: studio.id }).eq("id", userId)
+          await db.from("profiles").update({ studio_id: studio.id }).eq("id", userId)
           slugToUse = studio.slug
         }
       }
@@ -52,32 +53,35 @@ export async function GET(request: NextRequest) {
         return NextResponse.redirect(new URL(`https://${slugToUse}.fydelys.fr/dashboard`))
       }
     }
-    // Coach / adhérent sur sous-domaine
     return NextResponse.redirect(new URL(next, request.url))
   }
 
   // ── SuperAdmin (première connexion) ──────────────────────────────────────
   if (userEmail === "info@lysia.fr") {
-    await supabase.from("profiles").insert({ id:userId, role:"superadmin", first_name:"Super", last_name:"Admin" })
+    await db.from("profiles").insert({ id:userId, role:"superadmin", first_name:"Super", last_name:"Admin" })
     return NextResponse.redirect(new URL("https://fydelys.fr/dashboard"))
   }
 
-  // ── Nouveau tenant (inscription depuis fydelys.fr) ───────────────────
-  if (isRegister) {
-    const { data: pending } = await supabase
+  // ── Nouveau tenant : détecter via pending_registrations ──────────────────
+  // register=1 peut être perdu par Supabase → on vérifie directement en DB
+  const { data: pendingCheck } = await db
+    .from("pending_registrations").select("email").eq("email", userEmail).single()
+  const isRegisterDetected = isRegister || !!pendingCheck
+
+  if (isRegisterDetected) {
+    const { data: pending } = await db
       .from("pending_registrations").select("data").eq("email", userEmail).single()
 
     if (pending?.data) {
       const r = pending.data as any
 
-      // Vérifier que le slug n'est pas déjà pris (race condition)
-      const { data: exists } = await supabase
+      const { data: exists } = await db
         .from("studios").select("slug").eq("slug", r.slug).single()
       if (exists) {
         return NextResponse.redirect(new URL("https://fydelys.fr/?error=slug_taken"))
       }
 
-      const { data: studio, error: studioErr } = await supabase.from("studios").insert({
+      const { data: studio, error: studioErr } = await db.from("studios").insert({
         name:        r.studioName,
         slug:        r.slug,
         city:        r.city,
@@ -91,7 +95,7 @@ export async function GET(request: NextRequest) {
       if (studioErr) console.error("Studio insert error:", JSON.stringify(studioErr))
 
       if (studio) {
-        await supabase.from("profiles").insert({
+        await db.from("profiles").insert({
           id:         userId,
           role:       "admin",
           studio_id:  studio.id,
@@ -99,36 +103,58 @@ export async function GET(request: NextRequest) {
           last_name:  r.lastName  || "",
           is_coach:   r.isCoach   || false,
         })
-        // seed_new_tenant peut échouer silencieusement — on log mais on continue
-        const { error: seedErr } = await supabase.rpc("seed_new_tenant", {
+        const { error: seedErr } = await db.rpc("seed_new_tenant", {
           p_studio_id: studio.id,
           p_type:      r.type || "Multi",
         })
         if (seedErr) console.error("Seed error:", JSON.stringify(seedErr))
 
-        await supabase.from("pending_registrations").delete().eq("email", userEmail)
+        await db.from("pending_registrations").delete().eq("email", userEmail)
         return NextResponse.redirect(new URL(`https://${studio.slug}.fydelys.fr/dashboard`))
       }
     }
 
-    // Fallback si pas de pending (ne devrait pas arriver)
-    console.error("No pending registration found for:", userEmail)
-    return NextResponse.redirect(new URL("https://fydelys.fr/?error=no_pending"))
+    // Log détaillé pour debug
+    console.error("no_pending | email:", userEmail, "| hostname:", hostname, "| isRegister param:", isRegister, "| pendingCheck:", !!pendingCheck)
+    // Tentative de récupération : chercher sans tenir compte de la casse
+    const { data: pendingAll } = await db
+      .from("pending_registrations").select("email,data").limit(20)
+    const pendingMatch = pendingAll?.find(p => p.email?.toLowerCase() === userEmail.toLowerCase())
+    if (pendingMatch?.data) {
+      console.error("Found pending via case-insensitive match:", pendingMatch.email)
+      const r = pendingMatch.data as any
+      const { data: studio2 } = await db.from("studios").insert({
+        name: r.studioName, slug: r.slug, city: r.city,
+        postal_code: r.zip || null, address: r.address || null,
+        email: pendingMatch.email, phone: r.phone || null, status: "actif",
+      }).select().single()
+      if (studio2) {
+        await db.from("profiles").insert({
+          id: userId, role: "admin", studio_id: studio2.id,
+          first_name: r.firstName || "", last_name: r.lastName || "",
+          is_coach: r.isCoach || false,
+        })
+        await db.rpc("seed_new_tenant", { p_studio_id: studio2.id, p_type: r.type || "Multi" })
+        await db.from("pending_registrations").delete().eq("email", pendingMatch.email)
+        return NextResponse.redirect(new URL(`https://${studio2.slug}.fydelys.fr/dashboard`))
+      }
+    }
+    return NextResponse.redirect(new URL("https://fydelys.fr/?error=no_pending&email=" + encodeURIComponent(userEmail)))
   }
 
   // ── Adhérent ou Coach sur sous-domaine ───────────────────────────────────
   if (isTenant) {
-    const { data: studio } = await supabase
+    const { data: studio } = await db
       .from("studios").select("id").eq("slug", tenantSlug).single()
 
     if (studio) {
-      const { data: invite } = await supabase.from("invitations")
+      const { data: invite } = await db.from("invitations")
         .select("role").eq("email", userEmail).eq("studio_id", studio.id)
         .eq("used", false).gt("expires_at", new Date().toISOString()).single()
 
       const role = invite ? (invite.role as string) : "adherent"
 
-      await supabase.from("profiles").insert({
+      await db.from("profiles").insert({
         id:         userId,
         role,
         studio_id:  studio.id,
@@ -137,15 +163,15 @@ export async function GET(request: NextRequest) {
       })
 
       if (invite) {
-        await supabase.from("invitations").update({ used:true })
+        await db.from("invitations").update({ used:true })
           .eq("email", userEmail).eq("studio_id", studio.id)
       }
 
       if (role === "adherent") {
-        const { data: existingM } = await supabase.from("members")
+        const { data: existingM } = await db.from("members")
           .select("id").eq("studio_id", studio.id).eq("email", userEmail).single()
         if (!existingM) {
-          await supabase.from("members").insert({
+          await db.from("members").insert({
             studio_id:    studio.id,
             auth_user_id: userId,
             first_name:   data.user.user_metadata?.first_name || "Nouveau",
@@ -156,7 +182,7 @@ export async function GET(request: NextRequest) {
             credits_total: 0,
           })
         } else {
-          await supabase.from("members").update({ auth_user_id: userId })
+          await db.from("members").update({ auth_user_id: userId })
             .eq("studio_id", studio.id).eq("email", userEmail)
         }
       }

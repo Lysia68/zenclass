@@ -1,7 +1,6 @@
 "use client"
 export const dynamic = "force-dynamic"
-import * as React from "react"
-import { useState, useEffect } from "react"
+import React, { useState, useEffect } from "react"
 import { createClient } from "@/lib/supabase"
 
 function FleurDeLys({ size = 46 }: { size?: number }) {
@@ -212,6 +211,8 @@ export default function LoginPage() {
   const [regStep, setRegStep]     = useState(1)
   const [regSent, setRegSent]     = useState(false)
   const [discModal, setDiscModal] = useState(false)
+  const [slugStatus, setSlugStatus]   = useState<"idle"|"checking"|"ok"|"taken">("idle")
+  const [emailStatus, setEmailStatus] = useState<"idle"|"checking"|"ok"|"taken">("idle")
 
   const supabase = createClient()
 
@@ -232,9 +233,36 @@ export default function LoginPage() {
   const validSlug = (s:string) => /^[a-z0-9]+$/.test(s)
   const updReg = (k:string,v:any) => {
     const n:any={...reg,[k]:v}
-    if(k==="studioName") n.slug=toSlug(v)
-    if(k==="slug") n.slug=v.toLowerCase().replace(/[^a-z0-9]/g,"")
+    if(k==="studioName") { n.slug=toSlug(v); checkSlug(n.slug) }
+    if(k==="slug") { n.slug=v.toLowerCase().replace(/[^a-z0-9]/g,""); checkSlug(n.slug) }
+    if(k==="email") checkEmail(v)
     setReg(n); setRegErrors(e=>({...e,[k]:undefined as any}))
+  }
+
+  // Vérification slug avec debounce
+  const slugTimerRef = React.useRef<ReturnType<typeof setTimeout>|null>(null)
+  const checkSlug = (slug: string) => {
+    if (!slug || slug.length < 2) { setSlugStatus("idle"); return }
+    if (slugTimerRef.current) clearTimeout(slugTimerRef.current)
+    setSlugStatus("checking")
+    slugTimerRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/check-availability?slug=${encodeURIComponent(slug)}`)
+      const { slugTaken } = await res.json()
+      setSlugStatus(slugTaken ? "taken" : "ok")
+    }, 500)
+  }
+
+  // Vérification email avec debounce
+  const emailTimerRef = React.useRef<ReturnType<typeof setTimeout>|null>(null)
+  const checkEmail = (email: string) => {
+    if (!email || !email.includes("@")) { setEmailStatus("idle"); return }
+    if (emailTimerRef.current) clearTimeout(emailTimerRef.current)
+    setEmailStatus("checking")
+    emailTimerRef.current = setTimeout(async () => {
+      const res = await fetch(`/api/check-availability?email=${encodeURIComponent(email)}`)
+      const { emailTaken } = await res.json()
+      setEmailStatus(emailTaken ? "taken" : "ok")
+    }, 600)
   }
 
   async function handleLogin(e:React.FormEvent){
@@ -248,8 +276,11 @@ export default function LoginPage() {
 
   async function handleRegister(){
     setLoading(true); setError(null)
-    const {data:ex}=await supabase.from("studios").select("id").eq("slug",reg.slug).single()
-    if(ex){ setRegErrors({slug:"Ce sous-domaine est déjà pris"}); setRegStep(1); setLoading(false); return }
+    // Double vérification finale slug + email (au cas où les états ne seraient pas à jour)
+    const checkRes = await fetch(`/api/check-availability?slug=${encodeURIComponent(reg.slug)}&email=${encodeURIComponent(reg.email)}`)
+    const { slugTaken, emailTaken } = await checkRes.json()
+    if(slugTaken){ setRegErrors({slug:"Ce sous-domaine est déjà pris"}); setSlugStatus("taken"); setRegStep(1); setLoading(false); return }
+    if(emailTaken){ setRegErrors({email:"Un compte existe déjà avec cet email"}); setEmailStatus("taken"); setRegStep(2); setLoading(false); return }
     const {error:se}=await supabase.from("pending_registrations").upsert({
       email:reg.email,
       data:{studioName:reg.studioName,slug:reg.slug,city:reg.city,zip:reg.zip||null,address:reg.address||null,
@@ -259,7 +290,7 @@ export default function LoginPage() {
     },{onConflict:"email"})
     if(se){ setError("Erreur lors de l'enregistrement."); setLoading(false); return }
     const {error}=await supabase.auth.signInWithOtp({email:reg.email,options:{
-      emailRedirectTo:`${window.location.origin}/auth/callback?next=/dashboard&register=1`,
+      emailRedirectTo:`https://fydelys.fr/auth/callback?next=/dashboard&register=1`,
       shouldCreateUser:true,
       data:{first_name:reg.firstName,last_name:reg.lastName},
     }})
@@ -402,14 +433,19 @@ export default function LoginPage() {
                   {/* Slug — format input.fydelys.fr */}
                   <div>
                     <label style={lbl}>Adresse web <span style={{color:"#B0A090"}}>(auto)</span> <span style={{color:"#F87171"}}>*</span></label>
-                    <div style={{display:"flex",alignItems:"center",background:"#FAFAF8",border:`1.5px solid ${regErrors.slug?"#F87171":"#DDD5C8"}`,borderRadius:10,overflow:"hidden"}}>
+                    <div style={{display:"flex",alignItems:"center",background:"#FAFAF8",border:`1.5px solid ${regErrors.slug||slugStatus==="taken"?"#F87171":slugStatus==="ok"?"#34D399":"#DDD5C8"}`,borderRadius:10,overflow:"hidden"}}>
                       <input value={reg.slug} onChange={e=>updReg("slug",e.target.value)} placeholder="yoga-flow-paris"
                         style={{...inp(),border:"none",background:"transparent",flex:1,padding:"11px 12px",textAlign:"right"}}/>
                       <span style={{padding:"11px 12px",color:"#8C7B6C",fontSize:13,borderLeft:"1px solid #DDD5C8",whiteSpace:"nowrap",flexShrink:0,fontWeight:600}}>.fydelys.fr</span>
                     </div>
                     {regErrors.slug&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{regErrors.slug}</div>}
-                    <div style={{fontSize:11,color:"#B0A090",marginTop:4}}>
-                      ✓ Votre URL : <code style={{color:C.accent}}>{reg.slug||"monstudio"}.fydelys.fr</code> · uniquement lettres et chiffres
+                    <div style={{display:"flex",alignItems:"center",gap:12,marginTop:4,flexWrap:"wrap"}}>
+                      <div style={{fontSize:11,color:"#B0A090"}}>
+                        Votre URL : <code style={{color:C.accent}}>{reg.slug||"monstudio"}.fydelys.fr</code>
+                      </div>
+                      {slugStatus==="checking" && <span style={{fontSize:11,color:"#B0A090"}}>⏳ Vérification…</span>}
+                      {slugStatus==="ok"       && <span style={{fontSize:11,color:"#34D399",fontWeight:700}}>✓ Disponible</span>}
+                      {slugStatus==="taken"    && <span style={{fontSize:11,color:"#F87171",fontWeight:700}}>✗ Déjà pris</span>}
                     </div>
                   </div>
 
@@ -423,8 +459,12 @@ export default function LoginPage() {
                     {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi"}
                   ]}/>
 
-                  <button onClick={()=>{const e=step1valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(2)}}
-                    style={btn()}>Continuer →</button>
+                  <button
+                    disabled={slugStatus==="taken"||slugStatus==="checking"}
+                    onClick={()=>{const e=step1valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(2)}}
+                    style={{...btn(),opacity:slugStatus==="taken"||slugStatus==="checking"?0.5:1}}>
+                    {slugStatus==="checking"?"Vérification…":"Continuer →"}
+                  </button>
                 </div>
               )}
 
@@ -438,7 +478,28 @@ export default function LoginPage() {
                     <FR label="Prénom" k="firstName" placeholder="Marie" required value={reg.firstName} onChange={updReg} error={regErrors.firstName}/>
                     <FR label="Nom" k="lastName" placeholder="Laurent" required value={reg.lastName} onChange={updReg} error={regErrors.lastName}/>
                   </div>
-                  <FR label="Email professionnel" k="email" type="email" placeholder="marie@studio.fr" required value={reg.email} onChange={updReg} error={regErrors.email}/>
+                  <div>
+                    <label style={lbl}>Email professionnel <span style={{color:"#F87171"}}>*</span></label>
+                    <div style={{position:"relative"}}>
+                      <input type="email" value={reg.email}
+                        onChange={e=>updReg("email",e.target.value)}
+                        placeholder="marie@studio.fr"
+                        style={{...inp(),width:"100%",boxSizing:"border-box",paddingRight:32,
+                          border:`1.5px solid ${regErrors.email||emailStatus==="taken"?"#F87171":emailStatus==="ok"?"#34D399":"#DDD5C8"}`}}
+                      />
+                      {emailStatus==="checking" && <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:12,color:"#B0A090"}}>⏳</span>}
+                      {emailStatus==="ok"       && <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"#34D399",fontWeight:700}}>✓</span>}
+                      {emailStatus==="taken"    && <span style={{position:"absolute",right:10,top:"50%",transform:"translateY(-50%)",fontSize:13,color:"#F87171",fontWeight:700}}>✗</span>}
+                    </div>
+                    {(regErrors.email||emailStatus==="taken") && (
+                      <div style={{fontSize:11,color:"#F87171",marginTop:3}}>
+                        {regErrors.email||"Un compte existe déjà avec cet email — connectez-vous plutôt"}
+                      </div>
+                    )}
+                    {emailStatus==="ok" && !regErrors.email && (
+                      <div style={{fontSize:11,color:"#34D399",marginTop:3}}>✓ Email disponible</div>
+                    )}
+                  </div>
                   <FR label="Téléphone" k="phone" type="tel" placeholder="+33 6 12 34 56 78" required value={reg.phone} onChange={updReg} error={regErrors.phone}/>
                   <div onClick={()=>updReg("isCoach",!reg.isCoach)}
                     style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",
@@ -454,7 +515,10 @@ export default function LoginPage() {
                   </div>
                   <div style={{display:"flex",gap:10}}>
                     <button onClick={()=>setRegStep(1)} style={{...btn(true),flex:1}}>← Retour</button>
-                    <button onClick={()=>{const e=step2valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(3)}}
+                    <button
+                      disabled={emailStatus==="taken"||emailStatus==="checking"}
+                      style={{...btn(),opacity:emailStatus==="taken"||emailStatus==="checking"?0.5:1}}
+                      onClick={()=>{const e=step2valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(3)}}
                       style={{...btn(),flex:2}}>Vérifier →</button>
                   </div>
                 </div>

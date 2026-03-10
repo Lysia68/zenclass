@@ -1068,6 +1068,92 @@ function Payments({ isMobile }) {
   );
 }
 
+
+// ── TIME PICKER — demi-heures avec saisie libre ───────────────────────────────
+function TimePicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [inputVal, setInputVal] = useState(value || "09:00");
+  const ref = React.useRef(null);
+
+  // Sync inputVal quand value change de l'extérieur
+  React.useEffect(() => { setInputVal(value || "09:00"); }, [value]);
+
+  // Fermer si clic extérieur
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  // Générer les demi-heures 06:00 → 22:00
+  const slots = [];
+  for (let h = 6; h <= 22; h++) {
+    slots.push(`${String(h).padStart(2,"0")}:00`);
+    if (h < 22) slots.push(`${String(h).padStart(2,"0")}:30`);
+  }
+
+  const commit = (v) => {
+    // Valider format HH:MM
+    const m = v.match(/^([01]?\d|2[0-3]):([0-5]\d)$/);
+    if (m) { const clean = `${m[1].padStart(2,"0")}:${m[2]}`; setInputVal(clean); onChange(clean); }
+    else { setInputVal(value || "09:00"); } // revert si invalide
+    setOpen(false);
+  };
+
+  return (
+    <div ref={ref} style={{ position:"relative", flex:1 }}>
+      <div style={{ display:"flex", alignItems:"center", border:`1.5px solid ${open ? C.accent : C.border}`, borderRadius:9, background:C.surfaceWarm, overflow:"hidden", transition:"border-color .15s" }}>
+        <span style={{ padding:"0 10px", fontSize:15, color:C.textMuted, userSelect:"none" }}>🕐</span>
+        <input
+          value={inputVal}
+          onChange={e => setInputVal(e.target.value)}
+          onFocus={() => setOpen(true)}
+          onBlur={e => commit(e.target.value)}
+          onKeyDown={e => { if (e.key === "Enter") { e.target.blur(); } if (e.key === "Escape") { setInputVal(value); setOpen(false); } }}
+          placeholder="09:00"
+          style={{ flex:1, border:"none", outline:"none", background:"transparent", padding:"9px 0", fontSize:13, color:C.text, fontWeight:600, minWidth:0 }}
+        />
+        <button onClick={() => setOpen(o => !o)} tabIndex={-1}
+          style={{ background:"none", border:"none", padding:"0 10px", cursor:"pointer", color:C.textMuted, fontSize:11 }}>
+          {open ? "▲" : "▼"}
+        </button>
+      </div>
+      {open && (
+        <div style={{ position:"absolute", top:"calc(100% + 4px)", left:0, right:0, background:C.surface, border:`1.5px solid ${C.border}`, borderRadius:10, boxShadow:"0 8px 24px rgba(0,0,0,.12)", zIndex:700, maxHeight:200, overflowY:"auto" }}>
+          {slots.map(t => (
+            <button key={t} onClick={() => { setInputVal(t); onChange(t); setOpen(false); }}
+              style={{ display:"block", width:"100%", textAlign:"left", padding:"8px 14px", border:"none", background: t === value ? C.accentLight : "transparent", color: t === value ? C.accent : C.text, fontWeight: t === value ? 700 : 400, fontSize:13, cursor:"pointer", borderBottom:`1px solid ${C.border}20` }}
+              onMouseEnter={e => e.currentTarget.style.background = C.accentLight}
+              onMouseLeave={e => e.currentTarget.style.background = t === value ? C.accentLight : "transparent"}>
+              {t}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ── DAY SELECT — joli select jour ────────────────────────────────────────────
+function DaySelect({ value, onChange }) {
+  const DAYS_FULL = [
+    { short:"Lun", label:"Lundi" }, { short:"Mar", label:"Mardi" },
+    { short:"Mer", label:"Mercredi" }, { short:"Jeu", label:"Jeudi" },
+    { short:"Ven", label:"Vendredi" }, { short:"Sam", label:"Samedi" },
+    { short:"Dim", label:"Dimanche" }
+  ];
+  return (
+    <div style={{ position:"relative", flex:1 }}>
+      <select value={value} onChange={e => onChange(e.target.value)}
+        style={{ width:"100%", padding:"9px 32px 9px 12px", borderRadius:9, border:`1.5px solid ${C.border}`, fontSize:13, color:C.text, background:C.surfaceWarm, outline:"none", appearance:"none", WebkitAppearance:"none", cursor:"pointer", fontWeight:600 }}>
+        {DAYS_FULL.map(d => <option key={d.short} value={d.short}>{d.label}</option>)}
+      </select>
+      <span style={{ position:"absolute", right:10, top:"50%", transform:"translateY(-50%)", pointerEvents:"none", fontSize:10, color:C.textMuted }}>▼</span>
+    </div>
+  );
+}
+
 const DAYS_FR = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
 
 function DisciplinesPage({ isMobile }) {
@@ -1108,14 +1194,10 @@ function DisciplinesPage({ isMobile }) {
             </div>
           ) : disc.slots.map((slot,si)=>(
             <div key={si} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
-              <select value={slot.day} onChange={e=>upSlot(disc.id,si,"day",e.target.value)}
-                style={{padding:"9px 10px",borderRadius:9,border:`1.5px solid ${C.border}`,fontSize:13,color:C.text,background:C.surfaceWarm,flex:1,outline:"none"}}>
-                {DAYS_FR.map(d=><option key={d}>{d}</option>)}
-              </select>
-              <input type="time" value={slot.time} onChange={e=>upSlot(disc.id,si,"time",e.target.value)}
-                style={{padding:"9px 10px",borderRadius:9,border:`1.5px solid ${C.border}`,fontSize:13,color:C.text,background:C.surfaceWarm,flex:1,outline:"none"}}/>
+              <DaySelect value={slot.day} onChange={v=>upSlot(disc.id,si,"day",v)}/>
+              <TimePicker value={slot.time} onChange={v=>upSlot(disc.id,si,"time",v)}/>
               <button onClick={()=>rmSlot(disc.id,si)}
-                style={{padding:"7px 11px",borderRadius:9,border:`1px solid ${C.border}`,background:C.surface,color:"#F87171",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
+                style={{width:32,height:38,borderRadius:9,border:`1px solid ${C.border}`,background:C.surface,color:"#F87171",cursor:"pointer",fontSize:16,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
           ))}
           <button onClick={()=>addSlot(disc.id)}

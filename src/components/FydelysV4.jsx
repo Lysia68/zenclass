@@ -1,4 +1,6 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect, useContext, createContext } from "react";
+
+const AppCtx = createContext({ studioName:"", userName:"", userEmail:"", planName:"", membersCount:0, userRole:"" });
 
 // ── ConfirmModal — remplace window.confirm ────────────────────────────────────
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -1194,7 +1196,7 @@ function RoleBadge({ role }) {
 }
 
 function Settings({ isMobile }) {
-  const { studioName, userName, userEmail, planName, membersCount, userRole } = React.useContext(AppCtx);
+  const { studioName, userName, userEmail, planName, membersCount, userRole } = useContext(AppCtx);
   const p = isMobile?12:28;
   const [currentRole, setCurrentRole] = useState("superadmin");
   const [tab, setTab] = useState("studio");

@@ -517,9 +517,10 @@ export default function LoginPage() {
                     <button onClick={()=>setRegStep(1)} style={{...btn(true),flex:1}}>← Retour</button>
                     <button
                       disabled={emailStatus==="taken"||emailStatus==="checking"}
-                      style={{...btn(),opacity:emailStatus==="taken"||emailStatus==="checking"?0.5:1}}
-                      onClick={()=>{const e=step2valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(3)}}
-                      style={{...btn(),flex:2}}>Vérifier →</button>
+                      style={{...btn(),flex:2,opacity:emailStatus==="taken"||emailStatus==="checking"?0.5:1}}
+                      onClick={()=>{const e=step2valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(3)}}>
+                      Vérifier →
+                    </button>
                   </div>
                 </div>
               )}

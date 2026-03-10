@@ -1856,6 +1856,33 @@ const saInp = (f=false,err=false) => ({
 });
 const TENANTS_INIT = [];
 
+// FieldSA / SelectSA définis HORS de SuperAdminView pour éviter la perte de focus
+// (React recrée les composants internes à chaque render sinon)
+function FieldSA({ label, k, placeholder, type="text", required, value, onChange, error }) {
+  return (
+    <div>
+      <label style={{ fontSize:11, fontWeight:700, color:"#8C7B6C", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
+        {label}{required&&<span style={{color:"#F87171"}}> *</span>}
+      </label>
+      <input type={type} value={value} onChange={e=>onChange(k,e.target.value)} placeholder={placeholder}
+        style={saInp(false,!!error)}/>
+      {error&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{error}</div>}
+    </div>
+  );
+}
+function SelectSA({ label, k, opts, required, value, onChange }) {
+  return (
+    <div>
+      <label style={{ fontSize:11, fontWeight:700, color:"#8C7B6C", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
+        {label}{required&&<span style={{color:"#F87171"}}> *</span>}
+      </label>
+      <select value={value} onChange={e=>onChange(k,e.target.value)} style={{...saInp(), appearance:"none"}}>
+        {opts.map(o=><option key={o.v} value={o.v} style={{background:"#FDFAF7"}}>{o.l}</option>)}
+      </select>
+    </div>
+  );
+}
+
 function SuperAdminView({ onSwitch, isMobile }) {
   const [tenants, setTenants] = useState(TENANTS_INIT);
   const [search, setSearch]   = useState("");
@@ -1878,10 +1905,9 @@ function SuperAdminView({ onSwitch, isMobile }) {
   const toSlug = (s) =>
     s.toLowerCase()
      .normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-     .replace(/[^a-z0-9]+/g,"-")
-     .replace(/(^-|-$)/g,"");
+     .replace(/[^a-z0-9]/g,"");
 
-  const validateSlug = (s) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s);
+  const validateSlug = (s) => /^[a-z0-9]+$/.test(s);
 
   // ── Shared styles ─────────────────────────────────────────────────────────────
   const SA = saInp();
@@ -1889,8 +1915,8 @@ function SuperAdminView({ onSwitch, isMobile }) {
   // ── Form Modal (New + Edit) ───────────────────────────────────────────────────
   function TenantFormModal({ editing }) {
     const emptyF = editing
-      ? { name:editing.name, slug:editing.slug||"", email:editing.email||"", firstName:editing.firstName||"", lastName:editing.lastName||"", phone:editing.phone||"", city:editing.city||"", address:editing.address||"", plan:editing.plan||"Starter", type:editing.type||"Yoga", notes:editing.notes||"", isCoach:editing.isCoach||false }
-      : { name:"", slug:"", email:"", firstName:"", lastName:"", phone:"", city:"", address:"", plan:"Starter", type:"Yoga", notes:"", isCoach:false };
+      ? { name:editing.name, slug:editing.slug||"", email:editing.email||"", firstName:editing.firstName||"", lastName:editing.lastName||"", phone:editing.phone||"", city:editing.city||"", address:editing.address||"", plan:editing.plan||"Essentiel", type:editing.type||"Yoga", notes:editing.notes||"", isCoach:editing.isCoach||false }
+      : { name:"", slug:"", email:"", firstName:"", lastName:"", phone:"", city:"", address:"", plan:"Essentiel", type:"Yoga", notes:"", isCoach:false };
     const [f, setF] = useState(emptyF);
     const [step, setStep] = useState(1);
     const [errors, setErrors] = useState({});
@@ -1946,7 +1972,7 @@ function SuperAdminView({ onSwitch, isMobile }) {
           contact:`${f.firstName} ${f.lastName}`,
           firstName:f.firstName, lastName:f.lastName, phone:f.phone, notes:f.notes,
           isCoach:f.isCoach,
-          members:0, revenue:f.plan==="Business"?199:f.plan==="Pro"?79:29,
+          members:0, revenue:f.plan==="Pro"?69:f.plan==="Standard"?29:9,
           status:"actif", since, growth:0
         };
         setTenants(prev=>[newT, ...prev]);
@@ -1954,27 +1980,6 @@ function SuperAdminView({ onSwitch, isMobile }) {
       }
       setModal(null);
     };
-
-    const FieldSA = ({label, k, placeholder, type="text", required}) => (
-      <div>
-        <label style={{ fontSize:11, fontWeight:700, color:"#8C7B6C", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
-          {label}{required&&<span style={{color:"#F87171"}}> *</span>}
-        </label>
-        <input type={type} value={f[k]} onChange={e=>upd(k,e.target.value)} placeholder={placeholder}
-          style={saInp(false,!!errors[k])}/>
-        {errors[k]&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{errors[k]}</div>}
-      </div>
-    );
-    const SelectSA = ({label, k, opts, required}) => (
-      <div>
-        <label style={{ fontSize:11, fontWeight:700, color:"#8C7B6C", textTransform:"uppercase", letterSpacing:.8, display:"block", marginBottom:5 }}>
-          {label}{required&&<span style={{color:"#F87171"}}> *</span>}
-        </label>
-        <select value={f[k]} onChange={e=>upd(k,e.target.value)} style={{...saInp(), appearance:"none"}}>
-          {opts.map(o=><option key={o.v} value={o.v} style={{background:"#FDFAF7"}}>{o.l}</option>)}
-        </select>
-      </div>
-    );
 
     const STEPS = ["Studio", "Contact", "Confirmation"];
     return (
@@ -1998,7 +2003,7 @@ function SuperAdminView({ onSwitch, isMobile }) {
 
           {step===1&&(
             <div style={{display:"flex",flexDirection:"column",gap:16}}>
-              <FieldSA label="Nom du studio / centre" k="name" placeholder="Ex: Yoga Flow Paris" required/>
+              <FieldSA label="Nom du studio / centre" k="name" placeholder="Ex: Yoga Flow Paris" required value={f.name} onChange={upd} error={errors.name}/>
               <div>
                 <label style={{fontSize:11,fontWeight:700,color:"#8C7B6C",textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:5}}>
                   Sous-domaine <span style={{color:"#B0A090"}}>(lettres, chiffres, tirets)</span> <span style={{color:"#F87171"}}>*</span>
@@ -2012,16 +2017,16 @@ function SuperAdminView({ onSwitch, isMobile }) {
                 <div style={{fontSize:11,color:"#B0A090",marginTop:4}}>✓ Autorisé : <code style={{color:"#A06838"}}>yoga-paris</code> · <code style={{color:"#A06838"}}>studio2</code> &nbsp; ✗ Interdit : points, espaces, majuscules, accents</div>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <FieldSA label="Ville" k="city" placeholder="Paris, Lyon…" required/>
-                <FieldSA label="Adresse" k="address" placeholder="12 rue de la Paix"/>
+                <FieldSA label="Ville" k="city" placeholder="Paris, Lyon…" required value={f.city} onChange={upd} error={errors.city}/>
+                <FieldSA label="Adresse" k="address" placeholder="12 rue de la Paix" value={f.address} onChange={upd}/>
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <SelectSA label="Type de pratique" k="type" required opts={[
+                <SelectSA label="Type de pratique" k="type" required value={f.type} onChange={upd} opts={[
                   {v:"Yoga",l:"🧘 Yoga"},{v:"Pilates",l:"⚡ Pilates"},{v:"Danse",l:"💃 Danse"},
                   {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi-disciplines"}
                 ]}/>
-                <SelectSA label="Plan Fydelys" k="plan" opts={[
-                  {v:"Starter",l:"Starter — 29 €/mois"},{v:"Pro",l:"Pro — 79 €/mois"},{v:"Business",l:"Business — 199 €/mois"}
+                <SelectSA label="Plan Fydelys" k="plan" value={f.plan} onChange={upd} opts={[
+                  {v:"Essentiel",l:"Essentiel — 9 €/mois"},{v:"Standard",l:"Standard — 29 €/mois"},{v:"Pro",l:"Pro — 69 €/mois"}
                 ]}/>
               </div>
             </div>
@@ -2033,11 +2038,11 @@ function SuperAdminView({ onSwitch, isMobile }) {
                 👤 Informations du gérant / responsable du studio
               </div>
               <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-                <FieldSA label="Prénom" k="firstName" placeholder="Marie" required/>
-                <FieldSA label="Nom" k="lastName" placeholder="Laurent" required/>
+                <FieldSA label="Prénom" k="firstName" placeholder="Marie" required value={f.firstName} onChange={upd} error={errors.firstName}/>
+                <FieldSA label="Nom" k="lastName" placeholder="Laurent" required value={f.lastName} onChange={upd} error={errors.lastName}/>
               </div>
-              <FieldSA label="Email professionnel" k="email" type="email" placeholder="marie@studio.fr" required/>
-              <FieldSA label="Téléphone" k="phone" type="tel" placeholder="+33 6 12 34 56 78" required/>
+              <FieldSA label="Email professionnel" k="email" type="email" placeholder="marie@studio.fr" required value={f.email} onChange={upd} error={errors.email}/>
+              <FieldSA label="Téléphone" k="phone" type="tel" placeholder="+33 6 12 34 56 78" required value={f.phone} onChange={upd} error={errors.phone}/>
               {/* Toggle coach */}
               <div onClick={()=>upd("isCoach",!f.isCoach)}
                 style={{display:"flex",alignItems:"center",justifyContent:"space-between",padding:"12px 14px",background:f.isCoach?"#F5EBE0":"#FAFAF8",border:`1px solid ${f.isCoach?"rgba(160,104,56,.3)":"#DDD5C8"}`,borderRadius:10,cursor:"pointer",userSelect:"none"}}>

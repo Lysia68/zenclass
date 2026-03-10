@@ -39,9 +39,14 @@ export async function middleware(request: NextRequest) {
           cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
           supabaseResponse = NextResponse.next({ request: { headers: requestHeaders } })
           setHeaders(supabaseResponse)
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
+          cookiesToSet.forEach(({ name, value, options }) => {
+            // Partager les cookies sur tous les sous-domaines .fydelys.fr
+            const cookieOptions = { ...options }
+            if (!hostname.includes("localhost")) {
+              cookieOptions.domain = ".fydelys.fr"
+            }
+            supabaseResponse.cookies.set(name, value, cookieOptions)
+          })
         },
       },
     }

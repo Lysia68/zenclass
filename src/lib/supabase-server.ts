@@ -12,9 +12,14 @@ export async function createServerSupabase() {
         getAll() { return cookieStore.getAll() },
         setAll(cookiesToSet: { name: string; value: string; options?: any }[]) {
           try {
-            cookiesToSet.forEach(({ name, value, options }) =>
-              cookieStore.set(name, value, options)
-            )
+            cookiesToSet.forEach(({ name, value, options }) => {
+              // Partager la session sur tous les sous-domaines .fydelys.fr
+              const opts = { ...options }
+              if (typeof process !== "undefined" && process.env.NEXT_PUBLIC_ROOT_DOMAIN) {
+                opts.domain = "." + process.env.NEXT_PUBLIC_ROOT_DOMAIN
+              }
+              cookieStore.set(name, value, opts)
+            })
           } catch {}
         },
       },

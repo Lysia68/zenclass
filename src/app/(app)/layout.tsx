@@ -111,6 +111,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
       coachDisciplines={coachDisciplines}
       billingStatus={billingStatus}
       trialEndsAt={trialEndsAt}
+      onSignOut={async () => {
+        await supabase.auth.signOut()
+        window.location.href = "https://fydelys.fr"
+      }}
     />
   )
 }

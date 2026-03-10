@@ -291,7 +291,7 @@ function IcoLogOut({s,c}) {
   );
 }
 
-function TopBar({ title, isMobile }) {
+function TopBar({ title, isMobile, onSignOut, isSuperAdmin }) {
   return (
     <div style={{ background:C.surface, borderBottom:`1.5px solid ${C.border}`, padding:`0 ${isMobile?16:28}px`, height:isMobile?48:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
       <div style={{ fontSize:isMobile?18:20, fontWeight:700, color:C.text, letterSpacing:isMobile?-0.3:0 }}>
@@ -299,6 +299,12 @@ function TopBar({ title, isMobile }) {
       </div>
       <div style={{ display:"flex", alignItems:"center", gap:8 }}>
         {!isMobile && <Pill color={C.textSoft} bg={C.bg}>Yogalate Paris</Pill>}
+        {isSuperAdmin && (
+          <a href="https://fydelys.fr/dashboard"
+            style={{ fontSize:11, padding:"5px 12px", borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, color:C.textSoft, textDecoration:"none", fontWeight:600, display:"flex", alignItems:"center", gap:5, whiteSpace:"nowrap" }}>
+            ⬅ SuperAdmin
+          </a>
+        )}
         {/* Avatar + nom */}
         <div style={{ display:"flex", alignItems:"center", gap:7, padding:"4px 10px 4px 5px", background:C.bg, border:`1px solid ${C.border}`, borderRadius:20 }}>
           <div style={{ width:24, height:24, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:10, fontWeight:700, color:C.accent, flexShrink:0 }}>ML</div>
@@ -307,7 +313,7 @@ function TopBar({ title, isMobile }) {
         {/* Bouton déconnexion */}
         <button
           title="Se déconnecter"
-          onClick={()=>{ if(window.confirm("Se déconnecter de Fydelys ?")) window.location.reload(); }}
+          onClick={()=>{ if(window.confirm("Se déconnecter de Fydelys ?")) onSignOut?.() }}
           style={{ display:"flex", alignItems:"center", justifyContent:"center", width:32, height:32, borderRadius:8, border:`1px solid ${C.border}`, background:C.bg, cursor:"pointer", flexShrink:0, transition:"all .15s" }}
           onMouseEnter={e=>{e.currentTarget.style.background=C.warnBg; e.currentTarget.style.borderColor="#EFC8BC";}}
           onMouseLeave={e=>{e.currentTarget.style.background=C.bg; e.currentTarget.style.borderColor=C.border;}}>
@@ -1883,7 +1889,7 @@ function SelectSA({ label, k, opts, required, value, onChange }) {
   );
 }
 
-function SuperAdminView({ onSwitch, isMobile }) {
+function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
   const [tenants, setTenants] = useState(TENANTS_INIT);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("tous");
@@ -2161,7 +2167,14 @@ function SuperAdminView({ onSwitch, isMobile }) {
             <div style={{fontSize:11,color:"#8C7B6C",textTransform:"uppercase",letterSpacing:1,fontWeight:600}}>Super Admin</div>
           </div>
         </div>
-        <div style={{fontSize:12,color:"#B0A090"}}>Plateforme · {tenants.length} tenant{tenants.length!==1?"s":""}</div>
+        <div style={{display:"flex",alignItems:"center",gap:10}}>
+          <div style={{fontSize:12,color:"#B0A090"}}>Plateforme · {tenants.length} tenant{tenants.length!==1?"s":""}</div>
+          <button
+            onClick={()=>{ if(window.confirm("Se déconnecter de Fydelys ?")) onSignOut?.() }}
+            style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1px solid #DDD5C8",background:"transparent",color:"#8C7B6C",cursor:"pointer",fontWeight:600,display:"flex",alignItems:"center",gap:5}}>
+            🚪 Déconnexion
+          </button>
+        </div>
       </div>
 
       <div style={{padding:`${p}px`}}>
@@ -2233,6 +2246,11 @@ function SuperAdminView({ onSwitch, isMobile }) {
                 <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.status==="actif"?"rgba(52,211,153,.15)":"rgba(248,113,113,.15)",color:t.status==="actif"?"#34D399":"#F87171"}}>{t.status==="actif"?"Actif":"Suspendu"}</span>
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button
+                  onClick={()=>window.open(`https://${t.slug}.fydelys.fr/dashboard`,"_blank")}
+                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(160,104,56,.3)",background:"rgba(160,104,56,.08)",color:"#A06838",cursor:"pointer",fontWeight:600}}>
+                  🔗 Accéder
+                </button>
                 <button onClick={()=>setModal({type:"edit",tenant:t})}
                   style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(167,139,250,.3)",background:"rgba(167,139,250,.1)",color:"#8C5E38",cursor:"pointer",fontWeight:600}}>✏ Modifier</button>
                 {t.status==="actif"
@@ -3103,7 +3121,7 @@ function AdherentView({ onSwitch, isMobile }) {
 // ══════════════════════════════════════════════════════════════════════════════
 // ROOT — switch automatique par rôle
 // ══════════════════════════════════════════════════════════════════════════════
-export default function App({ initialRole = "admin", studioSlug = "", coachName = "", coachDisciplines = [], billingStatus = "trialing", trialEndsAt = null }) {
+export default function App({ initialRole = "admin", studioSlug = "", coachName = "", coachDisciplines = [], billingStatus = "trialing", trialEndsAt = null, onSignOut = null }) {
   const [role, setRole] = useState(initialRole); // "superadmin" | "admin" | "coach" | "adherent"
   const [page, setPage] = useState("planning");
   const width = useWidth();
@@ -3116,7 +3134,7 @@ export default function App({ initialRole = "admin", studioSlug = "", coachName 
   const showTrialBanner  = billingStatus === "trialing" && trialDaysLeft <= 7;
   const showPastDueBanner = billingStatus === "past_due";
 
-  if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile}/>;
+  if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile} onSignOut={onSignOut}/>;
   if (role === "coach")      return <CoachView      onSwitch={setRole} isMobile={isMobile} coachName={coachName||MY_COACH_NAME} coachDisciplines={coachDisciplines}/>;
   if (role === "adherent")   return <AdherentView   onSwitch={setRole} isMobile={isMobile}/>;
   // admin avec is_coach → vue admin normale (ils ont accès à tout)
@@ -3135,7 +3153,7 @@ export default function App({ initialRole = "admin", studioSlug = "", coachName 
       `}</style>
       {!isMobile && <Sidebar active={page} onNav={setPage}/>}
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?60:0 }}>
-        <TopBar title={PAGE_TITLES[page]} isMobile={isMobile}/>
+        <TopBar title={PAGE_TITLES[page]} isMobile={isMobile} onSignOut={onSignOut} isSuperAdmin={initialRole==="superadmin"}/>
         {/* Bannière trial expiration */}
         {showTrialBanner && (
           <div style={{ background:trialDaysLeft<=3?"#F5EAE6":"#FDF4E3", borderBottom:`1px solid ${trialDaysLeft<=3?"#F5C2B5":"rgba(196,146,42,.25)"}`, padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>

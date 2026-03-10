@@ -154,6 +154,8 @@ export default function LandingPage() {
         .nav-link:hover{background:rgba(160,104,56,.08);color:var(--accent);}
         .nav-cta{padding:9px 20px;background:var(--btn);border-radius:9px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;box-shadow:0 2px 8px rgba(154,96,48,.3);transition:opacity .2s,transform .15s;}
         .nav-cta:hover{opacity:.9;transform:translateY(-1px);}
+        .nav-cta-ghost{display:none;}
+        @media(max-width:768px){.nav-cta-ghost{display:inline-block;font-size:13px!important;padding:7px 12px!important;}.nav-cta{font-size:13px;padding:8px 14px;}}
 
         /* Hero */
         @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}
@@ -243,6 +245,9 @@ export default function LandingPage() {
         @media(max-width:768px){
           nav{padding:0 18px;}
           .nav-link{display:none;}
+          .nav-cta{display:flex;}
+          .nav-link-conn{display:flex!important;font-size:13px;padding:7px 10px;}
+          .nav-cta{font-size:13px;padding:8px 14px;}
           .sec{padding:64px 18px;}
           .feat-grid{grid-template-columns:1fr;border-radius:16px;}
           .disc-grid{grid-template-columns:1fr 1fr;}
@@ -268,7 +273,8 @@ export default function LandingPage() {
         <div className="nav-links">
           <a href="#fonctionnalites" className="nav-link">Fonctionnalités</a>
           <a href="#tarifs" className="nav-link">Tarifs</a>
-          <a href="/login" className="nav-link">Connexion</a>
+          <a href="/login" className="nav-link nav-link-conn">Connexion</a>
+          <a href="/login" style={{padding:"8px 14px",borderRadius:"8px",fontSize:14,fontWeight:600,color:"var(--mid)",textDecoration:"none",border:"1.5px solid var(--border)",background:"rgba(255,255,255,.55)"}} className="nav-cta-ghost">Connexion</a>
           <a href="/login?tab=register" className="nav-cta">Créer mon studio</a>
         </div>
       </nav>
@@ -391,7 +397,7 @@ export default function LandingPage() {
 
       {/* ── HOW IT WORKS ── */}
       <section className="sec" style={{background:"var(--bg2)"}}>
-        <div className="inner" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"center"}} >
+        <div className="inner how-grid" style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:80,alignItems:"center"}}>
           <div>
             <div className="sec-tag">✦ En 3 étapes</div>
             <h2 className="sec-h">Lancez votre studio en 5 minutes</h2>
@@ -409,19 +415,20 @@ export default function LandingPage() {
             </div>
           </div>
           {/* Testimonial */}
-          <div style={{background:"var(--surface)",border:"1.5px solid var(--border)",borderRadius:24,padding:40,boxShadow:"0 20px 60px rgba(42,31,20,.06)"}}>
-            <div style={{fontFamily:"var(--D)",fontSize:22,fontWeight:600,color:"#2A1F14",marginBottom:24,fontStyle:"italic",lineHeight:1.5}}>
-              "Fydelys a transformé la gestion de mon studio. Mes adhérentes adorent pouvoir réserver et payer directement depuis leur téléphone."
-            </div>
+          <div style={{background:"var(--surface)",border:"1.5px solid var(--border)",borderRadius:24,padding:"clamp(24px,4vw,40px)",boxShadow:"0 20px 60px rgba(42,31,20,.06)",position:"relative",overflow:"hidden"}}>
+            <div style={{position:"absolute",top:-20,right:-20,fontFamily:"Georgia,serif",fontSize:120,color:"rgba(160,104,56,.06)",lineHeight:1,pointerEvents:"none",userSelect:"none"}}>"</div>
             <div style={{display:"flex",gap:12,alignItems:"center",marginBottom:20}}>
-              <div style={{width:44,height:44,borderRadius:"50%",background:"linear-gradient(135deg,#E8C88A,#C4922A)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:18,fontWeight:700,color:"#fff",fontFamily:"Georgia,serif"}}>M</div>
+              <div style={{width:48,height:48,borderRadius:"50%",background:"linear-gradient(135deg,#E8C88A,#C4922A)",display:"flex",alignItems:"center",justifyContent:"center",fontSize:20,fontWeight:700,color:"#fff",fontFamily:"Georgia,serif",flexShrink:0}}>M</div>
               <div>
-                <div style={{fontSize:14,fontWeight:700,color:"#2A1F14"}}>Marie L.</div>
+                <div style={{fontSize:15,fontWeight:700,color:"#2A1F14"}}>Marie L.</div>
                 <div style={{fontSize:12,color:"#8C7B6C"}}>Studio Yoga Lumière · Lyon</div>
+                <div style={{color:"#C4922A",fontSize:12,marginTop:2}}>⭐⭐⭐⭐⭐</div>
               </div>
             </div>
-            <div style={{padding:16,background:"var(--bg)",borderRadius:12,fontSize:13,color:"#8C7B6C",lineHeight:1.7}}>
-              <div style={{color:"#C4922A",fontWeight:700,marginBottom:4}}>⭐⭐⭐⭐⭐</div>
+            <div style={{fontFamily:"var(--D)",fontSize:"clamp(16px,2.2vw,21px)",fontWeight:600,color:"#2A1F14",fontStyle:"italic",lineHeight:1.6,marginBottom:16}}>
+              "Fydelys a transformé la gestion de mon studio. Mes adhérentes adorent pouvoir réserver et payer directement depuis leur téléphone."
+            </div>
+            <div style={{padding:"12px 16px",background:"var(--bg)",borderRadius:12,fontSize:13,color:"#8C7B6C",lineHeight:1.7,borderLeft:"3px solid var(--accent)"}}>
               Onboarding en 10 minutes, interface claire, support très réactif. Je recommande à tous les gérants de studio.
             </div>
           </div>

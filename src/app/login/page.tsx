@@ -196,7 +196,7 @@ function SR({ label, k, opts, value, onChange }:SRProps) {
 export default function LoginPage() {
   const [ctx, setCtx]           = useState<Ctx>("tenant-login")
   const [studioName, setStudioName] = useState("")
-  const [tab, setTab]           = useState<""|"login"|"register">("")
+  const [tab, setTab]           = useState<"login"|"register">("login")
   const [email, setEmail]       = useState("")
   const [loading, setLoading]   = useState(false)
   const [sent, setSent]         = useState(false)
@@ -219,7 +219,11 @@ export default function LoginPage() {
   useEffect(()=>{
     const h = window.location.hostname
     if(h==="fydelys.fr"||h==="localhost"||h.startsWith("localhost:")) {
-      setCtx("superadmin"); setTab("")
+      setCtx("superadmin")
+      // Si ?tab=register dans l'URL → créer studio directement
+      const tabParam = new URLSearchParams(window.location.search).get("tab")
+      if (tabParam === "register") { setTab("register") }
+      else { setTab("login") }  // Par défaut : connexion directe, pas les 2 CTA
     } else {
       const m = h.match(/^([a-z0-9-]+)\.fydelys\.fr/)
       if(m) supabase.from("studios").select("name").eq("slug",m[1]).single()
@@ -276,7 +280,7 @@ export default function LoginPage() {
   async function handleLogin(e:React.FormEvent){
     e.preventDefault(); setLoading(true); setError(null)
     const {error}=await supabase.auth.signInWithOtp({email,
-      options:{emailRedirectTo:`https://fydelys.fr/auth/callback?next=/dashboard`}})
+      options:{emailRedirectTo:`https://fydelys.fr/auth/confirm?next=/dashboard`}})
     if(error&&!error.message?.includes("Database error")) setError(error.message)
     else setSent(true)
     setLoading(false)
@@ -298,7 +302,7 @@ export default function LoginPage() {
     },{onConflict:"email"})
     if(se){ setError("Erreur lors de l'enregistrement."); setLoading(false); return }
     const {error}=await supabase.auth.signInWithOtp({email:reg.email,options:{
-      emailRedirectTo:`https://fydelys.fr/auth/callback?next=/dashboard&register=1`,
+      emailRedirectTo:`https://fydelys.fr/auth/confirm?next=/dashboard&register=1`,
       shouldCreateUser:true,
       data:{first_name:reg.firstName,last_name:reg.lastName},
     }})
@@ -354,7 +358,7 @@ export default function LoginPage() {
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'Inter',-apple-system,sans-serif"}}>
       <div style={{position:"fixed",inset:0,background:C.glow,pointerEvents:"none"}}/>
 
-      <div style={{width:"100%",maxWidth:ctx==="superadmin"&&tab==="register"?500:tab===""?380:400,position:"relative"}}>
+      <div style={{width:"100%",maxWidth:ctx==="superadmin"&&tab==="register"?500:400,position:"relative"}}>
 
         {/* Logo */}
         <div style={{textAlign:"center",marginBottom:32}}>
@@ -386,17 +390,12 @@ export default function LoginPage() {
           </div>
         )}
 
-        <div style={{background:tab===""?"transparent":C.card,backdropFilter:tab===""?"none":"blur(20px)",WebkitBackdropFilter:tab===""?"none":"blur(20px)",border:tab===""?"none":C.border,borderRadius:20,padding:tab===""?"0":"28px 26px",boxShadow:tab===""?"none":"0 8px 40px rgba(42,31,20,.08)"}}>
+        <div style={{background:C.card,backdropFilter:"blur(20px)",WebkitBackdropFilter:"blur(20px)",border:C.border,borderRadius:20,padding:"28px 26px",boxShadow:"0 8px 40px rgba(42,31,20,.08)"}}>
 
           {/* LOGIN */}
           {(ctx!=="superadmin"||tab==="login") && !sent && (
             <>
-              {ctx==="superadmin" && (
-                <button onClick={()=>{setTab("");setError(null);setSent(false)}}
-                  style={{background:"none",border:"none",color:C.sub,fontSize:13,cursor:"pointer",padding:"0 0 16px",display:"flex",alignItems:"center",gap:6,fontWeight:600}}>
-                  ← Retour
-                </button>
-              )}
+
               <div style={{marginBottom:20}}>
                 <h2 style={{fontSize:17,fontWeight:700,color:C.title,margin:"0 0 5px",letterSpacing:-0.3}}>Connexion sans mot de passe</h2>
                 <p style={{fontSize:13,color:C.sub,margin:0,lineHeight:1.6}}>Recevez un lien sécurisé dans votre boîte mail.</p>
@@ -430,9 +429,9 @@ export default function LoginPage() {
           {/* REGISTER */}
           {ctx==="superadmin" && tab==="register" && !regSent && (
             <>
-              <button onClick={()=>{setTab("");setError(null);setRegStep(1)}}
+              <button onClick={()=>window.location.href="/"}
                 style={{background:"none",border:"none",color:C.sub,fontSize:13,cursor:"pointer",padding:"0 0 16px",display:"flex",alignItems:"center",gap:6,fontWeight:600}}>
-                ← Retour
+                ← Retour à l'accueil
               </button>
               <div style={{display:"flex",gap:6,marginBottom:22}}>
                 {["Studio","Contact","Confirmation"].map((s,i)=>(

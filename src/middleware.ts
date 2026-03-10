@@ -52,6 +52,18 @@ export async function middleware(request: NextRequest) {
     }
   )
 
+  // ── Intercepter ?code= sur la racine (Supabase confirmation email) ─────────
+  // Supabase peut envoyer le code sur / au lieu de /auth/callback
+  const codeParam = searchParams.get("code")
+  if (codeParam && (pathname === "/" || pathname === "")) {
+    const callbackUrl = new URL("/auth/callback", request.url)
+    callbackUrl.searchParams.set("code", codeParam)
+    // Préserver register=1 si présent
+    const registerParam = searchParams.get("register")
+    if (registerParam) callbackUrl.searchParams.set("register", registerParam)
+    return NextResponse.redirect(callbackUrl)
+  }
+
   const { data: { user } } = await supabase.auth.getUser()
   const isProtected = pathname.startsWith("/dashboard") || pathname.startsWith("/planning") ||
                       pathname.startsWith("/members") || pathname.startsWith("/subscriptions") ||

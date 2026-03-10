@@ -13,11 +13,25 @@ export async function GET(request: NextRequest) {
   const tenantSlug  = tenantMatch ? tenantMatch[1] : null
   const isTenant    = !!tenantSlug && !isApp
 
-  if (!code) return NextResponse.redirect(new URL("/", request.url))
+  const tokenHash = searchParams.get("token_hash")
+  const type = searchParams.get("type")
 
-  // anon client pour échanger le code → session cookie
+  if (!code && !tokenHash) return NextResponse.redirect(new URL("/", request.url))
+
+  // anon client pour échanger le code/token → session cookie
   const supabase = await createServerSupabase()
-  const { data, error } = await supabase.auth.exchangeCodeForSession(code)
+  let data: any, error: any
+
+  if (tokenHash) {
+    // Flux email confirmation (token_hash)
+    const res = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: (type as any) || "signup" })
+    data = res.data; error = res.error
+  } else {
+    // Flux magic link (code PKCE)
+    const res = await supabase.auth.exchangeCodeForSession(code!)
+    data = res.data; error = res.error
+  }
+
   if (error || !data.user) return NextResponse.redirect(new URL("/?error=auth", request.url))
 
   // service_role pour toutes les opérations DB (bypass RLS sans policy SELECT)

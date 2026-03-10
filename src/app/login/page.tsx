@@ -268,7 +268,7 @@ export default function LoginPage() {
   async function handleLogin(e:React.FormEvent){
     e.preventDefault(); setLoading(true); setError(null)
     const {error}=await supabase.auth.signInWithOtp({email,
-      options:{emailRedirectTo:`${window.location.origin}/auth/callback?next=/dashboard`}})
+      options:{emailRedirectTo:`https://fydelys.fr/auth/callback?next=/dashboard`}})
     if(error&&!error.message?.includes("Database error")) setError(error.message)
     else setSent(true)
     setLoading(false)

@@ -1036,30 +1036,96 @@ function Payments({ isMobile }) {
   );
 }
 
+const DAYS_FR = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
+
 function DisciplinesPage({ isMobile }) {
-  const [discs, setDiscs] = useState(DISCIPLINES);
-  const [nD, setND] = useState({ name:"", icon:"🏃", color:C.accent });
+  const [discs, setDiscs] = useState(DISCIPLINES.map(d=>({ ...d, slots:[] })));
+  const [nD, setND]       = useState({ name:"", icon:"🏃", color:C.accent });
+  const [editDisc, setEditDisc] = useState(null); // discipline en cours de config horaires
   const p = isMobile?16:28;
+
+  // Slots helpers
+  const addSlot = (id) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:[...(d.slots||[]),{day:"Lun",time:"09:00"}]}:d));
+  const rmSlot  = (id,si) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:d.slots.filter((_,j)=>j!==si)}:d));
+  const upSlot  = (id,si,field,val) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:d.slots.map((s,j)=>j===si?{...s,[field]:val}:s)}:d));
+
+  const ScheduleModal = ({ disc }) => (
+    <div onClick={e=>e.target===e.currentTarget&&setEditDisc(null)}
+      style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:C.surface,borderRadius:16,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,.18)",overflow:"hidden"}}>
+        <div style={{padding:"18px 22px",borderBottom:`1px solid ${C.border}`,display:"flex",alignItems:"center",justifyContent:"space-between",background:disc.color+"10"}}>
+          <div style={{display:"flex",alignItems:"center",gap:10}}>
+            <div style={{width:38,height:38,borderRadius:10,background:disc.color+"20",border:`1.5px solid ${disc.color}40`,display:"flex",alignItems:"center",justifyContent:"center",fontSize:20}}>
+              {(() => { const Ico = DISC_ICONS[disc.id]; return Ico ? <Ico s={20} c={disc.color}/> : null; })()}
+            </div>
+            <div>
+              <div style={{fontSize:15,fontWeight:800,color:C.text}}>{disc.name}</div>
+              <div style={{fontSize:12,color:C.textMuted}}>{disc.slots?.length||0} créneau{disc.slots?.length!==1?"x":""}</div>
+            </div>
+          </div>
+          <button onClick={()=>setEditDisc(null)} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"5px 9px",cursor:"pointer",fontSize:14,color:C.textSoft}}>✕</button>
+        </div>
+
+        <div style={{padding:"18px 22px",maxHeight:"55vh",overflowY:"auto"}}>
+          {(!disc.slots||disc.slots.length===0) ? (
+            <div style={{textAlign:"center",padding:"24px 0",color:C.textMuted,fontSize:13}}>
+              Aucun créneau — cliquez sur "Ajouter" pour commencer
+            </div>
+          ) : disc.slots.map((slot,si)=>(
+            <div key={si} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
+              <select value={slot.day} onChange={e=>upSlot(disc.id,si,"day",e.target.value)}
+                style={{padding:"9px 10px",borderRadius:9,border:`1.5px solid ${C.border}`,fontSize:13,color:C.text,background:C.surfaceWarm,flex:1,outline:"none"}}>
+                {DAYS_FR.map(d=><option key={d}>{d}</option>)}
+              </select>
+              <input type="time" value={slot.time} onChange={e=>upSlot(disc.id,si,"time",e.target.value)}
+                style={{padding:"9px 10px",borderRadius:9,border:`1.5px solid ${C.border}`,fontSize:13,color:C.text,background:C.surfaceWarm,flex:1,outline:"none"}}/>
+              <button onClick={()=>rmSlot(disc.id,si)}
+                style={{padding:"7px 11px",borderRadius:9,border:`1px solid ${C.border}`,background:C.surface,color:"#F87171",cursor:"pointer",fontSize:13,flexShrink:0}}>✕</button>
+            </div>
+          ))}
+          <button onClick={()=>addSlot(disc.id)}
+            style={{width:"100%",padding:"9px",borderRadius:9,border:"1.5px dashed #C4A87A",background:C.accentLight,color:C.accent,fontSize:13,fontWeight:600,cursor:"pointer",marginTop:8}}>
+            + Ajouter un créneau
+          </button>
+        </div>
+
+        <div style={{padding:"14px 22px",borderTop:`1px solid ${C.border}`,display:"flex",justifyContent:"flex-end",gap:10}}>
+          <Button variant="ghost" onClick={()=>setEditDisc(null)}>Fermer</Button>
+          <Button variant="primary" onClick={()=>setEditDisc(null)}>Enregistrer</Button>
+        </div>
+      </div>
+    </div>
+  );
+
   return (
     <div style={{ padding:p }}>
+      {editDisc && <ScheduleModal disc={editDisc}/>}
+
       <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:14, marginBottom:22 }}>
         {discs.map(d=>(
-          <Card key={d.id} style={{ textAlign:"center", borderTop:`3px solid ${d.color}` }}>
+          <Card key={d.id} style={{ textAlign:"center", borderTop:`3px solid ${d.color}`, padding:"16px 14px" }}>
             <div style={{ width:52, height:52, borderRadius:12, background:d.color+"18", border:`1.5px solid ${d.color}40`, display:"flex", alignItems:"center", justifyContent:"center", marginBottom:10, marginLeft:"auto", marginRight:"auto" }}>
               {(() => { const Ico = DISC_ICONS[d.id]; return Ico ? <Ico s={26} c={d.color}/> : null; })()}
             </div>
-            <div style={{ fontWeight:700, fontSize:17, color:C.text, marginBottom:14 }}>{d.name}</div>
-            <Button sm variant="danger" onClick={()=>setDiscs(prev=>prev.filter(x=>x.id!==d.id))}>Supprimer</Button>
+            <div style={{ fontWeight:700, fontSize:15, color:C.text, marginBottom:4 }}>{d.name}</div>
+            <div style={{ fontSize:11, color:C.textMuted, marginBottom:12 }}>
+              {d.slots?.length>0 ? `${d.slots.length} créneau${d.slots.length>1?"x":""}` : "Aucun horaire"}
+            </div>
+            <div style={{ display:"flex", flexDirection:"column", gap:6 }}>
+              <Button sm variant="primary" onClick={()=>setEditDisc(d)}>🗓 Horaires</Button>
+              <Button sm variant="danger" onClick={()=>setDiscs(prev=>prev.filter(x=>x.id!==d.id))}>Supprimer</Button>
+            </div>
           </Card>
         ))}
       </div>
+
       <Card style={{ maxWidth:480 }}>
         <div style={{ fontSize:14, fontWeight:700, color:C.accent, textTransform:"uppercase", marginBottom:16 }}>Ajouter une discipline</div>
         <div style={{ display:"grid", gridTemplateColumns:"56px 1fr auto", gap:10, alignItems:"end" }}>
           <Field label="Icône" value={nD.icon} onChange={v=>setND({...nD,icon:v})}/>
           <Field label="Nom" value={nD.name} onChange={v=>setND({...nD,name:v})} placeholder="Ex: Hot Yoga"/>
           <div style={{ paddingTop:22 }}>
-            <Button variant="primary" onClick={()=>{ if(!nD.name)return; setDiscs(prev=>[...prev,{id:Date.now(),...nD}]); setND({name:"",icon:"🏃",color:C.accent}); }}>＋</Button>
+            <Button variant="primary" onClick={()=>{ if(!nD.name)return; setDiscs(prev=>[...prev,{id:Date.now(),...nD,slots:[]}]); setND({name:"",icon:"🏃",color:C.accent}); }}>＋</Button>
           </div>
         </div>
       </Card>

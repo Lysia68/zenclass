@@ -189,12 +189,12 @@ export default function LoginPage() {
 
   const toSlug = (s:string) =>
     s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"")
-     .replace(/[^a-z0-9]+/g,"-").replace(/(^-|-$)/g,"")
-  const validSlug = (s:string) => /^[a-z0-9]+(-[a-z0-9]+)*$/.test(s)
+     .replace(/[^a-z0-9]/g,"")  // supprime tout sauf lettres et chiffres, pas de tirets
+  const validSlug = (s:string) => /^[a-z0-9]+$/.test(s)
   const updReg = (k:string,v:any) => {
     const n:any={...reg,[k]:v}
     if(k==="studioName") n.slug=toSlug(v)
-    if(k==="slug") n.slug=v.toLowerCase().replace(/[^a-z0-9-]/g,"")
+    if(k==="slug") n.slug=v.toLowerCase().replace(/[^a-z0-9]/g,"")
     setReg(n); setRegErrors(e=>({...e,[k]:undefined as any}))
   }
 
@@ -234,7 +234,7 @@ export default function LoginPage() {
     if(!reg.studioName.trim()) e.studioName="Obligatoire"
     if(!reg.city.trim())       e.city="Obligatoire"
     if(!reg.slug.trim())       e.slug="Obligatoire"
-    else if(!validSlug(reg.slug)) e.slug="Lettres minuscules, chiffres et tirets"
+    else if(!validSlug(reg.slug)) e.slug="Lettres minuscules et chiffres uniquement, sans tirets"
     return e
   }
   const step2valid = () => {
@@ -294,9 +294,6 @@ export default function LoginPage() {
   return (
     <div style={{minHeight:"100vh",background:C.bg,display:"flex",flexDirection:"column",alignItems:"center",justifyContent:"center",padding:24,fontFamily:"'Inter',-apple-system,sans-serif"}}>
       <div style={{position:"fixed",inset:0,background:C.glow,pointerEvents:"none"}}/>
-
-      {discModal && <DisciplinesModal studioType={reg.type} onClose={()=>setDiscModal(false)}
-        onSave={d=>{updReg("disciplines",d);setDiscModal(false)}}/>}
 
       <div style={{width:"100%",maxWidth:ctx==="superadmin"&&tab==="register"?500:400,position:"relative"}}>
 
@@ -392,7 +389,7 @@ export default function LoginPage() {
                     </div>
                     {regErrors.slug&&<div style={{fontSize:11,color:"#F87171",marginTop:3}}>{regErrors.slug}</div>}
                     <div style={{fontSize:11,color:"#B0A090",marginTop:4}}>
-                      ✓ Votre URL : <code style={{color:C.accent}}>{reg.slug||"monstudio"}.fydelys.fr</code>
+                      ✓ Votre URL : <code style={{color:C.accent}}>{reg.slug||"monstudio"}.fydelys.fr</code> · uniquement lettres et chiffres
                     </div>
                   </div>
 
@@ -404,23 +401,6 @@ export default function LoginPage() {
                     {v:"Yoga",l:"🧘 Yoga"},{v:"Pilates",l:"⚡ Pilates"},{v:"Danse",l:"💃 Danse"},
                     {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi"}
                   ]}/>
-
-                  {/* Bouton disciplines */}
-                  <div>
-                    <label style={lbl}>Disciplines & Horaires <span style={{color:"#B0A090"}}>(optionnel)</span></label>
-                    <button type="button" onClick={()=>setDiscModal(true)}
-                      style={{width:"100%",padding:"11px 14px",borderRadius:10,border:"1.5px dashed #C4A87A",
-                        background:"#FBF6EE",color:C.accent,fontSize:14,fontWeight:600,cursor:"pointer",
-                        display:"flex",alignItems:"center",justifyContent:"space-between"}}>
-                      <span>
-                        {reg.disciplines.length>0
-                          ? `${reg.disciplines.length} discipline${reg.disciplines.length>1?"s":""} · ${totalSlots} créneau${totalSlots>1?"x":""}`
-                          : "Configurer les cours et horaires"}
-                      </span>
-                      <span style={{fontSize:18}}>🗓</span>
-                    </button>
-                    <div style={{fontSize:11,color:"#B0A090",marginTop:4}}>Modifiable à tout moment depuis votre espace studio</div>
-                  </div>
 
                   <button onClick={()=>{const e=step1valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(2)}}
                     style={btn()}>Continuer →</button>
@@ -469,7 +449,6 @@ export default function LoginPage() {
                       ["URL",         `${reg.slug||"—"}.fydelys.fr`],
                       ["Ville",       reg.city],
                       ["Type",        reg.type],
-                      ["Disciplines", reg.disciplines.length>0?`${reg.disciplines.length} configurée${reg.disciplines.length>1?"s":""}`:"-"],
                       ["Plan",        "À choisir après l'activation (9 · 29 · 69 €/mois)"],
                       ["Gérant",      `${reg.firstName} ${reg.lastName}`],
                       ["Email",       reg.email],

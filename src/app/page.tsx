@@ -91,12 +91,12 @@ const FEATURES = [
 ]
 
 const DISCIPLINES = [
-  { emoji: "🧘", name: "Yoga",        desc: "Hatha, Vinyasa, Yin, Ashtanga…" },
-  { emoji: "🤸", name: "Pilates",     desc: "Mat, réformateur, barre au sol…" },
-  { emoji: "🧠", name: "Méditation",  desc: "Pleine conscience, sophrologie…" },
-  { emoji: "💃", name: "Danse",       desc: "Modern jazz, contemporain, barre…" },
-  { emoji: "🥊", name: "Arts martiaux", desc: "Taï-chi, karaté, self-défense…" },
-  { emoji: "🏃", name: "Fitness",     desc: "HIIT, circuit training, stretching…" },
+  { img: "https://images.unsplash.com/photo-1588286840104-8957b019727f?w=600&q=75&auto=format&fit=crop", name: "Yoga",          desc: "Hatha, Vinyasa, Yin, Ashtanga…",   tag: "Le plus populaire" },
+  { img: "https://images.unsplash.com/photo-1518611012118-696072aa579a?w=600&q=75&auto=format&fit=crop", name: "Pilates",       desc: "Mat, réformateur, barre au sol…",  tag: "" },
+  { img: "https://images.unsplash.com/photo-1506126613408-eca07ce68773?w=600&q=75&auto=format&fit=crop", name: "Méditation",    desc: "Pleine conscience, sophrologie…",  tag: "" },
+  { img: "https://images.unsplash.com/photo-1547153760-18fc86324498?w=600&q=75&auto=format&fit=crop",    name: "Danse",         desc: "Contemporary, jazz, barre…",       tag: "" },
+  { img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=75&auto=format&fit=crop", name: "Fitness",      desc: "HIIT, circuit training, cardio…",  tag: "" },
+  { img: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&q=75&auto=format&fit=crop",    name: "Stretching",   desc: "Souplesse, récupération, barre…",  tag: "" },
 ]
 
 const PLANS = [
@@ -189,10 +189,9 @@ export default function LandingPage() {
 
         /* Disciplines */
         .disc-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:48px;}
-        .disc-card{background:var(--surface);border:1.5px solid var(--border);border-radius:16px;padding:22px 20px;display:flex;align-items:flex-start;gap:14px;transition:transform .2s,box-shadow .2s;}
-        .disc-card:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(42,31,20,.07);}
-        .disc-emoji{font-size:28px;flex-shrink:0;line-height:1;}
-        .disc-name{font-size:15px;font-weight:700;color:var(--text);margin-bottom:3px;}
+        .disc-card-photo{background:var(--surface);border:1.5px solid var(--border);border-radius:14px;overflow:hidden;transition:transform .25s,box-shadow .25s;}
+        .disc-card-photo:hover{transform:translateY(-4px);box-shadow:0 14px 36px rgba(42,31,20,.1);}
+        .disc-name{font-size:14px;font-weight:700;color:var(--text);margin-bottom:3px;}
         .disc-desc{font-size:12px;color:var(--soft);}
 
         /* Screenshot mockup */
@@ -253,6 +252,7 @@ export default function LandingPage() {
           .footer-bottom{flex-direction:column;align-items:flex-start;}
           .how-grid{grid-template-columns:1fr!important;}
           .plans-grid{grid-template-columns:1fr!important;}
+          .mockups-grid{grid-template-columns:1fr!important;}
         }
         @media(max-width:480px){
           .disc-grid{grid-template-columns:1fr;}
@@ -369,9 +369,15 @@ export default function LandingPage() {
               <p className="sec-sub" style={{marginBottom:0}}>Fydelys s'adapte à votre studio, quelle que soit votre discipline.</p>
               <div className="disc-grid">
                 {DISCIPLINES.map((d) => (
-                  <div key={d.name} className="disc-card">
-                    <span className="disc-emoji">{d.emoji}</span>
-                    <div>
+                  <div key={d.name} className="disc-card-photo">
+                    <div style={{position:"relative",overflow:"hidden",borderRadius:"12px 12px 0 0",height:130}}>
+                      <img src={d.img} alt={d.name + " studio"} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .4s"}}
+                        onMouseOver={e=>(e.currentTarget.style.transform="scale(1.05)")}
+                        onMouseOut={e=>(e.currentTarget.style.transform="scale(1)")}
+                      />
+                      {d.tag && <span style={{position:"absolute",top:8,left:8,background:"rgba(196,146,42,.92)",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:8,letterSpacing:".4px"}}>{d.tag}</span>}
+                    </div>
+                    <div style={{padding:"12px 14px"}}>
                       <div className="disc-name">{d.name}</div>
                       <div className="disc-desc">{d.desc}</div>
                     </div>

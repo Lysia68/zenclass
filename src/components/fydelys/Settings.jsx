@@ -4,7 +4,7 @@ import { AppCtx } from "./context";
 import { C } from "./theme";
 import { FYDELYS_PLANS } from "./demoData";
 import { IcoUser, IcoUsers, IcoSettings, IcoCheck, IcoX, IcoMail, IcoLogOut } from "./icons";
-import { Card, SectionHead, Button, Field, Tag, Pill, RoleBadge, EmptyState } from "./ui";
+import { Card, SectionHead, Button, Field, Tag, Pill, EmptyState } from "./ui";
 
 function RoleBadge({ role }) {
   const r = ROLES_DEF[role] || ROLES_DEF.adherent;

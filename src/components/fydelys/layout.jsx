@@ -62,14 +62,6 @@ const MOBILE_NAV = [
 
 
 
-const MOBILE_NAV = [
-  {key:"dashboard", label:"Accueil"},
-  {key:"planning",  label:"Planning"},
-  {key:"members",   label:"Membres"},
-  {key:"payments",  label:"Paiements"},
-  {key:"settings",  label:"Plus"},
-];
-
 function BottomNav({ active, onNav }) {
   return (
     <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex", zIndex:200, height:62, boxShadow:"0 -2px 16px rgba(42,31,20,.07)" }}>

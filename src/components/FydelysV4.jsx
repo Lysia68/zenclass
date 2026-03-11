@@ -2468,8 +2468,6 @@ function AidePage({ isMobile }) {
     },
   ];
 
-  ];
-
   return (
     <div style={{ padding: p, maxWidth: 720 }}>
       <div style={{ marginBottom: 28 }}>

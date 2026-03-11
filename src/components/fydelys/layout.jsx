@@ -3,6 +3,7 @@ import { C } from "./theme";
 import { IcoYoga, NAV_ICONS, IcoLogOut } from "./icons";
 import { Pill, ConfirmModal } from "./ui";
 
+const NAV = [
   {key:"dashboard",     label:"Tableau de bord"},
   {key:"planning",      label:"Planning"},
   {key:"members",       label:"Adhérents"},

@@ -932,9 +932,6 @@ function Settings({ isMobile }) {
   );
 }
 
-const PAGE_TITLES = { dashboard:"Tableau de bord", planning:"Planning", members:"Adhérents", subscriptions:"Abonnements", payments:"Paiements", disciplines:"Disciplines", settings:"Paramètres", aide:"Aide" };
-const PAGES = { dashboard:Dashboard, planning:Planning, members:Members, subscriptions:Subscriptions, payments:Payments, disciplines:DisciplinesPage, settings:Settings, aide:AidePage };
-
 // ─── TENANTS DATA (Super Admin) ───────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
 // SUPER ADMIN VIEW

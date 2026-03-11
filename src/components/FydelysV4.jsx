@@ -1,6 +1,7 @@
+import { createClient } from "@/lib/supabase";
 import React, { useState, useEffect, useContext, createContext } from "react";
 
-const AppCtx = createContext({ studioName:"", userName:"", userEmail:"", planName:"", membersCount:0, userRole:"" });
+const AppCtx = createContext({ studioName:"", studioSlug:"", userName:"", userEmail:"", planName:"", membersCount:0, userRole:"" });
 
 // ── ConfirmModal — remplace window.confirm ────────────────────────────────────
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -28,14 +29,93 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 
 const MEMBERS = [];
 const DISCIPLINES = [
-  { id:1, name:"Yoga Vinyasa", icon:"🧘", color:"#C4956A" },
-  { id:2, name:"Pilates",      icon:"⚡", color:"#6B9E7A" },
-  { id:3, name:"Méditation",   icon:"☯",  color:"#6A8FAE" },
-  { id:4, name:"Yin Yoga",     icon:"🌙", color:"#AE7A7A" },
+  { id:1, name:"Yoga Vinyasa", icon:"🧘", color:"#C4956A", slots:[{day:"Lun",time:"09:00",duration:60},{day:"Mer",time:"18:30",duration:60},{day:"Sam",time:"10:00",duration:75}] },
+  { id:2, name:"Pilates",      icon:"⚡", color:"#6B9E7A", slots:[{day:"Mar",time:"17:30",duration:60},{day:"Jeu",time:"12:00",duration:45}] },
+  { id:3, name:"Méditation",   icon:"☯",  color:"#6A8FAE", slots:[{day:"Mer",time:"07:30",duration:30},{day:"Dim",time:"09:30",duration:45}] },
+  { id:4, name:"Yin Yoga",     icon:"🌙", color:"#AE7A7A", slots:[{day:"Ven",time:"19:00",duration:75},{day:"Dim",time:"17:00",duration:75}] },
 ];
 const SESSIONS_INIT = [];
 const BOOKINGS_INIT = {};
 const SUBSCRIPTIONS_INIT = [];
+
+// ── Plans Fydelys — modifier ici pour changer tarifs/limites ─────────────────
+// NOTE : toutes les formules incluent 15 jours d'essai gratuit avant paiement.
+// "Paiements adhérents" = module Stripe côté studio pour encaisser ses membres.
+const FYDELYS_PLANS = [
+  {
+    id: "essentiel",
+    name: "Essentiel",
+    price: 9,            // ← tarif mensuel (après essai 15j)
+    desc: "Pour démarrer",
+    color: "#5D6D7E",
+    limits: {
+      members:      50,   // ← adhérents max
+      coaches:       1,   // ← coachs max
+      disciplines:   1,   // ← disciplines max
+    },
+    features: [
+      { label: "1 discipline",                    ok: true  },
+      { label: "1 coach",                         ok: true  },
+      { label: "50 adhérents",                    ok: true  },
+      { label: "Planning + présences",            ok: true  },
+      { label: "Espace adhérent (magic link)",    ok: true  },
+      { label: "Séances récurrentes",             ok: true  },
+      { label: "Paiements adhérents (Stripe)",    ok: false },
+      { label: "Invitation d'équipe",             ok: false },
+      { label: "Rappel cours 1h avant",                     ok: false },
+      { label: "Support prioritaire",             ok: false },
+    ]
+  },
+  {
+    id: "standard",
+    name: "Standard",
+    price: 29,           // ← tarif mensuel (après essai 15j)
+    desc: "Pour les studios actifs",
+    color: "#A06838",
+    popular: true,
+    limits: {
+      members:      100,  // ← adhérents max
+      coaches:       3,   // ← coachs max
+      disciplines:   3,   // ← disciplines max
+    },
+    features: [
+      { label: "3 disciplines",                   ok: true  },
+      { label: "3 coachs",                        ok: true  },
+      { label: "100 adhérents",                   ok: true  },
+      { label: "Planning + présences",            ok: true  },
+      { label: "Espace adhérent (magic link)",    ok: true  },
+      { label: "Séances récurrentes",             ok: true  },
+      { label: "Paiements adhérents (Stripe)",    ok: true  },
+      { label: "Invitation d'équipe",             ok: true  },
+      { label: "Rappel cours 1h avant",                     ok: true  },
+      { label: "Support prioritaire",             ok: false },
+    ]
+  },
+  {
+    id: "pro",
+    name: "Pro",
+    price: 69,           // ← tarif mensuel (après essai 15j)
+    desc: "Pour les grands studios",
+    color: "#7B52A8",
+    limits: {
+      members:      null, // illimité
+      coaches:      null, // illimité
+      disciplines:  null, // illimité
+    },
+    features: [
+      { label: "Disciplines illimitées",          ok: true  },
+      { label: "Coachs illimités",                ok: true  },
+      { label: "Adhérents illimités",             ok: true  },
+      { label: "Planning + présences",            ok: true  },
+      { label: "Espace adhérent (magic link)",    ok: true  },
+      { label: "Séances récurrentes",             ok: true  },
+      { label: "Paiements adhérents (Stripe)",    ok: true  },
+      { label: "Invitation d'équipe",             ok: true  },
+      { label: "Rappel cours 1h avant",                     ok: true  },
+      { label: "Support prioritaire",             ok: true  },
+    ]
+  },
+];
 const PAYMENTS = [];
 
 // ── SVG ICON SYSTEM ───────────────────────────────────────────────────────────
@@ -79,7 +159,7 @@ const IcoMeditation= ({s,c}) => <ICG size={s} color={c}><circle cx="12" cy="5" r
 const IcoMoon      = ({s,c}) => <ICG size={s} color={c}><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></ICG>;
 
 const DISC_ICONS = { 1: IcoYoga, 2: IcoPilates, 3: IcoMeditation, 4: IcoMoon };
-const NAV_ICONS  = { dashboard: IcoHome, planning: IcoCalendar, members: IcoUsers, subscriptions: IcoTag, payments: IcoCreditCard, disciplines: IcoLayers, settings: IcoSettings };
+const NAV_ICONS  = { dashboard: IcoHome, planning: IcoCalendar, members: IcoUsers, subscriptions: IcoTag, payments: IcoCreditCard, disciplines: IcoLayers, settings: IcoSettings, aide: IcoHelpCircle };
 
 function useWidth() {
   const [w, setW] = useState(typeof window !== "undefined" ? window.innerWidth : 1200);
@@ -174,6 +254,7 @@ const NAV = [
   {key:"payments",      label:"Paiements"},
   {key:"disciplines",   label:"Disciplines"},
   {key:"settings",      label:"Paramètres"},
+  {key:"aide",          label:"Aide"},
 ];
 
 function Sidebar({ active, onNav, studioName = "Mon studio", planName = "Essentiel", membersCount = 0, userName = "", userRole = "Admin" }) {
@@ -237,6 +318,16 @@ function BottomNav({ active, onNav }) {
         );
       })}
     </nav>
+  );
+}
+
+function IcoHelpCircle({s,c}) {
+  return (
+    <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke={c} strokeWidth={1.5} strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+      <line x1="12" y1="17" x2="12.01" y2="17" strokeWidth="2"/>
+    </svg>
   );
 }
 
@@ -353,26 +444,7 @@ function KpiCard({ icon, label, value, delta, accentColor, isMobile }) {
 }
 
 
-// ── SEED BANNER — bouton pour insérer des données exemple ─────────────────────
-function SeedBanner({ onSeed, loading }) {
-  return (
-    <div style={{ margin:"32px auto", maxWidth:420, background:"#FFFDF9", border:"1.5px dashed #DDD5C8", borderRadius:16, padding:"28px 24px", textAlign:"center" }}>
-      <div style={{ fontSize:32, marginBottom:10 }}>🌱</div>
-      <div style={{ fontSize:15, fontWeight:700, color:C.text, marginBottom:6 }}>Aucune donnée pour l'instant</div>
-      <div style={{ fontSize:13, color:C.textSoft, lineHeight:1.6, marginBottom:20 }}>
-        Votre espace est vide. Vous pouvez insérer quelques données d'exemple pour explorer les fonctionnalités.
-      </div>
-      <button
-        onClick={onSeed}
-        disabled={loading}
-        style={{ background:loading?"#DDD5C8":"linear-gradient(145deg,#B88050,#9A6030)", color:"#fff", border:"none", borderRadius:10, padding:"10px 22px", fontSize:13, fontWeight:700, cursor:loading?"not-allowed":"pointer", opacity:loading?0.7:1 }}
-      >
-        {loading ? "Insertion…" : "✦ Insérer des données exemple"}
-      </button>
-      <div style={{ fontSize:11, color:"#B0A090", marginTop:10 }}>1 à 2 entrées par section — supprimables à tout moment</div>
-    </div>
-  );
-}
+
 
 // ── EMPTY STATE générique ────────────────────────────────────────────────────
 function EmptyState({ icon="📋", title, sub }) {
@@ -393,20 +465,11 @@ function Dashboard({ isMobile }) {
   const handleChangeStatus = (bid, sid, ns) => {
     setBookings(prev => { const nb={...prev}; nb[sid]=(nb[sid]||[]).map(b=>b.id===bid?{...b,st:ns}:b); return nb; });
   };
-  const [seedLoading, setSeedLoading] = useState(false);
-  const handleSeed = async () => {
-    setSeedLoading(true);
-    // Appel RPC seed via l'API (données légères : 1-2 lignes par table)
-    try {
-      await fetch("/api/seed-demo", { method:"POST" });
-      window.location.reload();
-    } catch(e) { console.error(e); }
-    setSeedLoading(false);
-  };
+
 
   if (SESSIONS_INIT.length === 0) return (
     <div style={{ padding:p }}>
-      <SeedBanner onSeed={handleSeed} loading={seedLoading}/>
+      
     </div>
   );
 
@@ -628,22 +691,87 @@ function Planning({ isMobile }) {
   const [fd, setFd] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
   const [nS, setNS] = useState({ disciplineId:1, teacher:"", date:"", time:"09:00", duration:60, spots:12, level:"Tous niveaux", room:"Studio A" });
+  const [coachesList, setCoachesList] = useState([]);
+  // Mode récurrence
+  const [recMode, setRecMode] = useState(false); // false = séance unique, true = récurrence
+  const [recFrom, setRecFrom] = useState("");
+  const [recTo, setRecTo]     = useState("");
+  const [recSlots, setRecSlots] = useState([]); // créneaux sélectionnés [{day,time,duration,disciplineId}]
+  const [recPreview, setRecPreview] = useState([]); // dates générées prévisualisées
   const p = isMobile?12:28;
 
+  // Utilitaire : convertir "Lun/Mar/…" → numéro JS getDay()
+  const DAY_NUM = { Lun:1, Mar:2, Mer:3, Jeu:4, Ven:5, Sam:6, Dim:0 };
+
+  // Charger la liste des coachs depuis Supabase au montage
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: profile } = await supabase.from("profiles").select("studio_id").eq("id", user.id).single();
+      if (!profile?.studio_id) return;
+      const { data: coaches } = await supabase
+        .from("profiles")
+        .select("id, first_name, last_name")
+        .eq("studio_id", profile.studio_id)
+        .in("role", ["coach", "admin"]);
+      if (coaches) {
+        setCoachesList(coaches.map(c => ({ id: c.id, name: `${c.first_name || ""} ${c.last_name || ""}`.trim() })));
+      }
+    });
+  }, []);
+
+  // Recalcule le preview quand les paramètres récurrence changent
+  useEffect(() => {
+    if (!recMode || !recFrom || !recTo || recSlots.length === 0) { setRecPreview([]); return; }
+    const from = new Date(recFrom); from.setHours(0,0,0,0);
+    const to   = new Date(recTo);   to.setHours(23,59,59,0);
+    if (from > to) { setRecPreview([]); return; }
+    const generated = [];
+    recSlots.forEach(slot => {
+      const targetDay = DAY_NUM[slot.day];
+      const cur = new Date(from);
+      // Avancer jusqu'au bon jour de la semaine
+      while (cur.getDay() !== targetDay) cur.setDate(cur.getDate() + 1);
+      while (cur <= to) {
+        generated.push({
+          id: Date.now() + Math.random(),
+          disciplineId: parseInt(slot.disciplineId),
+          teacher: slot.teacher || nS.teacher || "",
+          date: cur.toISOString().slice(0,10),
+          time: slot.time,
+          duration: slot.duration || 60,
+          spots: nS.spots || 12,
+          level: nS.level || "Tous niveaux",
+          room: nS.room || "Studio A",
+          booked: 0, waitlist: 0,
+        });
+        cur.setDate(cur.getDate() + 7); // semaine suivante
+      }
+    });
+    generated.sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+    setRecPreview(generated);
+  }, [recMode, recFrom, recTo, recSlots, nS.teacher, nS.spots, nS.level, nS.room]);
+
   const filtered = fd ? sessions.filter(s=>s.disciplineId===fd) : sessions;
-  const [seedLoading2, setSeedLoading2] = useState(false);
-  const handleSeed2 = async () => {
-    setSeedLoading2(true);
-    try { await fetch("/api/seed-demo", { method:"POST" }); window.location.reload(); } catch(e) {}
-    setSeedLoading2(false);
-  };
+
   const dates = [...new Set(filtered.map(s=>s.date))].sort();
 
   const addSession = () => {
-    if (!nS.teacher || !nS.date) return;
+    if (!nS.date) return;
     setSessions(prev => [...prev, { id:Date.now(), ...nS, booked:0, waitlist:0, disciplineId:parseInt(nS.disciplineId) }]);
     setShowAdd(false);
     setNS({ disciplineId:1, teacher:"", date:"", time:"09:00", duration:60, spots:12, level:"Tous niveaux", room:"Studio A" });
+  };
+
+  const addRecurringSessions = () => {
+    if (recPreview.length === 0) return;
+    setSessions(prev => [...prev, ...recPreview]);
+    setShowAdd(false);
+    setRecMode(false);
+    setRecFrom(""); setRecTo("");
+    setRecSlots([]);
+    setRecPreview([]);
   };
 
   const handleToggle = (id) => setExpandedId(prev => prev===id ? null : id);
@@ -684,21 +812,207 @@ function Planning({ isMobile }) {
 
       {showAdd && (
         <Card style={{ marginBottom:18, borderTop:`3px solid ${C.accent}` }}>
-          <div style={{ fontSize:14, fontWeight:700, color:C.accent, textTransform:"uppercase", marginBottom:16 }}>Créer une séance</div>
-          <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:14 }}>
-            <Field label="Discipline" value={nS.disciplineId} onChange={v=>setNS({...nS,disciplineId:v})} opts={DISCIPLINES.map(d=>({v:d.id,l:d.name}))}/>
-            <Field label="Professeur" value={nS.teacher} onChange={v=>setNS({...nS,teacher:v})} placeholder="Nom"/>
-            <Field label="Date" type="date" value={nS.date} onChange={v=>setNS({...nS,date:v})}/>
-            <Field label="Heure" type="time" value={nS.time} onChange={v=>setNS({...nS,time:v})}/>
-            <Field label="Durée (min)" type="number" value={nS.duration} onChange={v=>setNS({...nS,duration:v})}/>
-            <Field label="Places" type="number" value={nS.spots} onChange={v=>setNS({...nS,spots:v})}/>
-            <Field label="Niveau" value={nS.level} onChange={v=>setNS({...nS,level:v})} opts={["Tous niveaux","Débutant","Intermédiaire","Avancé"]}/>
-            <Field label="Salle" value={nS.room} onChange={v=>setNS({...nS,room:v})} placeholder="Studio A"/>
+          {/* Toggle séance unique / récurrence */}
+          <div style={{ display:"flex", gap:6, marginBottom:18 }}>
+            <button onClick={()=>setRecMode(false)}
+              style={{ flex:1, padding:"8px", borderRadius:8, border:`1.5px solid ${recMode?C.border:C.accent}`, background:recMode?"none":C.accentLight, color:recMode?C.textMuted:C.accent, fontSize:13, fontWeight:recMode?400:700, cursor:"pointer" }}>
+              📅 Séance unique
+            </button>
+            <button onClick={()=>setRecMode(true)}
+              style={{ flex:1, padding:"8px", borderRadius:8, border:`1.5px solid ${recMode?C.accent:C.border}`, background:recMode?C.accentLight:"none", color:recMode?C.accent:C.textMuted, fontSize:13, fontWeight:recMode?700:400, cursor:"pointer" }}>
+              🔁 Récurrence
+            </button>
           </div>
-          <div style={{ marginTop:16, display:"flex", gap:10 }}>
-            <Button variant="primary" onClick={addSession}>Créer la séance</Button>
-            <Button variant="ghost" onClick={()=>setShowAdd(false)}>Annuler</Button>
-          </div>
+
+          {/* ── MODE SÉANCE UNIQUE ── */}
+          {!recMode && (
+            <>
+              <div style={{ fontSize:13, fontWeight:700, color:C.accent, textTransform:"uppercase", letterSpacing:.5, marginBottom:14 }}>Créer une séance</div>
+              <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:14 }}>
+                <Field label="Discipline" value={nS.disciplineId} onChange={v=>{
+                  const disc = DISCIPLINES.find(d=>d.id===parseInt(v));
+                  const slot = disc?.slots?.[0];
+                  setNS({...nS, disciplineId:v, ...(slot?{time:slot.time, duration:slot.duration||60}:{})});
+                }} opts={DISCIPLINES.map(d=>({v:d.id,l:d.name}))}/>
+                <div>
+                  <label style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:5}}>Professeur</label>
+                  <select value={nS.teacher} onChange={e=>setNS({...nS,teacher:e.target.value})}
+                    style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,color:C.text,background:C.surface,outline:"none",boxSizing:"border-box"}}>
+                    <option value="">— Choisir un coach —</option>
+                    {coachesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    {coachesList.length === 0 && <option disabled>Aucun coach configuré</option>}
+                  </select>
+                </div>
+                <Field label="Date" type="date" value={nS.date} onChange={v=>setNS({...nS,date:v})}/>
+                <Field label="Heure" type="time" value={nS.time} onChange={v=>setNS({...nS,time:v})}/>
+                <Field label="Durée (min)" type="number" value={nS.duration} onChange={v=>setNS({...nS,duration:v})}/>
+                <Field label="Places" type="number" value={nS.spots} onChange={v=>setNS({...nS,spots:v})}/>
+                <Field label="Niveau" value={nS.level} onChange={v=>setNS({...nS,level:v})} opts={["Tous niveaux","Débutant","Intermédiaire","Avancé"]}/>
+                <Field label="Salle" value={nS.room} onChange={v=>setNS({...nS,room:v})} placeholder="Studio A"/>
+              </div>
+              <div style={{ marginTop:16, display:"flex", gap:10 }}>
+                <Button variant="primary" onClick={addSession}>Créer la séance</Button>
+                <Button variant="ghost" onClick={()=>setShowAdd(false)}>Annuler</Button>
+              </div>
+            </>
+          )}
+
+          {/* ── MODE RÉCURRENCE ── */}
+          {recMode && (() => {
+            const allSlots = DISCIPLINES.flatMap(d =>
+              (d.slots||[]).map((s,i) => ({ key:`${d.id}-${i}`, disciplineId:d.id, discName:d.name, discIcon:d.icon, day:s.day, time:s.time, duration:s.duration||60, teacher:"" }))
+            );
+            const isSelected = (k) => recSlots.some(s=>s.key===k);
+            const dayLabel = (d) => ({Lun:"Lundi",Mar:"Mardi",Mer:"Mercredi",Jeu:"Jeudi",Ven:"Vendredi",Sam:"Samedi",Dim:"Dimanche"}[d]||d);
+
+            // Sélectionner/désélectionner un créneau
+            const toggleSlot = (slot) => {
+              setRecSlots(prev => isSelected(slot.key)
+                ? prev.filter(s=>s.key!==slot.key)
+                : [...prev, {...slot, teacher: nS.teacher}]
+              );
+            };
+
+            // Changer le coach d'un créneau sélectionné
+            const updateSlotCoach = (key, teacher) => {
+              setRecSlots(prev => prev.map(s => s.key===key ? {...s, teacher} : s));
+            };
+
+            // Supprimer une séance précise dans le preview
+            const removePreviewItem = (previewId) => {
+              setRecPreview(prev => prev.filter(s => s.id !== previewId));
+            };
+
+            // Changer le coach d'une séance précise dans le preview
+            const updatePreviewCoach = (previewId, teacher) => {
+              setRecPreview(prev => prev.map(s => s.id===previewId ? {...s, teacher} : s));
+            };
+
+            return (
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:C.accent, textTransform:"uppercase", letterSpacing:.5, marginBottom:14 }}>Générer des séances récurrentes</div>
+
+                {/* ── ÉTAPE 1 : Créneaux ── */}
+                <div style={{ marginBottom:4 }}>
+                  <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>
+                    1 · Créneaux à inclure
+                  </div>
+                  {allSlots.length === 0 ? (
+                    <div style={{ padding:"14px", background:"#FFF8F0", borderRadius:10, border:`1px dashed ${C.border}`, fontSize:13, color:C.textSoft, marginBottom:12 }}>
+                      ℹ Aucun créneau configuré. Allez dans <strong>Disciplines</strong> pour définir les horaires.
+                    </div>
+                  ) : (
+                    <div style={{ display:"flex", flexDirection:"column", gap:6, marginBottom:16 }}>
+                      {allSlots.map(slot => {
+                        const sel = isSelected(slot.key);
+                        const selSlot = recSlots.find(s=>s.key===slot.key);
+                        return (
+                          <div key={slot.key} style={{ borderRadius:10, border:`1.5px solid ${sel?C.accent:C.border}`, background:sel?C.accentLight:C.surface, overflow:"hidden", transition:"all .15s" }}>
+                            {/* Ligne principale — clic pour sélectionner */}
+                            <div onClick={()=>toggleSlot(slot)}
+                              style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", cursor:"pointer" }}>
+                              <div style={{ width:20, height:20, borderRadius:5, border:`2px solid ${sel?C.accent:C.border}`, background:sel?C.accent:"transparent", flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center" }}>
+                                {sel && <span style={{color:"#fff",fontSize:12,lineHeight:1}}>✓</span>}
+                              </div>
+                              <span style={{fontSize:15}}>{slot.discIcon}</span>
+                              <div style={{flex:1}}>
+                                <div style={{ fontSize:13, fontWeight:700, color:sel?C.accent:C.text }}>{slot.discName}</div>
+                                <div style={{ fontSize:11, color:C.textSoft }}>{dayLabel(slot.day)} · {slot.time} · {slot.duration} min</div>
+                              </div>
+                            </div>
+                            {/* Coach par créneau — visible seulement si sélectionné */}
+                            {sel && (
+                              <div style={{ borderTop:`1px solid ${C.border}`, padding:"8px 14px 10px", display:"flex", alignItems:"center", gap:10, background:"rgba(160,104,56,.04)" }}>
+                                <span style={{fontSize:11,fontWeight:700,color:C.textMuted,flexShrink:0,textTransform:"uppercase",letterSpacing:.6}}>Coach</span>
+                                <select value={selSlot?.teacher||""} onChange={e=>updateSlotCoach(slot.key, e.target.value)}
+                                  style={{flex:1,padding:"6px 10px",border:`1.5px solid ${C.border}`,borderRadius:7,fontSize:13,color:C.text,background:C.surface,outline:"none"}}>
+                                  <option value="">— Coach par défaut ({nS.teacher||"non défini"}) —</option>
+                                  {coachesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                                </select>
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+
+                {/* ── ÉTAPE 2 : Coach par défaut + paramètres ── */}
+                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>2 · Paramètres</div>
+                <div style={{ display:"grid", gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`, gap:12, marginBottom:16 }}>
+                  <div style={{ gridColumn:"span 2" }}>
+                    <label style={{fontSize:11,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:.8,display:"block",marginBottom:5}}>Coach par défaut</label>
+                    <select value={nS.teacher} onChange={e=>{
+                        const t = e.target.value;
+                        setNS(s=>({...s,teacher:t}));
+                        // Appliquer aux créneaux sans coach spécifique
+                        setRecSlots(prev=>prev.map(s=>(!s.teacher)?{...s,teacher:t}:s));
+                      }}
+                      style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,color:C.text,background:C.surface,outline:"none",boxSizing:"border-box"}}>
+                      <option value="">— Choisir un coach —</option>
+                      {coachesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                    </select>
+                  </div>
+                  <Field label="Places" type="number" value={nS.spots} onChange={v=>setNS({...nS,spots:v})}/>
+                  <Field label="Salle" value={nS.room} onChange={v=>setNS({...nS,room:v})} placeholder="Studio A"/>
+                </div>
+
+                {/* ── ÉTAPE 3 : Période ── */}
+                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>3 · Période</div>
+                <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
+                  <Field label="Du" type="date" value={recFrom} onChange={v=>setRecFrom(v)}/>
+                  <Field label="Au" type="date" value={recTo} onChange={v=>setRecTo(v)}/>
+                </div>
+
+                {/* ── PRÉVISUALISATION éditable ── */}
+                {recPreview.length > 0 && (
+                  <div style={{ marginBottom:16 }}>
+                    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:8 }}>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8 }}>
+                        4 · Séances générées
+                      </div>
+                      <span style={{ fontSize:12, fontWeight:700, color:"#3A6E46", background:"#EAF5EC", border:"1px solid #A8D5B0", borderRadius:6, padding:"2px 8px" }}>
+                        {recPreview.length} séance{recPreview.length>1?"s":""}
+                      </span>
+                    </div>
+                    <div style={{ maxHeight:280, overflowY:"auto", display:"flex", flexDirection:"column", gap:4, paddingRight:2 }}>
+                      {recPreview.map((s) => {
+                        const disc = DISCIPLINES.find(d=>d.id===s.disciplineId)||DISCIPLINES[0];
+                        const d = new Date(s.date);
+                        const label = d.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"short"});
+                        return (
+                          <div key={s.id} style={{ display:"flex", alignItems:"center", gap:8, padding:"7px 10px", background:"#F8FBF8", border:"1px solid #D4E8D6", borderRadius:8 }}>
+                            <span style={{fontSize:13,flexShrink:0}}>{disc.icon}</span>
+                            <span style={{fontSize:12,fontWeight:600,color:"#2A5E38",flex:"0 0 160px",whiteSpace:"nowrap"}}>{label} · {s.time} · {s.duration}min</span>
+                            {/* Coach modifiable par séance */}
+                            <select value={s.teacher||""} onChange={e=>updatePreviewCoach(s.id, e.target.value)}
+                              style={{flex:1,padding:"4px 8px",border:`1px solid ${C.border}`,borderRadius:6,fontSize:12,color:C.text,background:"#fff",outline:"none",minWidth:0}}>
+                              <option value="">— coach —</option>
+                              {coachesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                            </select>
+                            {/* Bouton supprimer */}
+                            <button onClick={()=>removePreviewItem(s.id)}
+                              style={{background:"none",border:"none",cursor:"pointer",padding:"2px 4px",color:"#F87171",fontSize:16,lineHeight:1,flexShrink:0}}
+                              title="Supprimer cette séance">
+                              ✕
+                            </button>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                <div style={{ display:"flex", gap:10 }}>
+                  <Button variant="primary" onClick={addRecurringSessions} disabled={recPreview.length===0}>
+                    ✦ Créer {recPreview.length>0?`${recPreview.length} séance${recPreview.length>1?"s":""}`:"les séances"}
+                  </Button>
+                  <Button variant="ghost" onClick={()=>setShowAdd(false)}>Annuler</Button>
+                </div>
+              </div>
+            );
+          })()}
         </Card>
       )}
 
@@ -725,12 +1039,7 @@ function Planning({ isMobile }) {
 
 function Members({ isMobile }) {
   const [members, setMembers] = useState(MEMBERS);
-  const [seedLoadingM, setSeedLoadingM] = useState(false);
-  const handleSeedM = async () => {
-    setSeedLoadingM(true);
-    try { await fetch("/api/seed-demo", { method:"POST" }); window.location.reload(); } catch(e) {}
-    setSeedLoadingM(false);
-  };
+
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -885,9 +1194,7 @@ function Members({ isMobile }) {
           </div>
         </Card>
       )}
-      {members.length === 0
-        ? <SeedBanner onSeed={handleSeedM} loading={seedLoadingM}/>
-        : <Card noPad>{filtered.map(m=><MemberRow key={m.id} m={m} onSelect={m=>setSelected(selected?.id===m.id?null:m)} selected={selected?.id===m.id}/>)}</Card>
+      {<Card noPad>{filtered.map(m=><MemberRow key={m.id} m={m} onSelect={m=>setSelected(selected?.id===m.id?null:m)} selected={selected?.id===m.id}/>)}</Card>
       }
       {selected && (
         <Card style={{ marginTop:16, borderTop:`3px solid ${C.accent}` }}>
@@ -1254,9 +1561,9 @@ function DisciplinesPage({ isMobile }) {
 // ── MOCK DATA MULTI-TENANT ────────────────────────────────────────────────────
 const TENANTS_DATA = [
   { id:"t1", name:"Yogalate Paris",    plan:"Pro",     members:124, revenue:"6 240 €", status:"actif",    city:"Paris 1er",    since:"Jan 2025" },
-  { id:"t2", name:"Zen Studio Lyon",   plan:"Starter", members:48,  revenue:"1 890 €", status:"actif",    city:"Lyon 2e",      since:"Mar 2025" },
+  { id:"t2", name:"Zen Studio Lyon",   plan:"Essentiel", members:48,  revenue:"1 890 €", status:"actif",    city:"Lyon 2e",      since:"Mar 2025" },
   { id:"t3", name:"Flow Bordeaux",     plan:"Pro",     members:87,  revenue:"4 120 €", status:"actif",    city:"Bordeaux",     since:"Fév 2025" },
-  { id:"t4", name:"Pilates Nice",      plan:"Starter", members:31,  revenue:"980 €",   status:"suspendu", city:"Nice",         since:"Avr 2025" },
+  { id:"t4", name:"Pilates Nice",      plan:"Essentiel", members:31,  revenue:"980 €",   status:"suspendu", city:"Nice",         since:"Avr 2025" },
   { id:"t5", name:"Ashtanga Nantes",   plan:"Pro",     members:105, revenue:"5 100 €", status:"actif",    city:"Nantes",       since:"Nov 2024" },
 ];
 const USERS_DATA = [
@@ -1281,19 +1588,1096 @@ function RoleBadge({ role }) {
   return <span style={{ fontSize:11, fontWeight:700, color:r.color, background:r.bg, padding:"3px 9px", borderRadius:10, whiteSpace:"nowrap" }}>{r.label}</span>;
 }
 
+
+
+
+// ── AIDE ILLUSTRATIONS — visuels SVG pour les guides ────────────────────────
+function AideIllustration({ type, color = "#3A6E90" }) {
+  const bg = "#F8F4EE";
+  const border = "#DDD5C8";
+  const text = "#2A1F14";
+  const muted = "#8C7B6C";
+  const soft = "#B0A090";
+  const accent = color;
+  const accentLight = `${color}18`;
+
+  const w = "100%";
+  const h = 130;
+
+  if (type === "rec_open") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius: 10, border: `1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Bouton + Séance */}
+      <rect x="20" y="16" width="100" height="32" rx="8" fill={accent}/>
+      <text x="70" y="37" textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff">＋ Séance</text>
+      {/* Flèche */}
+      <path d="M128 32 L170 32" stroke={accent} strokeWidth="2" markerEnd="url(#arr)"/>
+      <defs><marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L0,6 L8,3 z" fill={accent}/></marker></defs>
+      {/* Panel toggle */}
+      <rect x="175" y="8" width="305" height="114" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      {/* Tab unique */}
+      <rect x="185" y="18" width="136" height="30" rx="7" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <text x="253" y="38" textAnchor="middle" fontSize="12" fontWeight="700" fill={accent}>📅 Séance unique</text>
+      {/* Tab récurrence — actif */}
+      <rect x="328" y="18" width="142" height="30" rx="7" fill={accent}/>
+      <text x="399" y="38" textAnchor="middle" fontSize="12" fontWeight="700" fill="#fff">🔁 Récurrence</text>
+      {/* Sous-titre */}
+      <text x="328" y="75" textAnchor="middle" fontSize="11" fill={muted}>Sélectionnez l&apos;onglet</text>
+      <text x="328" y="92" textAnchor="middle" fontSize="11" fontWeight="700" fill={accent}>🔁 Récurrence</text>
+    </svg>
+  );
+
+  if (type === "rec_slots") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius: 10, border: `1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="22" fontSize="10" fontWeight="700" fill={muted} style={{textTransform:"uppercase",letterSpacing:1}}>CRÉNEAUX À INCLURE</text>
+      {/* Créneau 1 coché — Pilates */}
+      <rect x="16" y="30" width="224" height="38" rx="8" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <rect x="28" y="43" width="14" height="14" rx="3" fill={accent}/>
+      <text x="43" y="53" fontSize="11" fill="#fff" fontWeight="800">✓</text>
+      <text x="52" y="48" fontSize="12" fontWeight="700" fill={accent}>⚡ Pilates</text>
+      <text x="52" y="62" fontSize="10" fill={muted}>Mardi · 17:30 · 60 min</text>
+      {/* Select coach visible sous créneau 1 */}
+      <rect x="16" y="70" width="224" height="26" rx="0 0 8 8" fill="rgba(160,104,56,.06)" stroke={accent} strokeWidth="1" strokeDasharray="0"/>
+      <text x="28" y="88" fontSize="10" fontWeight="700" fill={muted}>COACH</text>
+      <rect x="68" y="76" width="160" height="18" rx="5" fill="#fff" stroke={border} strokeWidth="1"/>
+      <text x="78" y="89" fontSize="10" fill={text}>Sophie Laurent</text>
+      {/* Créneau 2 coché — Yoga */}
+      <rect x="252" y="30" width="232" height="38" rx="8" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <rect x="264" y="43" width="14" height="14" rx="3" fill={accent}/>
+      <text x="279" y="53" fontSize="11" fill="#fff" fontWeight="800">✓</text>
+      <text x="288" y="48" fontSize="12" fontWeight="700" fill={accent}>🧘 Yoga Vinyasa</text>
+      <text x="288" y="62" fontSize="10" fill={muted}>Mercredi · 18:30 · 60 min</text>
+      <rect x="252" y="70" width="232" height="26" rx="0 0 8 8" fill="rgba(160,104,56,.06)" stroke={accent} strokeWidth="1"/>
+      <text x="264" y="88" fontSize="10" fontWeight="700" fill={muted}>COACH</text>
+      <rect x="304" y="76" width="168" height="18" rx="5" fill="#fff" stroke={border} strokeWidth="1"/>
+      <text x="314" y="89" fontSize="10" fill={text}>Marie Dubois</text>
+      {/* Créneau non coché */}
+      <rect x="16" y="102" width="150" height="22" rx="6" fill="#fff" stroke={border} strokeWidth="1"/>
+      <rect x="26" y="109" width="12" height="12" rx="3" fill="none" stroke={border} strokeWidth="1.5"/>
+      <text x="45" y="122" fontSize="10" fill={muted}>☯ Méditation · Dim 09:30</text>
+    </svg>
+  );
+
+  if (type === "rec_params") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius: 10, border: `1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="20" fontSize="10" fontWeight="700" fill={muted} style={{textTransform:"uppercase",letterSpacing:1}}>2 · PARAMÈTRES</text>
+      {/* Coach par défaut */}
+      <text x="16" y="38" fontSize="10" fontWeight="700" fill={muted}>COACH PAR DÉFAUT</text>
+      <rect x="16" y="44" width="230" height="28" rx="7" fill="#fff" stroke={accent} strokeWidth="1.5"/>
+      <text x="28" y="63" fontSize="12" fill={text}>Marie Dubois</text>
+      <text x="230" y="63" fontSize="14" fill={muted}>▾</text>
+      <text x="255" y="40" fontSize="10" fill={soft} fontStyle="italic">→ S&apos;applique aux créneaux</text>
+      <text x="255" y="53" fontSize="10" fill={soft} fontStyle="italic">  sans coach spécifique</text>
+      {/* Places */}
+      <text x="16" y="88" fontSize="10" fontWeight="700" fill={muted}>PLACES</text>
+      <rect x="16" y="94" width="100" height="28" rx="7" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="66" y="113" textAnchor="middle" fontSize="13" fill={text}>12</text>
+      {/* Salle */}
+      <text x="130" y="88" fontSize="10" fontWeight="700" fill={muted}>SALLE</text>
+      <rect x="130" y="94" width="116" height="28" rx="7" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="188" y="113" textAnchor="middle" fontSize="12" fill={text}>Studio A</text>
+    </svg>
+  );
+
+  if (type === "rec_period") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius: 10, border: `1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="20" fontSize="10" fontWeight="700" fill={muted} style={{textTransform:"uppercase",letterSpacing:1}}>3 · PÉRIODE</text>
+      {/* Du */}
+      <text x="16" y="40" fontSize="10" fontWeight="700" fill={muted}>DU</text>
+      <rect x="16" y="46" width="180" height="32" rx="8" fill="#fff" stroke={accent} strokeWidth="1.5"/>
+      <text x="26" y="67" fontSize="13" fontWeight="600" fill={text}>04 / 07 / 2026</text>
+      {/* Au */}
+      <text x="210" y="40" fontSize="10" fontWeight="700" fill={muted}>AU</text>
+      <rect x="210" y="46" width="180" height="32" rx="8" fill="#fff" stroke={accent} strokeWidth="1.5"/>
+      <text x="220" y="67" fontSize="13" fontWeight="600" fill={text}>12 / 12 / 2026</text>
+      {/* Flèche et résultat */}
+      <path d="M402 62 L430 62" stroke={accent} strokeWidth="2"/>
+      <rect x="432" y="46" width="60" height="32" rx="8" fill={accent}/>
+      <text x="462" y="58" textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff">23</text>
+      <text x="462" y="71" textAnchor="middle" fontSize="9" fill="rgba(255,255,255,.8)">séances</text>
+      {/* Ligne du temps */}
+      <line x1="16" y1="106" x2="484" y2="106" stroke={border} strokeWidth="1.5"/>
+      {[0,1,2,3,4,5,6,7].map(i => (
+        <g key={i}>
+          <circle cx={16 + i*66} cy={106} r={4} fill={i===0||i===7?accent:accentLight} stroke={accent} strokeWidth="1"/>
+          {i===0&&<text x={16} y={122} textAnchor="middle" fontSize="9" fill={accent} fontWeight="700">Juil</text>}
+          {i===7&&<text x={484} y={122} textAnchor="middle" fontSize="9" fill={accent} fontWeight="700">Déc</text>}
+        </g>
+      ))}
+    </svg>
+  );
+
+  if (type === "rec_preview") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius: 10, border: `1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="20" fontSize="10" fontWeight="700" fill={muted}>4 · SÉANCES GÉNÉRÉES — modifiables avant validation</text>
+      {/* Lignes séances */}
+      {[
+        { icon:"⚡", date:"mar. 7 juil. · 17:30 · 60min", coach:"Sophie Laurent", i:0 },
+        { icon:"🧘", date:"mer. 8 juil. · 18:30 · 60min", coach:"Marie Dubois",   i:1 },
+        { icon:"⚡", date:"mar. 14 juil. · 17:30 · 60min", coach:"Sophie Laurent", del:true, i:2 },
+        { icon:"🧘", date:"mer. 15 juil. · 18:30 · 60min", coach:"Marie Dubois",   i:3 },
+      ].map(row => (
+        <g key={row.i}>
+          <rect x="16" y={28+row.i*23} width="468" height="20" rx="5" fill={row.del?"#FFF0F0":"#F0FAF0"} stroke={row.del?"#F8C8C8":"#C8E6CC"} strokeWidth="1"/>
+          <text x="26" y={42+row.i*23} fontSize="12">{row.icon}</text>
+          <text x="44" y={42+row.i*23} fontSize="11" fontWeight="600" fill={row.del?"#C0392B":"#2A5E38"}>{row.date}</text>
+          {/* Select coach */}
+          <rect x="260" y={31+row.i*23} width="170" height="14" rx="4" fill="#fff" stroke={row.del?"#F8C8C8":border} strokeWidth="1"/>
+          <text x="268" y={42+row.i*23} fontSize="10" fill={row.del?"#C0392B":text}>{row.coach}</text>
+          {/* Bouton ✕ */}
+          <text x="450" y={42+row.i*23} fontSize="13" fill={row.del?"#F87171":"#D0C8C0"} fontWeight="700">✕</text>
+          {row.del && <line x1="44" y1={38+row.i*23} x2="250" y2={38+row.i*23} stroke="#F87171" strokeWidth="1" strokeOpacity="0.6"/>}
+        </g>
+      ))}
+      <text x="16" y="126" fontSize="10" fill={muted} fontStyle="italic">Cliquez ✕ pour supprimer une date (ex: jour férié) · Modifiez le coach par séance</text>
+    </svg>
+  );
+
+  if (type === "rec_confirm") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius: 10, border: `1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Badge compteur */}
+      <rect x="16" y="16" width="120" height="40" rx="10" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="1.5"/>
+      <text x="76" y="30" textAnchor="middle" fontSize="11" fill="#3A6E46">Total</text>
+      <text x="76" y="48" textAnchor="middle" fontSize="22" fontWeight="800" fill="#3A6E46">22</text>
+      <text x="152" y="32" fontSize="11" fill={muted}>séances générées</text>
+      <text x="152" y="46" fontSize="10" fill={soft}>du 4 juil. au 12 déc. 2026</text>
+      {/* Bouton Créer */}
+      <rect x="16" y="72" width="220" height="40" rx="10" fill={accent}/>
+      <text x="126" y="97" textAnchor="middle" fontSize="14" fontWeight="800" fill="#fff">✦ Créer 22 séances</text>
+      {/* Bouton Annuler */}
+      <rect x="248" y="72" width="100" height="40" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="298" y="97" textAnchor="middle" fontSize="13" fill={muted}>Annuler</text>
+      {/* Confirmation */}
+      <rect x="16" y="118" width="468" height="0" rx="0"/>
+      <text x="260" y="122" textAnchor="middle" fontSize="10" fill={muted} fontStyle="italic">→ Les séances apparaissent immédiatement dans le planning</text>
+    </svg>
+  );
+
+
+  // ── Tableau de bord ───────────────────────────────────────────────────────
+  if (type === "dash_overview") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* KPI cards */}
+      {[{x:16,label:"Séances",val:"8",delta:"+2"},{x:136,label:"Adhérents",val:"42",delta:"+5"},{x:256,label:"Revenus",val:"1 240 €",delta:"+8%"}].map((k,i)=>(
+        <g key={i}>
+          <rect x={k.x} y="14" width="108" height="46" rx="9" fill="#fff" stroke={border} strokeWidth="1.5"/>
+          <text x={k.x+10} y="30" fontSize="10" fill={muted}>{k.label}</text>
+          <text x={k.x+10} y="48" fontSize="17" fontWeight="800" fill={text}>{k.val}</text>
+          <text x={k.x+90} y="48" fontSize="10" fill="#34D399" fontWeight="700" textAnchor="end">{k.delta}</text>
+        </g>
+      ))}
+      {/* Prochaine séance */}
+      <rect x="16" y="70" width="348" height="48" rx="9" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <rect x="16" y="70" width="5" height="48" rx="3 0 0 3" fill={accent}/>
+      <text x="30" y="88" fontSize="12" fontWeight="700" fill={text}>🧘 Yoga Vinyasa</text>
+      <text x="30" y="105" fontSize="11" fill={muted}>Aujourd'hui 18:30 · Sophie Laurent · 8/12 places</text>
+      <rect x="374" y="70" width="110" height="48" rx="9" fill={accentLight} stroke={accent} strokeWidth="1"/>
+      <text x="429" y="94" textAnchor="middle" fontSize="10" fontWeight="700" fill={accent}>Prochaines</text>
+      <text x="429" y="108" textAnchor="middle" fontSize="10" fill={muted}>séances →</text>
+    </svg>
+  );
+
+  if (type === "nav_overview") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Sidebar */}
+      <rect x="16" y="10" width="148" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="30" y="28" fontSize="14" fontWeight="800" fill={text}>Fyde<tspan fill={accent}>lys</tspan></text>
+      {[
+        {y:38,label:"Tableau de bord",active:true},
+        {y:54,label:"Planning"},
+        {y:70,label:"Adhérents"},
+        {y:86,label:"Paiements"},
+        {y:102,label:"Paramètres"},
+      ].map((n,i)=>(
+        <g key={i}>
+          {n.active && <rect x="16" y={n.y-10} width="148" height="18" fill={accentLight}/>}
+          {n.active && <rect x="16" y={n.y-10} width="3" height="18" fill={accent}/>}
+          <text x="30" y={n.y+2} fontSize="11" fontWeight={n.active?"700":"400"} fill={n.active?accent:muted}>{n.label}</text>
+        </g>
+      ))}
+      {/* Mobile nav */}
+      <rect x="180" y="98" width="304" height="32" rx="8" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="332" y="110" textAnchor="middle" fontSize="9" fill={muted}>Version mobile : barre de navigation en bas</text>
+      {["🏠","📅","👥","💳","⚙️"].map((ic,i)=>(
+        <text key={i} x={196+i*56} y="124" fontSize="14" textAnchor="middle">{ic}</text>
+      ))}
+    </svg>
+  );
+
+  if (type === "subdomain_overview") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* URL bar */}
+      <rect x="16" y="20" width="468" height="32" rx="8" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <rect x="22" y="26" width="20" height="20" rx="4" fill="#34D399" opacity="0.2"/>
+      <text x="32" y="40" fontSize="11" fill="#34D399" textAnchor="middle">🔒</text>
+      <text x="52" y="40" fontSize="13" fill={muted}>yogalatestudio</text>
+      <text x="168" y="40" fontSize="13" fontWeight="700" fill={accent}>.fydelys.fr</text>
+      <text x="260" y="40" fontSize="13" fill={muted}>/dashboard</text>
+      {/* Flèches rôles */}
+      {[
+        {x:50, role:"Admin", color:"#A06838", bg:"#F5EBE0"},
+        {x:200, role:"Coach", color:"#3A6E90", bg:"#E6EFF5"},
+        {x:350, role:"Adhérent", color:"#4E8A58", bg:"#EAF5EC"},
+      ].map((r,i)=>(
+        <g key={i}>
+          <rect x={r.x} y="72" width="100" height="44" rx="9" fill={r.bg} stroke={r.color} strokeWidth="1.5"/>
+          <text x={r.x+50} y="92" textAnchor="middle" fontSize="11" fontWeight="700" fill={r.color}>{r.role}</text>
+          <text x={r.x+50} y="107" textAnchor="middle" fontSize="10" fill={r.color} opacity="0.7">→ son espace</text>
+          <path d={`M${r.x+50} 55 L${r.x+50} 70`} stroke={r.color} strokeWidth="1.5" markerEnd="url(#arr2)"/>
+        </g>
+      ))}
+      <defs><marker id="arr2" markerWidth="6" markerHeight="6" refX="3" refY="3" orient="auto"><path d="M0,0 L0,6 L6,3 z" fill={muted}/></marker></defs>
+      <text x="250" y="58" textAnchor="middle" fontSize="10" fill={muted}>Même URL — espace différent selon le rôle</text>
+    </svg>
+  );
+
+  // ── Adhérents ─────────────────────────────────────────────────────────────
+  if (type === "member_add") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="22" fontSize="12" fontWeight="700" fill={text}>👥 Adhérents</text>
+      {/* Liste */}
+      {[{y:30,n:"Dupont Marie"},{y:52,n:"Martin Pierre"},{y:74,n:"Bernard Lucie"}].map((r,i)=>(
+        <g key={i}><rect x="16" y={r.y} width="300" height="20" rx="5" fill="#fff" stroke={border} strokeWidth="1"/>
+        <text x="28" y={r.y+14} fontSize="11" fill={text}>{r.n}</text></g>
+      ))}
+      {/* Bouton + Ajouter */}
+      <rect x="350" y="20" width="134" height="34" rx="9" fill={accent}/>
+      <text x="417" y="42" textAnchor="middle" fontSize="13" fontWeight="700" fill="#fff">+ Ajouter</text>
+      <path d="M340 37 L352 37" stroke={accent} strokeWidth="2"/>
+      <circle cx="336" cy="37" r="6" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <text x="336" y="41" textAnchor="middle" fontSize="10" fill={accent}>←</text>
+    </svg>
+  );
+
+  if (type === "member_form") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="10" width="468" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="28" y="28" fontSize="13" fontWeight="700" fill={text}>Nouvel adhérent</text>
+      {[{x:28,y:38,label:"PRÉNOM",val:"Marie"},{x:260,y:38,label:"NOM",val:"Dupont"},{x:28,y:74,label:"EMAIL",val:"marie@gmail.com"},{x:260,y:74,label:"TÉLÉPHONE",val:"06 12 34 56 78"}].map((f,i)=>(
+        <g key={i}>
+          <text x={f.x} y={f.y+8} fontSize="9" fontWeight="700" fill={muted}>{f.label}</text>
+          <rect x={f.x} y={f.y+12} width="200" height="22" rx="6" fill={bg} stroke={i===2?accent:border} strokeWidth={i===2?"1.5":"1"}/>
+          <text x={f.x+8} y={f.y+27} fontSize="12" fill={text}>{f.val}</text>
+        </g>
+      ))}
+      <rect x="28" y="105" width="120" height="8" rx="4" fill={accent} opacity="0.8"/>
+      <text x="88" y="113" textAnchor="middle" fontSize="9" fill="#fff" fontWeight="700">Enregistrer</text>
+    </svg>
+  );
+
+  if (type === "member_link") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Email */}
+      <rect x="16" y="10" width="220" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <rect x="16" y="10" width="220" height="28" rx="10 10 0 0" fill="#2A1F14"/>
+      <text x="126" y="29" textAnchor="middle" fontSize="12" fontWeight="800" fill="#fff">Yoga Flow Paris</text>
+      <text x="26" y="54" fontSize="11" fontWeight="700" fill={text}>Bonjour Marie 👋</text>
+      <text x="26" y="70" fontSize="10" fill={muted} style={{lineHeight:1.5}}>Votre lien d'accès</text>
+      <text x="26" y="83" fontSize="10" fill={muted}>à Yoga Flow Paris</text>
+      <rect x="26" y="92" width="190" height="22" rx="7" fill={accent}/>
+      <text x="121" y="107" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">Accéder à mon espace ✦</text>
+      {/* Flèche */}
+      <path d="M244 65 L272 65" stroke={accent} strokeWidth="2"/>
+      <text x="258" y="60" textAnchor="middle" fontSize="10" fill={muted}>1 clic</text>
+      {/* Espace membre */}
+      <rect x="278" y="10" width="206" height="110" rx="10" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <text x="381" y="34" textAnchor="middle" fontSize="12" fontWeight="700" fill={accent}>Espace Membre</text>
+      <text x="381" y="52" textAnchor="middle" fontSize="10" fill={muted}>Planning · Historique</text>
+      <text x="381" y="66" textAnchor="middle" fontSize="10" fill={muted}>Abonnement · Paiement</text>
+      <rect x="298" y="78" width="166" height="28" rx="8" fill={accent}/>
+      <text x="381" y="97" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">✓ Connecté automatiquement</text>
+    </svg>
+  );
+
+  // ── Disciplines ───────────────────────────────────────────────────────────
+  if (type === "disc_create") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="10" width="468" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="28" y="28" fontSize="13" fontWeight="700" fill={text}>Nouvelle discipline</text>
+      {/* Icône selector */}
+      <text x="28" y="50" fontSize="9" fontWeight="700" fill={muted}>ICÔNE</text>
+      {["🧘","⚡","☯","🌙","💃","🔥"].map((ic,i)=>(
+        <g key={i}>
+          <rect x={28+i*42} y="55" width="34" height="34" rx="8" fill={i===0?accentLight:bg} stroke={i===0?accent:border} strokeWidth={i===0?"1.5":"1"}/>
+          <text x={45+i*42} y="78" textAnchor="middle" fontSize="18">{ic}</text>
+        </g>
+      ))}
+      {/* Nom + couleur */}
+      <text x="28" y="104" fontSize="9" fontWeight="700" fill={muted}>NOM</text>
+      <rect x="28" y="108" width="160" height="18" rx="5" fill={bg} stroke={accent} strokeWidth="1.5"/>
+      <text x="36" y="121" fontSize="11" fill={text}>Yoga Vinyasa</text>
+      <text x="205" y="104" fontSize="9" fontWeight="700" fill={muted}>COULEUR</text>
+      {["#C4956A","#6B9E7A","#6A8FAE","#AE7A7A"].map((col,i)=>(
+        <circle key={i} cx={212+i*22} cy={117} r="8" fill={col} stroke={i===0?"#2A1F14":"none"} strokeWidth="2"/>
+      ))}
+    </svg>
+  );
+
+  if (type === "disc_slots") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="10" fontWeight="700" fill={muted}>CRÉNEAUX RÉCURRENTS</text>
+      {[
+        {y:24,day:"Mardi",time:"17:30",dur:"60 min",col:accent},
+        {y:56,day:"Jeudi",time:"12:00",dur:"45 min",col:accent},
+        {y:88,day:"+ Ajouter",isAdd:true},
+      ].map((s,i)=>(
+        <g key={i}>
+          <rect x="16" y={s.y} width="468" height="26" rx="7" fill={s.isAdd?"transparent":"#fff"} stroke={s.isAdd?"#DDD5C8":s.col} strokeWidth={s.isAdd?"1":"1.5"} strokeDasharray={s.isAdd?"4 3":"0"}/>
+          {s.isAdd
+            ? <text x="250" y={s.y+17} textAnchor="middle" fontSize="11" fill={muted}>{s.day}</text>
+            : <>
+              <rect x="24" y={s.y+5} width="80" height="16" rx="5" fill={accentLight}/>
+              <text x="64" y={s.y+17} textAnchor="middle" fontSize="11" fontWeight="600" fill={accent}>{s.day}</text>
+              <rect x="116" y={s.y+5} width="60" height="16" rx="5" fill={bg}/>
+              <text x="146" y={s.y+17} textAnchor="middle" fontSize="11" fill={text}>{s.time}</text>
+              <text x="220" y={s.y+17} fontSize="11" fill={muted}>{s.dur}</text>
+              <text x="472" y={s.y+17} textAnchor="end" fontSize="12" fill="#F87171">✕</text>
+            </>
+          }
+        </g>
+      ))}
+      <text x="16" y="122" fontSize="10" fill={muted} fontStyle="italic">Ces créneaux sont proposés automatiquement dans Planning → Récurrence</text>
+    </svg>
+  );
+
+  if (type === "disc_coaches") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="10" fontWeight="700" fill={muted}>DISCIPLINES PAR COACH</text>
+      {[
+        {y:26,name:"Sophie Laurent",discs:["🧘 Yoga","⚡ Pilates"]},
+        {y:70,name:"Marie Dubois",discs:["☯ Méditation","🌙 Yin Yoga"]},
+      ].map((c,i)=>(
+        <g key={i}>
+          <rect x="16" y={c.y} width="468" height="38" rx="9" fill="#fff" stroke={border} strokeWidth="1.5"/>
+          <circle cx="38" cy={c.y+19} r="14" fill={accentLight} stroke={accent} strokeWidth="1"/>
+          <text x="38" y={c.y+23} textAnchor="middle" fontSize="11" fontWeight="700" fill={accent}>{c.name.split(" ").map(n=>n[0]).join("")}</text>
+          <text x="58" y={c.y+17} fontSize="12" fontWeight="600" fill={text}>{c.name}</text>
+          {c.discs.map((d,j)=>(
+            <g key={j}>
+              <rect x={58+j*110} y={c.y+22} width="100" height="14" rx="5" fill={accentLight}/>
+              <text x={108+j*110} y={c.y+32} textAnchor="middle" fontSize="10" fill={accent}>{d}</text>
+            </g>
+          ))}
+        </g>
+      ))}
+    </svg>
+  );
+
+  // ── Abonnements ───────────────────────────────────────────────────────────
+  if (type === "sub_monthly") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="16" width="140" height="100" rx="12" fill={accent}/>
+      <text x="86" y="38" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.7)">MENSUEL ILLIMITÉ</text>
+      <text x="86" y="62" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff">∞</text>
+      <text x="86" y="82" textAnchor="middle" fontSize="12" fill="rgba(255,255,255,.9)">séances / mois</text>
+      <text x="86" y="104" textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">49 €/mois</text>
+      <text x="185" y="38" fontSize="12" fontWeight="700" fill={text}>Idéal pour les pratiquants réguliers</text>
+      <text x="185" y="58" fontSize="11" fill={muted}>✓  Accès illimité à toutes les séances</text>
+      <text x="185" y="74" fontSize="11" fill={muted}>✓  Prélèvement mensuel automatique</text>
+      <text x="185" y="90" fontSize="11" fill={muted}>✓  Annulation à tout moment</text>
+    </svg>
+  );
+
+  if (type === "sub_credits") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="16" width="140" height="100" rx="12" fill="#3A6E90"/>
+      <text x="86" y="38" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.7)">CARNET</text>
+      <text x="86" y="66" textAnchor="middle" fontSize="32" fontWeight="800" fill="#fff">10</text>
+      <text x="86" y="84" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">séances</text>
+      <text x="86" y="104" textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">85 €</text>
+      {/* Barre crédit */}
+      <text x="185" y="38" fontSize="12" fontWeight="700" fill={text}>Crédits restants : 7 / 10</text>
+      <rect x="185" y="44" width="280" height="10" rx="5" fill={border}/>
+      <rect x="185" y="44" width="196" height="10" rx="5" fill="#3A6E90"/>
+      <text x="185" y="70" fontSize="11" fill={muted}>✓  Valable 3 mois</text>
+      <text x="185" y="85" fontSize="11" fill={muted}>✓  -1 crédit par séance</text>
+      <text x="185" y="100" fontSize="11" fill={muted}>✓  Rechargeable à tout moment</text>
+    </svg>
+  );
+
+  if (type === "sub_single") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="16" width="140" height="100" rx="12" fill="#4E8A58"/>
+      <text x="86" y="38" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.7)">À L'UNITÉ</text>
+      <text x="86" y="70" textAnchor="middle" fontSize="28" fill="#fff">1️⃣</text>
+      <text x="86" y="88" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">séance</text>
+      <text x="86" y="104" textAnchor="middle" fontSize="14" fontWeight="700" fill="#fff">12 €</text>
+      <text x="185" y="38" fontSize="12" fontWeight="700" fill={text}>Idéal pour les adhérents occasionnels</text>
+      <text x="185" y="58" fontSize="11" fill={muted}>✓  Sans engagement</text>
+      <text x="185" y="74" fontSize="11" fill={muted}>✓  Facturé à chaque séance</text>
+      <text x="185" y="90" fontSize="11" fill={muted}>✓  Règlement à la séance</text>
+    </svg>
+  );
+
+  // ── Paiements ─────────────────────────────────────────────────────────────
+  if (type === "pay_list") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="12" fontWeight="700" fill={text}>💳 Paiements</text>
+      {[
+        {y:24,name:"Dupont Marie",date:"10/03",amt:"49 €",mode:"CB",ok:true},
+        {y:48,name:"Martin Pierre",date:"09/03",amt:"85 €",mode:"Virement",ok:true},
+        {y:72,name:"Bernard Lucie",date:"08/03",amt:"12 €",mode:"Espèces",ok:true},
+        {y:96,name:"Moreau Claire",date:"—",amt:"49 €",mode:"En attente",ok:false},
+      ].map((r,i)=>(
+        <g key={i}>
+          <rect x="16" y={r.y} width="468" height="20" rx="5" fill="#fff" stroke={border} strokeWidth="1"/>
+          <text x="28" y={r.y+14} fontSize="11" fontWeight="600" fill={text}>{r.name}</text>
+          <text x="180" y={r.y+14} fontSize="11" fill={muted}>{r.date}</text>
+          <text x="250" y={r.y+14} fontSize="11" fontWeight="700" fill={r.ok?text:"#F87171"}>{r.amt}</text>
+          <rect x="330" y={r.y+4} width="70" height="14" rx="4" fill={r.ok?"#EAF5EC":"#FFF0F0"}/>
+          <text x="365" y={r.y+14} textAnchor="middle" fontSize="9" fontWeight="700" fill={r.ok?"#3A6E46":"#C0392B"}>{r.mode}</text>
+        </g>
+      ))}
+    </svg>
+  );
+
+  if (type === "pay_form") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="10" width="468" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="28" y="28" fontSize="13" fontWeight="700" fill={text}>Enregistrer un paiement</text>
+      {[
+        {x:28,y:36,label:"ADHÉRENT",val:"Dupont Marie",w:200},
+        {x:244,y:36,label:"MONTANT",val:"49 €",w:120},
+        {x:28,y:72,label:"DATE",val:"10/03/2026",w:120},
+        {x:164,y:72,label:"MODE",val:"Carte bancaire",w:140},
+      ].map((f,i)=>(
+        <g key={i}>
+          <text x={f.x} y={f.y+8} fontSize="9" fontWeight="700" fill={muted}>{f.label}</text>
+          <rect x={f.x} y={f.y+12} width={f.w} height="20" rx="6" fill={bg} stroke={i===0?accent:border} strokeWidth={i===0?"1.5":"1"}/>
+          <text x={f.x+8} y={f.y+26} fontSize="11" fill={text}>{f.val}</text>
+        </g>
+      ))}
+      <rect x="28" y="102" width="130" height="10" rx="5" fill={accent} opacity="0.9"/>
+      <text x="93" y="111" textAnchor="middle" fontSize="9" fill="#fff" fontWeight="700">Enregistrer</text>
+    </svg>
+  );
+
+  if (type === "pay_link") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Paiement */}
+      <rect x="16" y="20" width="140" height="90" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="86" y="40" textAnchor="middle" fontSize="11" fontWeight="700" fill={text}>Paiement</text>
+      <text x="86" y="60" textAnchor="middle" fontSize="20" fontWeight="800" fill={accent}>49 €</text>
+      <text x="86" y="76" textAnchor="middle" fontSize="10" fill={muted}>Dupont Marie</text>
+      <text x="86" y="90" textAnchor="middle" fontSize="10" fill={muted}>10/03/2026</text>
+      {/* Lien */}
+      <path d="M158 65 L190 65" stroke={accent} strokeWidth="2"/>
+      <text x="174" y="60" textAnchor="middle" fontSize="9" fill={muted}>lié à</text>
+      {/* Abonnement */}
+      <rect x="195" y="20" width="140" height="90" rx="10" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <text x="265" y="40" textAnchor="middle" fontSize="11" fontWeight="700" fill={accent}>Abonnement</text>
+      <text x="265" y="58" textAnchor="middle" fontSize="11" fill={text}>Mensuel illimité</text>
+      <text x="265" y="73" textAnchor="middle" fontSize="10" fill={muted}>Mars 2026</text>
+      {/* Solde mis à jour */}
+      <path d="M337 65 L368 65" stroke="#34D399" strokeWidth="2"/>
+      <rect x="372" y="20" width="112" height="90" rx="10" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="1.5"/>
+      <text x="428" y="40" textAnchor="middle" fontSize="10" fontWeight="700" fill="#3A6E46">Solde mis à jour</text>
+      <text x="428" y="60" textAnchor="middle" fontSize="20" fontWeight="800" fill="#3A6E46">✓</text>
+      <text x="428" y="78" textAnchor="middle" fontSize="10" fill="#4E8A58">En règle</text>
+    </svg>
+  );
+
+  // ── Paramètres équipe ─────────────────────────────────────────────────────
+  if (type === "team_list") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="12" fontWeight="700" fill={text}>⚙️ Paramètres → Équipe</text>
+      {[
+        {y:26,name:"Sophie Laurent",role:"Coach",discs:"Yoga · Pilates",status:"actif",sc:"#EAF5EC",tc:"#3A6E46"},
+        {y:60,name:"Marie Dubois",role:"Admin + Coach",discs:"Méditation · Yin Yoga",status:"actif",sc:"#EAF5EC",tc:"#3A6E46"},
+        {y:94,name:"Thomas Petit",role:"Coach",discs:"Aucune discipline",status:"invité",sc:"#FFF8E8",tc:"#B07000"},
+      ].map((r,i)=>(
+        <g key={i}>
+          <rect x="16" y={r.y} width="468" height="30" rx="8" fill="#fff" stroke={border} strokeWidth="1"/>
+          <circle cx="36" cy={r.y+15} r="11" fill={accentLight}/>
+          <text x="36" y={r.y+19} textAnchor="middle" fontSize="10" fontWeight="700" fill={accent}>{r.name.split(" ").map(n=>n[0]).join("")}</text>
+          <text x="54" y={r.y+13} fontSize="12" fontWeight="600" fill={text}>{r.name}</text>
+          <text x="54" y={r.y+25} fontSize="10" fill={muted}>{r.discs}</text>
+          <rect x="340" y={r.y+8} width="70" height="14" rx="5" fill={r.sc}/>
+          <text x="375" y={r.y+18} textAnchor="middle" fontSize="9" fontWeight="700" fill={r.tc}>{r.status}</text>
+          <text x="458" y={r.y+18} fontSize="14" fill={muted}>···</text>
+        </g>
+      ))}
+    </svg>
+  );
+
+  if (type === "team_invite") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="10" width="220" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="28" y="30" fontSize="13" fontWeight="700" fill={text}>Inviter un coach</text>
+      {[{y:38,l:"PRÉNOM",v:"Thomas"},{y:65,l:"NOM",v:"Petit"},{y:92,l:"EMAIL",v:"thomas@studio.fr"}].map((f,i)=>(
+        <g key={i}><text x="28" y={f.y+8} fontSize="9" fontWeight="700" fill={muted}>{f.l}</text>
+        <rect x="28" y={f.y+11} width="190" height="18" rx="5" fill={bg} stroke={border} strokeWidth="1"/>
+        <text x="36" y={f.y+23} fontSize="11" fill={text}>{f.v}</text></g>
+      ))}
+      {/* Email envoyé */}
+      <rect x="254" y="10" width="230" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <rect x="254" y="10" width="230" height="28" rx="10 10 0 0" fill="#2A1F14"/>
+      <text x="369" y="29" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">Yoga Flow Paris</text>
+      <text x="264" y="54" fontSize="11" fontWeight="600" fill={text}>Bonjour Thomas 👋</text>
+      <text x="264" y="70" fontSize="10" fill={muted}>Vous êtes invité(e)</text>
+      <text x="264" y="83" fontSize="10" fill={muted}>à rejoindre l'équipe</text>
+      <rect x="264" y="92" width="204" height="20" rx="7" fill={accent}/>
+      <text x="366" y="106" textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">Rejoindre Yoga Flow Paris ✦</text>
+    </svg>
+  );
+
+  if (type === "team_disciplines") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="11" fontWeight="700" fill={text}>Gérer les disciplines de Sophie Laurent</text>
+      <text x="16" y="32" fontSize="10" fill={muted}>Cochez les disciplines que ce coach peut enseigner</text>
+      {[
+        {x:16,y:40,name:"🧘 Yoga Vinyasa",checked:true},
+        {x:16,y:68,name:"⚡ Pilates",checked:true},
+        {x:16,y:96,name:"☯ Méditation",checked:false},
+        {x:260,y:40,name:"🌙 Yin Yoga",checked:false},
+        {x:260,y:68,name:"💃 Danse",checked:false},
+      ].map((d,i)=>(
+        <g key={i}>
+          <rect x={d.x} y={d.y} width="224" height="22" rx="7" fill={d.checked?accentLight:"#fff"} stroke={d.checked?accent:border} strokeWidth={d.checked?"1.5":"1"}/>
+          <rect x={d.x+8} y={d.y+5} width="12" height="12" rx="3" fill={d.checked?accent:"none"} stroke={d.checked?accent:border} strokeWidth="1.5"/>
+          {d.checked && <text x={d.x+14} y={d.y+15} textAnchor="middle" fontSize="9" fill="#fff" fontWeight="700">✓</text>}
+          <text x={d.x+28} y={d.y+15} fontSize="12" fill={d.checked?accent:text}>{d.name}</text>
+        </g>
+      ))}
+    </svg>
+  );
+
+  // ── Login ─────────────────────────────────────────────────────────────────
+  if (type === "login_email") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="100" y="10" width="300" height="110" rx="14" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="250" y="34" textAnchor="middle" fontSize="14" fontWeight="800" fill={text}>Fyde<tspan fill={accent}>lys</tspan></text>
+      <text x="250" y="50" textAnchor="middle" fontSize="11" fill={muted}>Connexion / Inscription</text>
+      <text x="116" y="68" fontSize="10" fontWeight="700" fill={muted}>ADRESSE EMAIL</text>
+      <rect x="116" y="72" width="268" height="24" rx="7" fill={bg} stroke={accent} strokeWidth="1.5"/>
+      <text x="126" y="88" fontSize="12" fill={text}>marie@gmail.com</text>
+      <rect x="116" y="104" width="268" height="10" rx="5" fill={accent}/>
+      <text x="250" y="113" textAnchor="middle" fontSize="9" fill="#fff" fontWeight="700">Recevoir le lien ✦</text>
+    </svg>
+  );
+
+  if (type === "login_email_sent") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Confirmation */}
+      <rect x="16" y="10" width="200" height="110" rx="12" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <circle cx="116" cy="44" r="20" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="1.5"/>
+      <text x="116" y="52" textAnchor="middle" fontSize="20">✉</text>
+      <text x="116" y="76" textAnchor="middle" fontSize="12" fontWeight="700" fill={text}>Vérifiez vos emails !</text>
+      <text x="116" y="92" textAnchor="middle" fontSize="10" fill={muted}>Lien envoyé à</text>
+      <rect x="40" y="98" width="152" height="16" rx="5" fill={accentLight}/>
+      <text x="116" y="110" textAnchor="middle" fontSize="10" fontWeight="700" fill={accent}>marie@gmail.com</text>
+      {/* Email */}
+      <rect x="230" y="10" width="254" height="110" rx="12" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <rect x="230" y="10" width="254" height="24" rx="12 12 0 0" fill="#2A1F14"/>
+      <text x="357" y="27" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">Yoga Flow Paris</text>
+      <text x="242" y="50" fontSize="11" fontWeight="600" fill={text}>Votre lien de connexion</text>
+      <text x="242" y="65" fontSize="10" fill={muted}>Valable 1 heure · Usage unique</text>
+      <rect x="242" y="74" width="228" height="22" rx="7" fill={accent}/>
+      <text x="356" y="89" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">Accéder à mon espace ✦</text>
+      <text x="242" y="112" fontSize="10" fill={soft} fontStyle="italic">Vérifiez vos spams si non reçu</text>
+    </svg>
+  );
+
+  if (type === "login_connected") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <path d="M16 65 L140 65" stroke={border} strokeWidth="1.5" strokeDasharray="6 3"/>
+      <text x="78" y="58" textAnchor="middle" fontSize="10" fill={muted}>1 clic</text>
+      <circle cx="156" cy="65" r="20" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="2"/>
+      <text x="156" y="72" textAnchor="middle" fontSize="20">✓</text>
+      <path d="M178 65 L210 65" stroke={accent} strokeWidth="1.5"/>
+      {[
+        {x:218,y:20,label:"Admin",color:"#A06838",bg:"#F5EBE0",desc:"Planning complet
+Adhérents · Paiements
+Paramètres"},
+        {x:335,y:20,label:"Coach",color:"#3A6E90",bg:"#E6EFF5",desc:"Mes séances
+Liste inscrits
+Presence"},
+      ].map((r,i)=>(
+        <g key={i}>
+          <rect x={r.x} y={r.y} width="108" height="90" rx="10" fill={r.bg} stroke={r.color} strokeWidth="1.5"/>
+          <text x={r.x+54} y={r.y+20} textAnchor="middle" fontSize="12" fontWeight="700" fill={r.color}>{r.label}</text>
+          {r.desc.split("
+").map((l,j)=>(
+            <text key={j} x={r.x+10} y={r.y+38+j*16} fontSize="10" fill={r.color} opacity="0.8">{l}</text>
+          ))}
+        </g>
+      ))}
+      <text x="16" y="112" fontSize="10" fill={muted} fontStyle="italic">Chaque utilisateur est redirigé vers son espace selon son rôle</text>
+    </svg>
+  );
+
+
+  // ── Plans Fydelys ────────────────────────────────────────────────────────
+  const PlanFeature = ({x, y, label, ok}) => (
+    <g>
+      <text x={x} y={y} fontSize="11" fill={ok?"#3A6E46":"#C8B8A8"}>{ok?"✓":"✕"}</text>
+      <text x={x+14} y={y} fontSize="11" fill={ok?text:soft}>{label}</text>
+    </g>
+  );
+
+  if (type === "plan_essentiel") return (
+    <svg width={w} height={160} viewBox="0 0 500 160" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="160" fill={bg}/>
+      <rect x="16" y="12" width="140" height="136" rx="12" fill="#5D6D7E"/>
+      <text x="86" y="34" textAnchor="middle" fontSize="14" fontWeight="800" fill="#fff">Essentiel</text>
+      <text x="86" y="52" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff">9€</text>
+      <text x="86" y="68" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.7)">/mois</text>
+      <text x="86" y="84" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">1 discipline</text>
+      <text x="86" y="100" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">1 coach</text>
+      <text x="86" y="116" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">50 adhérents</text>
+      <text x="86" y="140" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.5)">9 €/mois après essai</text>
+      <PlanFeature x={174} y={34}  label="Planning + présences"          ok={true}  />
+      <PlanFeature x={174} y={52}  label="Espace adhérent magic link"    ok={true}  />
+      <PlanFeature x={174} y={70}  label="Abonnements & paiements"       ok={true}  />
+      <PlanFeature x={174} y={88}  label="Séances récurrentes"           ok={true}  />
+      <PlanFeature x={174} y={106} label="Invitation d'équipe"           ok={false} />
+      <PlanFeature x={174} y={124} label="Rappel cours 1h avant"                   ok={false} />
+      <PlanFeature x={174} y={142} label="Support prioritaire"           ok={false} />
+    </svg>
+  );
+
+  if (type === "plan_standard") return (
+    <svg width={w} height={160} viewBox="0 0 500 160" style={{ borderRadius:10, border:`1.5px solid #A06838` }}>
+      <rect width="500" height="160" fill="#FBF6F0"/>
+      <rect x="360" y="0" width="140" height="22" rx="0 12 0 0" fill="#A06838"/>
+      <text x="430" y="15" textAnchor="middle" fontSize="10" fontWeight="800" fill="#fff">⭐ POPULAIRE</text>
+      <rect x="16" y="12" width="140" height="136" rx="12" fill="#A06838"/>
+      <text x="86" y="34" textAnchor="middle" fontSize="14" fontWeight="800" fill="#fff">Standard</text>
+      <text x="86" y="52" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff">29€</text>
+      <text x="86" y="68" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.7)">/mois après essai</text>
+      <text x="86" y="84" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">3 disciplines</text>
+      <text x="86" y="100" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">3 coachs</text>
+      <text x="86" y="116" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">100 adhérents</text>
+      <text x="86" y="140" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.5)">Pour les studios actifs</text>
+      <PlanFeature x={174} y={34}  label="Planning + présences"          ok={true}  />
+      <PlanFeature x={174} y={52}  label="Espace adhérent magic link"    ok={true}  />
+      <PlanFeature x={174} y={70}  label="Abonnements & paiements"       ok={true}  />
+      <PlanFeature x={174} y={88}  label="Séances récurrentes"           ok={true}  />
+      <PlanFeature x={174} y={106} label="Invitation d'équipe"           ok={true}  />
+      <PlanFeature x={174} y={124} label="Rappel cours 1h avant"                   ok={true}  />
+      <PlanFeature x={174} y={142} label="Support prioritaire"           ok={false} />
+    </svg>
+  );
+
+  if (type === "plan_pro") return (
+    <svg width={w} height={160} viewBox="0 0 500 160" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="160" fill={bg}/>
+      <rect x="16" y="12" width="140" height="136" rx="12" fill="#7B52A8"/>
+      <text x="86" y="34" textAnchor="middle" fontSize="14" fontWeight="800" fill="#fff">Pro</text>
+      <text x="86" y="52" textAnchor="middle" fontSize="28" fontWeight="800" fill="#fff">69€</text>
+      <text x="86" y="68" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.7)">/mois après essai</text>
+      <text x="86" y="90" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">Adhérents illimités</text>
+      <text x="86" y="106" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">Coachs illimités</text>
+      <text x="86" y="122" textAnchor="middle" fontSize="11" fill="rgba(255,255,255,.8)">Disciplines illimitées</text>
+      <text x="86" y="140" textAnchor="middle" fontSize="10" fill="rgba(255,255,255,.5)">Pour les grands studios</text>
+      <PlanFeature x={174} y={34}  label="Planning + présences"          ok={true}  />
+      <PlanFeature x={174} y={52}  label="Espace adhérent magic link"    ok={true}  />
+      <PlanFeature x={174} y={70}  label="Abonnements & paiements"       ok={true}  />
+      <PlanFeature x={174} y={88}  label="Séances récurrentes"           ok={true}  />
+      <PlanFeature x={174} y={106} label="Invitation d'équipe"           ok={true}  />
+      <PlanFeature x={174} y={124} label="Rappel cours 1h avant"                   ok={true}  />
+      <PlanFeature x={174} y={142} label="Support prioritaire"           ok={true}  />
+    </svg>
+  );
+
+  return null;
+}
+
+function AidePage({ isMobile }) {
+  const p = isMobile ? 16 : 28;
+  const [open, setOpen] = React.useState(null);
+  const { studioName, userName, userEmail } = useContext(AppCtx);
+  const [form, setForm] = React.useState({ name: userName||"", email: userEmail||"", subject: "", message: "" });
+  const [sending, setSending] = React.useState(false);
+  const [sent, setSent] = React.useState(false);
+  const [formError, setFormError] = React.useState("");
+
+  // Sync si les données du contexte arrivent après le montage
+  React.useEffect(() => {
+    setForm(f => ({
+      ...f,
+      name:  f.name  || userName  || "",
+      email: f.email || userEmail || "",
+    }));
+  }, [userName, userEmail]);
+
+  const handleSend = async () => {
+    if (!form.name || !form.email || !form.message) {
+      setFormError("Veuillez renseigner votre nom, email et message.");
+      return;
+    }
+    setSending(true); setFormError("");
+    try {
+      const res = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ...form, studio: studioName }),
+      });
+      if (res.ok) {
+        setSent(true);
+        setForm(f => ({ ...f, subject: "", message: "" }));
+      } else {
+        setFormError("Erreur lors de l'envoi. Réessayez ou écrivez à info@lysia.fr");
+      }
+    } catch {
+      setFormError("Erreur réseau. Réessayez dans quelques instants.");
+    }
+    setSending(false);
+  };
+
+  const sections = [
+    // ── 0. Démarrer ─────────────────────────────────────────────────────────
+    {
+      id: "start", icon: "🚀", title: "Démarrer avec Fydelys", color: "#A06838",
+      items: [
+        { q: "Vue d'ensemble de l'application", type: "guide", steps: [
+          { num: "1", title: "Le tableau de bord", text: "Dès la connexion, vous voyez vos KPIs du jour (séances, adhérents actifs, revenus) et les prochaines séances. C'est votre point de départ.", visual: "dash_overview" },
+          { num: "2", title: "La barre de navigation", text: "À gauche (desktop) ou en bas (mobile) : Tableau de bord · Planning · Adhérents · Abonnements · Paiements · Disciplines · Paramètres · Aide.", visual: "nav_overview" },
+          { num: "3", title: "Votre studio en sous-domaine", text: "Chaque studio a son URL unique : votre-studio.fydelys.fr. Vos adhérents s'y connectent directement. Vous les administrez depuis cette même URL.", visual: "subdomain_overview" },
+        ]},
+        { q: "Comment configurer mon studio ?", a: "Allez dans Paramètres → Studio pour renseigner le nom, l'adresse, le téléphone et l'email de contact. Ces informations apparaissent sur les emails envoyés à vos adhérents." },
+        { q: "Comment créer mes premières disciplines ?", a: "Dans le menu Disciplines, définissez vos cours (Yoga, Pilates…) avec leur nom, couleur, icône et créneaux récurrents. Ces créneaux alimentent ensuite la génération automatique de séances." },
+        { q: "Comment inviter mon équipe ?", a: "Dans Paramètres → Équipe, cliquez sur + Inviter un coach. Un magic link est envoyé par email au nom de votre studio. Le coach clique dessus et accède directement à son espace." },
+      ]
+    },
+    // ── 1. Planning ──────────────────────────────────────────────────────────
+    {
+      id: "planning", icon: "📅", title: "Planning", color: "#3A6E90",
+      items: [
+        { q: "Comment créer une séance unique ?", a: "Dans Planning, cliquez sur + Séance → onglet 📅 Séance unique. Choisissez la discipline (l'heure et durée se pré-remplissent), sélectionnez le coach dans la liste déroulante, la date et les paramètres. Cliquez Créer la séance." },
+        { q: "Comment générer des séances récurrentes ?", type: "guide", steps: [
+          { num: "1", title: "Ouvrir le mode Récurrence", text: "Cliquez sur + Séance puis sélectionnez l'onglet 🔁 Récurrence.", visual: "rec_open" },
+          { num: "2", title: "Choisir les créneaux", text: "Les créneaux configurés dans Disciplines s'affichent sous forme de cases à cocher. Cochez ceux à inclure. Chaque créneau coché révèle un sélecteur de coach spécifique.", visual: "rec_slots" },
+          { num: "3", title: "Configurer les paramètres", text: "Définissez le coach par défaut (appliqué aux créneaux sans coach spécifique), le nombre de places et la salle.", visual: "rec_params" },
+          { num: "4", title: "Choisir la période", text: "Saisissez la date de début et de fin. Fydelys calcule toutes les dates selon le jour de la semaine de chaque créneau.", visual: "rec_period" },
+          { num: "5", title: "Réviser et ajuster", text: "La liste des séances générées s'affiche. Changez le coach d'une séance précise ou cliquez ✕ pour supprimer une date (jour férié, fermeture…).", visual: "rec_preview" },
+          { num: "6", title: "Valider", text: "Cliquez sur ✦ Créer N séances. Toutes apparaissent immédiatement dans le planning.", visual: "rec_confirm" },
+        ]},
+        { q: "Comment gérer les présences ?", a: "Cliquez sur une séance dans le planning pour la développer. Vous voyez la liste des inscrits et pouvez marquer chaque adhérent présent, absent ou en liste d'attente." },
+        { q: "Comment inscrire manuellement un adhérent ?", a: "Dans le détail d'une séance (clic pour développer), cliquez sur + Inscrire. Tapez le nom de l'adhérent. Il apparaît dans la liste avec le statut Confirmé." },
+        { q: "Comment envoyer un rappel ?", a: "Dans le détail d'une séance développée, cliquez sur Rappel. Un email est envoyé automatiquement à tous les adhérents confirmés pour cette séance." },
+      ]
+    },
+    // ── 2. Adhérents ─────────────────────────────────────────────────────────
+    {
+      id: "members", icon: "👥", title: "Adhérents", color: "#4E8A58",
+      items: [
+        { q: "Comment ajouter un adhérent ?", type: "guide", steps: [
+          { num: "1", title: "Ouvrir le formulaire", text: "Dans Adhérents, cliquez sur + Ajouter en haut à droite.", visual: "member_add" },
+          { num: "2", title: "Renseigner les informations", text: "Saisissez le prénom, nom, email et téléphone. L'email est l'identifiant de connexion : il doit être unique.", visual: "member_form" },
+          { num: "3", title: "L'adhérent reçoit son lien", text: "Un magic link est envoyé à son email au nom de votre studio. Il clique dessus et accède à son espace membre sans créer de mot de passe.", visual: "member_link" },
+        ]},
+        { q: "Comment chercher et filtrer les adhérents ?", a: "La barre de recherche en haut de la liste filtre en temps réel par nom, prénom ou email. Les badges colorés indiquent le statut (actif, suspendu, nouveau) et le niveau de crédit." },
+        { q: "Comment voir la fiche d'un adhérent ?", a: "Cliquez sur un adhérent dans la liste pour ouvrir sa fiche complète : informations personnelles, abonnement actif, crédits restants, historique des séances et des paiements." },
+        { q: "Comment suspendre ou supprimer un adhérent ?", a: "Dans la fiche adhérent, utilisez le menu Actions (⋯) pour suspendre l'accès temporairement ou archiver le profil. Un adhérent suspendu ne peut plus se connecter mais ses données sont conservées." },
+      ]
+    },
+    // ── 3. Disciplines ───────────────────────────────────────────────────────
+    {
+      id: "disciplines", icon: "🎯", title: "Disciplines", color: "#7B52A8",
+      items: [
+        { q: "Comment créer une discipline ?", type: "guide", steps: [
+          { num: "1", title: "Ajouter une discipline", text: "Dans Disciplines, cliquez sur + Ajouter. Donnez un nom, choisissez une icône et une couleur d'identification.", visual: "disc_create" },
+          { num: "2", title: "Définir les créneaux récurrents", text: "Ajoutez un ou plusieurs créneaux : jour de la semaine + heure + durée. Ces créneaux apparaîtront ensuite dans le générateur de séances récurrentes du Planning.", visual: "disc_slots" },
+          { num: "3", title: "Affecter des coaches", text: "Dans l'onglet Équipe, chaque coach peut être associé à une ou plusieurs disciplines. Cette association est utilisée comme suggestion lors de la création de séances.", visual: "disc_coaches" },
+        ]},
+        { q: "À quoi servent les créneaux récurrents ?", a: "Les créneaux définis dans Disciplines (ex : Pilates Mardi 17:30 60min) sont proposés automatiquement dans le générateur de séances récurrentes du Planning. Ils évitent de ressaisir les infos à chaque création." },
+        { q: "Comment modifier une discipline existante ?", a: "Cliquez sur le nom d'une discipline dans la liste pour l'éditer. Vous pouvez changer le nom, l'icône, la couleur et les créneaux. Les séances déjà créées ne sont pas affectées." },
+      ]
+    },
+    // ── 4. Abonnements ───────────────────────────────────────────────────────
+    {
+      id: "subscriptions", icon: "🎫", title: "Abonnements", color: "#C0392B",
+      items: [
+        { q: "Quels types d'abonnements existent ?", type: "guide", steps: [
+          { num: "1", title: "Mensuel illimité", text: "L'adhérent paie un forfait mensuel fixe et peut assister à autant de séances qu'il le souhaite.", visual: "sub_monthly" },
+          { num: "2", title: "Carnet de séances", text: "L'adhérent achète un nombre fixe de séances (ex : 10 séances). Chaque participation déduit 1 crédit. Quand le solde atteint 0, il faut recharger.", visual: "sub_credits" },
+          { num: "3", title: "Séance à l'unité", text: "Chaque séance est facturée individuellement, sans engagement. Idéal pour les adhérents occasionnels.", visual: "sub_single" },
+        ]},
+        { q: "Comment attribuer un abonnement à un adhérent ?", a: "Dans la fiche de l'adhérent (Adhérents → clic sur le nom), cliquez sur Attribuer un abonnement. Choisissez le type, la date de début et le montant. Les crédits se mettent à jour automatiquement." },
+        { q: "Comment fonctionne la déduction de crédits ?", a: "Lorsqu'un adhérent s'inscrit à une séance, un crédit est réservé. Si l'adhérent est marqué présent, le crédit est définitivement déduit. En cas d'annulation, le crédit est restitué selon votre politique." },
+        { q: "Comment renouveler un abonnement ?", a: "Dans la fiche adhérent ou dans Abonnements, cliquez sur Renouveler à côté de l'abonnement échu. Le nouveau cycle démarre à la date de fin du précédent." },
+      ]
+    },
+    // ── 5. Paiements ─────────────────────────────────────────────────────────
+    {
+      id: "payments", icon: "💳", title: "Paiements", color: "#9B59B6",
+      items: [
+        { q: "Comment enregistrer un paiement ?", type: "guide", steps: [
+          { num: "1", title: "Accéder à Paiements", text: "Dans le menu Paiements, vous voyez tous les règlements enregistrés triés par date.", visual: "pay_list" },
+          { num: "2", title: "Créer un paiement", text: "Cliquez sur + Enregistrer. Choisissez l'adhérent, le montant, la date et le mode de règlement (espèces, virement, carte, chèque).", visual: "pay_form" },
+          { num: "3", title: "Lier à un abonnement", text: "Le paiement est automatiquement lié à l'abonnement en cours de l'adhérent. Le solde est mis à jour en temps réel.", visual: "pay_link" },
+        ]},
+        { q: "Comment voir les paiements en attente ?", a: "Dans Paiements, le filtre En attente liste les adhérents dont l'abonnement est actif mais dont le paiement du mois n'a pas encore été enregistré." },
+        { q: "Comment gérer mon abonnement Fydelys ?", a: "Dans Paramètres → Mon compte, la section Formule Fydelys affiche votre plan actuel. Chaque formule inclut 15 jours d'essai gratuit. Essentiel (9€/mois) : planification sans module paiements adhérents. Standard (29€) et Pro (69€) incluent les paiements adhérents via Stripe." },
+        { q: "La période d'essai gratuite dure combien de temps ?", a: "14 jours à compter de la création de votre studio, sans carte bancaire requise. Un email de rappel est envoyé 3 jours avant la fin de l'essai." },
+      ]
+    },
+    // ── 6. Paramètres ────────────────────────────────────────────────────────
+    {
+      id: "settings", icon: "⚙️", title: "Paramètres", color: "#5D6D7E",
+      items: [
+        { q: "Comment configurer les informations du studio ?", a: "Dans Paramètres → Studio : nom, adresse, téléphone, email, site web. Ces données apparaissent dans les emails envoyés à vos adhérents et sur votre page de connexion." },
+        { q: "Comment gérer l'équipe (coachs) ?", type: "guide", steps: [
+          { num: "1", title: "Voir l'équipe", text: "Dans Paramètres → Équipe, la liste des coachs affiche leur statut (actif / invité) et leurs disciplines associées.", visual: "team_list" },
+          { num: "2", title: "Inviter un coach", text: "Cliquez sur + Inviter un coach. Renseignez prénom, nom et email. Un email d'invitation brandé au nom de votre studio est envoyé avec un lien de connexion.", visual: "team_invite" },
+          { num: "3", title: "Affecter des disciplines", text: "Cliquez sur les ··· d'un coach pour gérer ses disciplines. Ces associations apparaissent comme suggestions dans la création de séances.", visual: "team_disciplines" },
+        ]},
+        { q: "Quelles sont les limites de chaque plan ?", type: "guide", steps: [
+          { num: "E", title: "Essentiel — 9 €/mois", text: "1 discipline, 1 coach, 50 adhérents. Planning, présences, espace adhérent magic link, séances récurrentes. Sans module paiements adhérents. 15 jours d'essai gratuit.", visual: "plan_essentiel" },
+          { num: "S", title: "Standard — 29 €/mois", text: "3 disciplines, 3 coachs, 100 adhérents. Tout Essentiel + paiements adhérents (Stripe), invitation d'équipe, rappel cours 1h avant. 15 jours d'essai gratuit.", visual: "plan_standard" },
+          { num: "★", title: "Pro — 69 €/mois", text: "Adhérents, coachs et disciplines illimités. Tout Studio + support prioritaire. Pour les grands studios.", visual: "plan_pro" },
+        ]},
+        { q: "Comment gérer les rôles et permissions ?", a: "Dans Paramètres → Rôles : Admin a accès à tout, Coach voit le planning et ses séances, Adhérent accède à son espace membre. Les rôles sont attribués automatiquement à la connexion." },
+      ]
+    },
+    // ── 7. Accès et connexion ────────────────────────────────────────────────
+    {
+      id: "access", icon: "🔐", title: "Accès et connexion", color: "#E67E22",
+      items: [
+        { q: "Comment fonctionne la connexion sans mot de passe ?", type: "guide", steps: [
+          { num: "1", title: "Saisir son email", text: "Sur votre-studio.fydelys.fr, l'utilisateur entre son adresse email et clique sur Recevoir le lien.", visual: "login_email" },
+          { num: "2", title: "Recevoir le magic link", text: "Un email est envoyé en quelques secondes au nom de votre studio. Il contient un bouton de connexion valable 1 heure.", visual: "login_email_sent" },
+          { num: "3", title: "Accéder à son espace", text: "Un clic sur le bouton et l'utilisateur est connecté — admin, coach ou adhérent selon son rôle. Pas de mot de passe à retenir.", visual: "login_connected" },
+        ]},
+        { q: "Première connexion d'un nouvel adhérent ?", a: "Si l'adhérent n'a jamais eu de compte, son profil est créé automatiquement lors de sa première connexion via magic link. Il est redirigé vers son espace membre avec le statut Nouveau." },
+        { q: "Comment révoquer l'accès d'un coach ?", a: "Dans Paramètres → Équipe, cliquez sur ··· à côté du coach puis Désactiver. Il ne pourra plus se connecter mais son historique est conservé." },
+        { q: "Le lien magic link a expiré, que faire ?", a: "Les magic links expirent après 1 heure. Il suffit de revenir sur votre-studio.fydelys.fr et de saisir à nouveau l'email pour recevoir un nouveau lien." },
+      ]
+    },
+  ];
+
+  ];
+
+  return (
+    <div style={{ padding: p, maxWidth: 720 }}>
+      <div style={{ marginBottom: 28 }}>
+        <div style={{ fontSize: isMobile?22:28, fontWeight: 800, color: C.text, letterSpacing: -0.5, marginBottom: 6 }}>Centre d'aide ✦</div>
+        <div style={{ fontSize: 14, color: C.textSoft }}>Tout ce qu'il faut savoir pour gérer votre studio avec Fydelys.</div>
+      </div>
+
+      {/* Formulaire de contact */}
+      <div style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "20px 20px", marginBottom: 24 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
+          <div style={{ width: 36, height: 36, borderRadius: 10, background: `${C.accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
+          <div>
+            <div style={{ fontSize: 15, fontWeight: 700, color: C.text }}>Contacter le support</div>
+            <div style={{ fontSize: 12, color: C.textSoft, marginTop: 1 }}>Réponse sous 24h · info@lysia.fr</div>
+          </div>
+        </div>
+
+        {sent ? (
+          <div style={{ padding: "18px", background: "#F0FAF2", border: "1.5px solid #A8D5B0", borderRadius: 10, textAlign: "center" }}>
+            <div style={{ fontSize: 28, marginBottom: 8 }}>✅</div>
+            <div style={{ fontSize: 14, fontWeight: 700, color: "#2A6638" }}>Message envoyé !</div>
+            <div style={{ fontSize: 13, color: "#4E8A58", marginTop: 4 }}>Nous vous répondrons sous 24h à <strong>{form.email}</strong>.</div>
+            <button onClick={() => setSent(false)}
+              style={{ marginTop: 12, background: "none", border: `1.5px solid #A8D5B0`, borderRadius: 8, padding: "6px 16px", fontSize: 13, color: "#4E8A58", cursor: "pointer", fontWeight: 600 }}>
+              Envoyer un autre message
+            </button>
+          </div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+            <div style={{ display: "grid", gridTemplateColumns: isMobile ? "1fr" : "1fr 1fr", gap: 12 }}>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Votre nom</label>
+                <input value={form.name} onChange={e => setForm(f => ({ ...f, name: e.target.value }))}
+                  placeholder="Marie Dupont"
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, background: C.bg, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border}/>
+              </div>
+              <div>
+                <label style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Email</label>
+                <input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))}
+                  placeholder="vous@studio.fr"
+                  style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, background: C.bg, outline: "none", boxSizing: "border-box" }}
+                  onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border}/>
+              </div>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Sujet</label>
+              <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+                placeholder="Ex : Problème de connexion, question sur les abonnements…"
+                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, background: C.bg, outline: "none", boxSizing: "border-box" }}
+                onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border}/>
+            </div>
+            <div>
+              <label style={{ fontSize: 11, fontWeight: 700, color: C.textMuted, textTransform: "uppercase", letterSpacing: .8, display: "block", marginBottom: 5 }}>Message <span style={{ color: "#F87171" }}>*</span></label>
+              <textarea value={form.message} onChange={e => setForm(f => ({ ...f, message: e.target.value }))}
+                placeholder="Décrivez votre problème ou votre question en détail…"
+                rows={4}
+                style={{ width: "100%", padding: "9px 12px", border: `1.5px solid ${C.border}`, borderRadius: 8, fontSize: 14, color: C.text, background: C.bg, outline: "none", boxSizing: "border-box", resize: "vertical", fontFamily: "inherit" }}
+                onFocus={e => e.target.style.borderColor = C.accent} onBlur={e => e.target.style.borderColor = C.border}/>
+            </div>
+            {formError && (
+              <div style={{ padding: "8px 12px", background: "#FFF0F0", border: "1px solid #F8C8C8", borderRadius: 8, fontSize: 13, color: "#C0392B" }}>{formError}</div>
+            )}
+            <button onClick={handleSend} disabled={sending}
+              style={{ alignSelf: "flex-start", padding: "10px 22px", background: sending ? C.border : "linear-gradient(145deg,#B88050,#9A6030)", color: "#fff", border: "none", borderRadius: 10, fontSize: 14, fontWeight: 700, cursor: sending ? "not-allowed" : "pointer", display: "flex", alignItems: "center", gap: 8 }}>
+              {sending ? "Envoi…" : "✦ Envoyer le message"}
+            </button>
+          </div>
+        )}
+      </div>
+
+      {/* Sections FAQ accordéon */}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+        {sections.map(sec => (
+          <div key={sec.id} style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 14, overflow: "hidden" }}>
+            {/* Header section */}
+            <div style={{ padding: "14px 18px", display: "flex", alignItems: "center", gap: 12, borderBottom: open===sec.id ? `1px solid ${C.border}` : "none" }}>
+              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${sec.color}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, flexShrink: 0 }}>{sec.icon}</div>
+              <div style={{ fontSize: 15, fontWeight: 700, color: C.text, flex: 1 }}>{sec.title}</div>
+              <div style={{ fontSize: 12, color: C.textMuted }}>{sec.items.length} articles</div>
+            </div>
+            {/* Items */}
+            <div style={{ padding: "8px 0" }}>
+              {sec.items.map((item, i) => (
+                <div key={i}>
+                  <button onClick={() => setOpen(open === `${sec.id}-${i}` ? null : `${sec.id}-${i}`)}
+                    style={{ width: "100%", textAlign: "left", padding: "12px 18px", background: "none", border: "none", cursor: "pointer", display: "flex", alignItems: "flex-start", gap: 12 }}>
+                    <span style={{ fontSize: 14, color: C.accent, fontWeight: 700, flexShrink: 0, marginTop: 1 }}>{open===`${sec.id}-${i}` ? "▾" : "▸"}</span>
+                    <div style={{ flex: 1 }}>
+                      <span style={{ fontSize: 14, fontWeight: 600, color: C.text, lineHeight: 1.4 }}>{item.q}</span>
+                      {item.type === "guide" && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 700, color: sec.color, background: `${sec.color}15`, borderRadius: 4, padding: "2px 6px" }}>Guide {item.steps?.length} étapes</span>}
+                    </div>
+                  </button>
+                  {open === `${sec.id}-${i}` && (
+                    <div style={{ padding: "0 18px 18px 44px" }}>
+                      {/* Réponse simple */}
+                      {!item.type && <div style={{ fontSize: 14, color: C.textSoft, lineHeight: 1.7 }}>{item.a}</div>}
+
+                      {/* Guide pas-à-pas avec illustrations */}
+                      {item.type === "guide" && (
+                        <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
+                          {item.steps.map((step, si) => (
+                            <div key={si} style={{ display: "flex", gap: 14, alignItems: "flex-start" }}>
+                              {/* Numéro étape */}
+                              <div style={{ width: 28, height: 28, borderRadius: "50%", background: sec.color, color: "#fff", fontSize: 13, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0, marginTop: 2 }}>{step.num}</div>
+                              <div style={{ flex: 1 }}>
+                                <div style={{ fontSize: 13, fontWeight: 700, color: C.text, marginBottom: 4 }}>{step.title}</div>
+                                <div style={{ fontSize: 13, color: C.textSoft, lineHeight: 1.7, marginBottom: step.visual ? 12 : 0 }}>{step.text}</div>
+                                {/* Illustration SVG selon step.visual */}
+                                {step.visual && <AideIllustration type={step.visual} color={sec.color}/>}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Version */}
+      <div style={{ marginTop: 32, textAlign: "center", fontSize: 12, color: C.textMuted }}>
+        Fydelys · Version 1.0 · <a href="https://fydelys.fr" style={{ color: C.accent, textDecoration: "none" }}>fydelys.fr</a>
+      </div>
+    </div>
+  );
+}
+
+function InviteCoachModal({ C, inviteEmail, setInviteEmail, inviteName, setInviteName, onClose, onSubmit }) {
+  return (
+    <div onClick={e=>e.target===e.currentTarget&&onClose()}
+      style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
+      <div style={{background:C.surface,borderRadius:16,padding:24,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,.18)"}}>
+        <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+          <div style={{fontSize:16,fontWeight:800,color:C.text}}>Inviter un coach</div>
+          <button onClick={onClose} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}><IcoX s={14} c={C.textSoft}/></button>
+        </div>
+        <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
+          {[["Prénom","fn","Marie"],["Nom","ln","Laurent"]].map(([lbl,k,ph])=>(
+            <div key={k}>
+              <FieldLabel>{lbl}</FieldLabel>
+              <input value={inviteName[k]} onChange={e=>setInviteName(p=>({...p,[k]:e.target.value}))} placeholder={ph}
+                style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
+                onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
+            </div>
+          ))}
+        </div>
+        <div style={{marginBottom:16}}>
+          <FieldLabel>Email professionnel</FieldLabel>
+          <input autoFocus type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="coach@studio.fr"
+            style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
+            onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
+        </div>
+        <div style={{padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accentDark,marginBottom:16}}>
+          🔗 Un magic link sera envoyé à <strong>{inviteEmail||"…"}</strong>. Le coach accédera au studio via <strong>slug.fydelys.fr</strong>
+        </div>
+        <div style={{display:"flex",gap:10}}>
+          <Button variant="primary" onClick={onSubmit}>
+            <IcoMail s={14} c="white"/> Envoyer l'invitation
+          </Button>
+          <Button variant="ghost" onClick={onClose}>Annuler</Button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function Settings({ isMobile }) {
   const { studioName, userName, userEmail, planName, membersCount, userRole } = useContext(AppCtx);
   const p = isMobile?12:28;
-  const [currentRole, setCurrentRole] = useState("superadmin");
-  const [tab, setTab] = useState("studio");
+  // currentRole = rôle réel de l'utilisateur (depuis AppCtx)
+  // Pas de useState avec valeur en dur — on dérive depuis userRole
+  const realRole = userRole || "admin"; // fallback admin si pas encore chargé
+  const [currentRole, setCurrentRole] = useState(realRole);
+  // Sync si userRole change (chargement async)
+  React.useEffect(() => {
+    if (userRole) {
+      setCurrentRole(userRole);
+      // Remettre l'onglet par défaut si le tab courant n'est pas accessible
+      setTab(t => {
+        if (userRole !== "superadmin" && t === "superadmin") return "studio";
+        return t;
+      });
+    }
+  }, [userRole]);
+  const [tab, setTab] = useState("studio"); // toujours "studio" par défaut — sera "superadmin" si SA
   const [users, setUsers] = useState(USERS_DATA);
   const [tenants, setTenants] = useState(TENANTS_DATA);
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [modal, setModal] = useState(null); // type: "newTenant"|"inviteUser"|"editUser"|"password"|"2fa"|"sessions"|"deleteAccount"
   const [toast, setToast] = useState(null);
+  // States invitation coach remontés ici pour éviter perte de focus (TabTeam recréé à chaque render)
+  const [inviteModal, setInviteModal] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState("");
+  const [inviteName, setInviteName]   = useState({ fn:"", ln:"" });
 
-  const isSA = currentRole === "superadmin";
-  const isAdmin = currentRole === "admin" || isSA;
+  const isSA = realRole === "superadmin";       // vrai rôle pour les onglets/accès
+  const isAdmin = realRole === "admin" || isSA; // vrai rôle pour les permissions
+  const isSAPreview = currentRole === "superadmin"; // aperçu uniquement (demo switcher)
 
   const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3000); };
 
@@ -1315,14 +2699,14 @@ function Settings({ isMobile }) {
 
   // ── Modal: Nouveau tenant ────────────────────────────────────────────────
   const NewTenantModal = () => {
-    const [f, setF] = useState({ name:"", city:"", plan:"Starter" });
+    const [f, setF] = useState({ name:"", city:"", plan:"Essentiel" });
     return (
       <Modal>
         <MHead title="Nouveau tenant"/>
         <div style={{ display:"flex", flexDirection:"column", gap:12, marginBottom:18 }}>
           <div><FieldLabel>Nom du studio</FieldLabel><input value={f.name} onChange={e=>setF({...f,name:e.target.value})} placeholder="Ex: Hot Yoga Lyon" style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:C.surfaceWarm }} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/></div>
           <div><FieldLabel>Ville</FieldLabel><input value={f.city} onChange={e=>setF({...f,city:e.target.value})} placeholder="Paris, Lyon…" style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:C.surfaceWarm }} onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/></div>
-          <Field label="Plan" value={f.plan} onChange={v=>setF({...f,plan:v})} opts={["Starter","Pro"].map(v=>({v,l:v}))}/>
+          <Field label="Plan" value={f.plan} onChange={v=>setF({...f,plan:v})} opts={FYDELYS_PLANS.map(p=>({v:p.name,l:p.name}))}/>
         </div>
         <div style={{ display:"flex", gap:10 }}>
           <Button variant="primary" onClick={()=>{ if(!f.name) return; setTenants(prev=>[...prev,{id:`t${Date.now()}`,name:f.name,city:f.city,plan:f.plan,members:0,revenue:"0 €",status:"actif",since:"Mars 2026"}]); setModal(null); showToast(`Tenant "${f.name}" créé !`); }}>Créer le tenant</Button>
@@ -1504,22 +2888,25 @@ function Settings({ isMobile }) {
     { key:"studio",  label:"Studio",       icon:<IcoSettings s={14} c="currentColor"/> },
     { key:"team",    label:"Équipe",        icon:<IcoUsers s={14} c="currentColor"/> },
     { key:"users",   label:"Utilisateurs", icon:<IcoTag s={14} c="currentColor"/> },
-    ...(isSA ? [{ key:"roles", label:"Rôles", icon:<IcoTag s={14} c="currentColor"/> }] : []),
+    { key:"roles", label:"Rôles", icon:<IcoTag s={14} c="currentColor"/> },
     { key:"account", label:"Mon compte",   icon:<IcoHome s={14} c="currentColor"/> },
   ].filter(Boolean);
 
-  // ── Preview role switcher (demo only) ────────────────────────────────────
-  const RoleSwitcher = () => (
-    <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:C.cardAlt||"#F5EEE6", border:`1px solid ${C.border}`, borderRadius:10, marginBottom:16, flexWrap:"wrap" }}>
-      <span style={{ fontSize:12, color:C.accent, fontWeight:600 }}>👁 Aperçu rôle :</span>
-      {["superadmin","admin","staff","adherent"].map(r=>(
-        <button key={r} onClick={()=>{ setCurrentRole(r); setTab(r==="superadmin"?"superadmin":"studio"); }}
-          style={{ fontSize:11, padding:"3px 10px", borderRadius:8, border:`1.5px solid ${currentRole===r?C.accent:C.border}`, background:currentRole===r?C.accent:"white", color:currentRole===r?"white":C.textMid, fontWeight:700, cursor:"pointer" }}>
-          {ROLES_DEF[r].label}
-        </button>
-      ))}
-    </div>
-  );
+  // ── Preview role switcher (superadmin seulement) ────────────────────────
+  const RoleSwitcher = () => {
+    if (!isSA) return null; // N'afficher que pour le superadmin réel
+    return (
+      <div style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 14px", background:C.cardAlt||"#F5EEE6", border:`1px solid ${C.border}`, borderRadius:10, marginBottom:16, flexWrap:"wrap" }}>
+        <span style={{ fontSize:12, color:C.accent, fontWeight:600 }}>👁 Aperçu rôle :</span>
+        {["superadmin","admin","staff","adherent"].map(r=>(
+          <button key={r} onClick={()=>{ setCurrentRole(r); setTab(r==="superadmin"?"superadmin":"studio"); }}
+            style={{ fontSize:11, padding:"3px 10px", borderRadius:8, border:`1.5px solid ${currentRole===r?C.accent:C.border}`, background:currentRole===r?C.accent:"white", color:currentRole===r?"white":C.textMid, fontWeight:700, cursor:"pointer" }}>
+            {ROLES_DEF[r].label}
+          </button>
+        ))}
+      </div>
+    );
+  };
 
   // ── Tab: Super Admin ──────────────────────────────────────────────────────
   const TabSuperAdmin = () => (
@@ -1648,7 +3035,7 @@ function Settings({ isMobile }) {
   // ── Tab: Roles ────────────────────────────────────────────────────────────
   const TabRoles = () => (
     <div style={{ display:"flex", flexDirection:"column", gap:12 }}>
-      {Object.entries(ROLES_DEF).map(([key, r])=>(
+      {Object.entries(ROLES_DEF).filter(([key])=> isSA || key !== "superadmin").map(([key, r])=>(
         <Card key={key} style={{ borderLeft:`3px solid ${r.color}` }}>
           <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, marginBottom:10 }}>
             <div style={{ display:"flex", alignItems:"center", gap:10 }}>
@@ -1703,6 +3090,69 @@ function Settings({ isMobile }) {
         </div>
         <div style={{ marginTop:14 }}><Button sm variant="primary" onClick={()=>showToast("Profil enregistré !")}>Enregistrer</Button></div>
       </Card>
+      {/* ── Facturation ── */}
+      <Card noPad>
+        <SectionHead>Formule Fydelys</SectionHead>
+        <div style={{ padding:"16px 18px" }}>
+          {/* Plan actuel */}
+          {(() => {
+            const currentPlan = FYDELYS_PLANS.find(p=>p.name===planName) || FYDELYS_PLANS[0];
+            return (
+              <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", background:C.accentLight, borderRadius:10, marginBottom:20, border:`1.5px solid ${currentPlan.color}40` }}>
+                <div style={{ width:44, height:44, borderRadius:11, background:currentPlan.color, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                  <span style={{ fontSize:20 }}>⭐</span>
+                </div>
+                <div style={{ flex:1 }}>
+                  <div style={{ fontSize:15, fontWeight:800, color:C.text }}>Plan <span style={{ color:currentPlan.color }}>{currentPlan.name}</span></div>
+                  <div style={{ fontSize:12, color:C.textSoft, marginTop:2 }}>{currentPlan.price} €/mois · {currentPlan.limits.members ? `${currentPlan.limits.members} adhérents max` : "Adhérents illimités"}</div>
+                </div>
+                <div style={{ fontSize:11, fontWeight:700, padding:"3px 9px", borderRadius:6, background:"#EAF5EC", color:"#3A6E46", flexShrink:0 }}>Actif</div>
+              </div>
+            );
+          })()}
+
+          {/* Cards 3 plans */}
+          <div style={{ fontSize:12, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:12 }}>Changer de formule</div>
+          <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)", gap:12, marginBottom:16 }}>
+            {FYDELYS_PLANS.map(plan => {
+              const isCurrent = plan.name === planName;
+              return (
+                <div key={plan.id} style={{ borderRadius:12, border:`2px solid ${isCurrent?plan.color:C.border}`, background:isCurrent?`${plan.color}08`:C.surface, padding:"16px", position:"relative", transition:"border-color .15s" }}>
+                  {plan.popular && !isCurrent && (
+                    <div style={{ position:"absolute", top:-1, right:12, background:plan.color, color:"#fff", fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:"0 0 7px 7px", textTransform:"uppercase" }}>Populaire</div>
+                  )}
+                  {isCurrent && (
+                    <div style={{ position:"absolute", top:-1, right:12, background:"#3A6E46", color:"#fff", fontSize:9, fontWeight:800, padding:"2px 8px", borderRadius:"0 0 7px 7px", textTransform:"uppercase" }}>✓ Actuel</div>
+                  )}
+                  <div style={{ fontSize:15, fontWeight:800, color:plan.color, marginBottom:2 }}>{plan.name}</div>
+                  <div style={{ fontSize:10, color:C.textSoft, marginBottom:10 }}>{plan.desc}</div>
+                  <div style={{ fontSize:24, fontWeight:800, color:C.text, lineHeight:1, marginBottom:12 }}>
+                    {plan.price} €<span style={{ fontSize:12, fontWeight:400, color:C.textSoft }}>/mois</span>
+                  </div>
+                  <div style={{ display:"flex", flexDirection:"column", gap:5, marginBottom:14 }}>
+                    {plan.features.map((f,i) => (
+                      <div key={i} style={{ display:"flex", alignItems:"center", gap:7 }}>
+                        <span style={{ fontSize:11, flexShrink:0, color:f.ok?"#3A6E46":"#C8B8A8" }}>{f.ok?"✓":"✕"}</span>
+                        <span style={{ fontSize:12, color:f.ok?C.text:C.textSoft, textDecoration:f.ok?"none":"none" }}>{f.label}</span>
+                      </div>
+                    ))}
+                  </div>
+                  {!isCurrent && (
+                    <button onClick={()=>showToast(`Passage au plan ${plan.name} — bientôt disponible`)}
+                      style={{ width:"100%", padding:"8px 12px", borderRadius:8, border:`1.5px solid ${plan.color}`, background:"transparent", color:plan.color, fontSize:12, fontWeight:700, cursor:"pointer" }}>
+                      Choisir {plan.name} →
+                    </button>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+          <div style={{ fontSize:11, color:C.textSoft, textAlign:"center" }}>
+            15 jours d'essai gratuit inclus · Sans engagement · Résiliable à tout moment
+          </div>
+        </div>
+      </Card>
+
       <Card noPad>
         <SectionHead>Sécurité</SectionHead>
         <div style={{ padding:"14px 18px", display:"flex", flexDirection:"column", gap:10 }}>
@@ -1732,9 +3182,7 @@ function Settings({ isMobile }) {
   const TabTeam = () => {
     const [coaches, setCoaches]         = useState(COACHES_INIT);
     const [editCoach, setEditCoach]     = useState(null); // coach en cours d'édition disciplines
-    const [inviteModal, setInviteModal] = useState(false);
-    const [inviteEmail, setInviteEmail] = useState("");
-    const [inviteName, setInviteName]   = useState({ fn:"", ln:"" });
+    // inviteModal/inviteEmail/inviteName remontés dans Settings pour éviter perte de focus
 
     // Sauvegarder disciplines d'un coach
     const saveDisciplines = (coachId, discIds) => {
@@ -1799,54 +3247,38 @@ function Settings({ isMobile }) {
       );
     };
 
-    // Modal inviter un coach
-    const InviteCoachModal = () => (
-      <div onClick={e=>e.target===e.currentTarget&&setInviteModal(false)}
-        style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
-        <div style={{background:C.surface,borderRadius:16,padding:24,width:"100%",maxWidth:440,boxShadow:"0 24px 60px rgba(0,0,0,.18)"}}>
-          <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
-            <div style={{fontSize:16,fontWeight:800,color:C.text}}>Inviter un coach</div>
-            <button onClick={()=>setInviteModal(false)} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}><IcoX s={14} c={C.textSoft}/></button>
-          </div>
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-            {[["Prénom","fn","Marie"],["Nom","ln","Laurent"]].map(([lbl,k,ph])=>(
-              <div key={k}>
-                <FieldLabel>{lbl}</FieldLabel>
-                <input value={inviteName[k]} onChange={e=>setInviteName(p=>({...p,[k]:e.target.value}))} placeholder={ph}
-                  style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
-                  onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
-              </div>
-            ))}
-          </div>
-          <div style={{marginBottom:16}}>
-            <FieldLabel>Email professionnel</FieldLabel>
-            <input type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="coach@studio.fr"
-              style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
-              onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
-          </div>
-          <div style={{padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accentDark,marginBottom:16}}>
-            🔗 Un magic link sera envoyé à <strong>{inviteEmail||"…"}</strong>. Le coach accédera au studio via <strong>slug.fydelys.fr</strong>
-          </div>
-          <div style={{display:"flex",gap:10}}>
-            <Button variant="primary" onClick={()=>{
-              if(!inviteEmail||!inviteName.fn) return;
-              const newCoach = { id:`c${Date.now()}`, fn:inviteName.fn, ln:inviteName.ln, email:inviteEmail, isCoach:true, disciplines:[], status:"invité" };
-              setCoaches(prev=>[...prev, newCoach]);
-              setInviteModal(false); setInviteEmail(""); setInviteName({fn:"",ln:""});
-              showToast(`Invitation envoyée à ${inviteEmail} ✓`);
-            }}>
-              <IcoMail s={14} c="white"/> Envoyer l'invitation
-            </Button>
-            <Button variant="ghost" onClick={()=>setInviteModal(false)}>Annuler</Button>
-          </div>
-        </div>
-      </div>
-    );
+    // InviteCoachModal est rendu depuis Settings (parent) pour éviter la perte de focus
 
     return (
       <div>
         {editCoach && <DiscModal coach={editCoach}/>}
-        {inviteModal && <InviteCoachModal/>}
+        {inviteModal && <InviteCoachModal
+        C={C}
+        inviteEmail={inviteEmail}
+        setInviteEmail={setInviteEmail}
+        inviteName={inviteName}
+        setInviteName={setInviteName}
+        onClose={()=>setInviteModal(false)}
+        onSubmit={async ()=>{
+          if(!inviteEmail||!inviteName.fn) return;
+          const newCoach = { id:`c${Date.now()}`, fn:inviteName.fn, ln:inviteName.ln, email:inviteEmail, isCoach:true, disciplines:[], status:"invité" };
+          setCoaches(prev=>[...prev, newCoach]);
+          setInviteModal(false); setInviteEmail(""); setInviteName({fn:"",ln:""});
+          // Appel API pour envoyer le magic link d'invitation
+          try {
+            await fetch("/api/invite-coach", {
+              method: "POST",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({
+                email: inviteEmail,
+                firstName: inviteName.fn,
+                lastName: inviteName.ln,
+              }),
+            });
+          } catch(e) { console.error("invite error", e); }
+          showToast(`Invitation envoyée à ${inviteEmail} ✓`);
+        }}
+      />}
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:20,flexWrap:"wrap",gap:10}}>
           <div>
@@ -1943,8 +3375,8 @@ function Settings({ isMobile }) {
   );
 }
 
-const PAGE_TITLES = { dashboard:"Tableau de bord", planning:"Planning", members:"Adhérents", subscriptions:"Abonnements", payments:"Paiements", disciplines:"Disciplines", settings:"Paramètres" };
-const PAGES = { dashboard:Dashboard, planning:Planning, members:Members, subscriptions:Subscriptions, payments:Payments, disciplines:DisciplinesPage, settings:Settings };
+const PAGE_TITLES = { dashboard:"Tableau de bord", planning:"Planning", members:"Adhérents", subscriptions:"Abonnements", payments:"Paiements", disciplines:"Disciplines", settings:"Paramètres", aide:"Aide" };
+const PAGES = { dashboard:Dashboard, planning:Planning, members:Members, subscriptions:Subscriptions, payments:Payments, disciplines:DisciplinesPage, settings:Settings, aide:AidePage };
 
 // ─── TENANTS DATA (Super Admin) ───────────────────────────────────────────────
 // ══════════════════════════════════════════════════════════════════════════════
@@ -2004,8 +3436,41 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
   const [modal, setModal]     = useState(null); // null | {type:"new"} | {type:"edit",tenant} | {type:"delete",tenant}
   const [toast, setToast]     = useState(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
+  const [loading, setLoading] = useState(true);
   const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3500); };
   const p = isMobile ? 16 : 28;
+
+  // Charger les vrais studios depuis Supabase
+  useEffect(() => {
+    const supabase = createClient();
+    supabase
+      .from("studios")
+      .select("id, name, slug, city, email, status, billing_status, trial_ends_at, plan_slug, created_at")
+      .order("created_at", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error("Studios load error:", error); setLoading(false); return; }
+        if (data && data.length > 0) {
+          const mois = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
+          const mapped = data.map(s => ({
+            id:      s.id,
+            name:    s.name || "Sans nom",
+            slug:    s.slug || "",
+            city:    s.city || "",
+            email:   s.email || "",
+            status:  s.status === "actif" ? "actif" : s.billing_status === "canceled" ? "suspendu" : "actif",
+            plan:    s.plan_slug || "Essentiel",
+            since:   (() => { const d = new Date(s.created_at); return `${mois[d.getMonth()]} ${d.getFullYear()}`; })(),
+            members: 0,
+            revenue: 0,
+            growth:  0,
+          }));
+          setTenants(mapped);
+        } else {
+          setTenants([]);
+        }
+        setLoading(false);
+      });
+  }, []);
 
   const filtered = tenants
     .filter(t => filter==="tous" || t.status===filter)
@@ -2087,7 +3552,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
           contact:`${f.firstName} ${f.lastName}`,
           firstName:f.firstName, lastName:f.lastName, phone:f.phone, notes:f.notes,
           isCoach:f.isCoach,
-          members:0, revenue:f.plan==="Pro"?69:f.plan==="Standard"?29:9,
+          members:0, revenue:FYDELYS_PLANS.find(p=>p.name===f.plan)?.price||9,
           status:"actif", since, growth:0
         };
         setTenants(prev=>[newT, ...prev]);
@@ -2142,7 +3607,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
                   {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi-disciplines"}
                 ]}/>
                 <SelectSA label="Plan Fydelys" k="plan" value={f.plan} onChange={upd} opts={[
-                  {v:"Essentiel",l:"Essentiel — 9 €/mois"},{v:"Standard",l:"Standard — 29 €/mois"},{v:"Pro",l:"Pro — 69 €/mois"}
+                  ...FYDELYS_PLANS.map(p=>({v:p.name,l:`${p.name} — ${p.price} €/mois`}))
                 ]}/>
               </div>
             </div>
@@ -3249,7 +4714,7 @@ export default function App({ initialRole = "admin", studioSlug = "", studioName
   if (role === "adherent")   return <AdherentView   onSwitch={setRole} isMobile={isMobile}/>;
   // admin avec is_coach → vue admin normale (ils ont accès à tout)
   const Page = PAGES[page] || Dashboard;
-  const appCtxValue = { studioName, userName, planName, membersCount, userRole, userEmail: "" };
+  const appCtxValue = { studioName, studioSlug, userName, planName, membersCount, userRole, userEmail: "" };
   return (
     <AppCtx.Provider value={appCtxValue}>
     <div style={{ display:"flex", minHeight:"100vh", background:C.bg }}>
@@ -3270,7 +4735,7 @@ export default function App({ initialRole = "admin", studioSlug = "", studioName
         {showTrialBanner && (
           <div style={{ background:trialDaysLeft<=3?"#F5EAE6":"#FDF4E3", borderBottom:`1px solid ${trialDaysLeft<=3?"#F5C2B5":"rgba(196,146,42,.25)"}`, padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
             <div style={{ fontSize:13, color:trialDaysLeft<=3?"#A85030":"#C4922A", fontWeight:600 }}>
-              ⏳ {trialDaysLeft > 0 ? `${trialDaysLeft} jour${trialDaysLeft>1?"s":""} d'essai restant${trialDaysLeft>1?"s":""}` : "Essai expiré"} — Choisissez votre formule pour continuer
+              ⏳ {trialDaysLeft > 0 ? `${trialDaysLeft} jour${trialDaysLeft>1?"s":""} d'essai gratuit restant${trialDaysLeft>1?"s":""}` : "Essai expiré"} — Activez votre abonnement pour continuer
             </div>
             <a href="/billing" style={{ fontSize:12, fontWeight:700, padding:"6px 14px", borderRadius:8, background:trialDaysLeft<=3?"#A85030":"#C4922A", color:"#fff", textDecoration:"none", whiteSpace:"nowrap" }}>
               Choisir une formule →

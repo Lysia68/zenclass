@@ -279,10 +279,37 @@ export default function LoginPage() {
 
   async function handleLogin(e:React.FormEvent){
     e.preventDefault(); setLoading(true); setError(null)
-    const {error}=await supabase.auth.signInWithOtp({email,
-      options:{emailRedirectTo:`https://fydelys.fr/auth/confirm?next=/dashboard`}})
-    if(error&&!error.message?.includes("Database error")) setError(error.message)
-    else setSent(true)
+    const hostname = window.location.hostname
+    const tenantMatch = hostname.match(/^([a-z0-9-]+)\.fydelys\.fr/)
+    const slug = tenantMatch ? tenantMatch[1] : null
+
+    if (slug) {
+      // Sur slug.fydelys.fr : on génère le magic link côté serveur
+      // pour envoyer un email brandé au nom du studio (pas "Fydelys")
+      try {
+        const res = await fetch("/api/send-magic-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, tenantSlug: slug }),
+        })
+        if (!res.ok) {
+          const { error: apiErr } = await res.json()
+          setError(apiErr || "Erreur lors de l'envoi")
+          setLoading(false)
+          return
+        }
+        setSent(true)
+      } catch {
+        setError("Erreur réseau. Réessayez.")
+      }
+    } else {
+      // Sur fydelys.fr : connexion admin standard via Supabase directement
+      const redirectTo = `https://fydelys.fr/auth/callback?next=/dashboard`
+      const {error}=await supabase.auth.signInWithOtp({email,
+        options:{emailRedirectTo: redirectTo}})
+      if(error&&!error.message?.includes("Database error")) setError(error.message)
+      else setSent(true)
+    }
     setLoading(false)
   }
 
@@ -302,7 +329,7 @@ export default function LoginPage() {
     },{onConflict:"email"})
     if(se){ setError("Erreur lors de l'enregistrement."); setLoading(false); return }
     const {error}=await supabase.auth.signInWithOtp({email:reg.email,options:{
-      emailRedirectTo:`https://fydelys.fr/auth/confirm?next=/dashboard&register=1`,
+      emailRedirectTo:`https://fydelys.fr/auth/callback?next=/dashboard&register=1`,
       shouldCreateUser:true,
       data:{first_name:reg.firstName,last_name:reg.lastName},
     }})
@@ -397,8 +424,14 @@ export default function LoginPage() {
             <>
 
               <div style={{marginBottom:20}}>
-                <h2 style={{fontSize:17,fontWeight:700,color:C.title,margin:"0 0 5px",letterSpacing:-0.3}}>Connexion sans mot de passe</h2>
-                <p style={{fontSize:13,color:C.sub,margin:0,lineHeight:1.6}}>Recevez un lien sécurisé dans votre boîte mail.</p>
+                <h2 style={{fontSize:17,fontWeight:700,color:C.title,margin:"0 0 5px",letterSpacing:-0.3}}>
+                  {ctx==="superadmin" ? "Connexion sans mot de passe" : "Connexion / Inscription"}
+                </h2>
+                <p style={{fontSize:13,color:C.sub,margin:0,lineHeight:1.6}}>
+                  {ctx==="superadmin"
+                    ? "Recevez un lien sécurisé dans votre boîte mail."
+                    : "Nouveau ou déjà membre ? Entrez votre email — un lien vous sera envoyé."}
+                </p>
               </div>
               <form onSubmit={handleLogin}>
                 <div style={{marginBottom:14}}>
@@ -411,6 +444,11 @@ export default function LoginPage() {
                 <button type="submit" disabled={loading||!email} style={{...btn(),opacity:loading||!email?.includes("@")?0.5:1}}>
                   {loading?"Envoi…":"Recevoir le lien ✦"}
                 </button>
+                {ctx!=="superadmin" && (
+                  <p style={{fontSize:11,color:C.footer,margin:"10px 0 0",textAlign:"center",lineHeight:1.5}}>
+                    Première fois ? Votre compte est créé automatiquement.
+                  </p>
+                )}
               </form>
             </>
           )}

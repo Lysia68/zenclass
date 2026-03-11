@@ -13,11 +13,14 @@ export async function GET(request: NextRequest) {
 
   const isApp      = hostname === "fydelys.fr" || hostname.includes("localhost")
   const tenantMatch = hostname.match(/^([a-z0-9-]+)\.fydelys\.fr/)
-  const tenantSlug = tenantMatch ? tenantMatch[1] : null
-  const isTenant   = !!tenantSlug && !isApp
+  // tenantParam DOIT être déclaré avant tenantSlug qui l'utilise
+  const tenantParam = searchParams.get("tenant")
+  // tenantSlug peut venir du hostname (sous-domaine) OU du param ?tenant= (callback sur fydelys.fr)
+  const tenantSlug = (tenantMatch ? tenantMatch[1] : null) ?? tenantParam ?? null
+  const isTenant   = !!tenantSlug
 
-  const tokenHash = searchParams.get("token_hash")
-  const type      = searchParams.get("type")
+  const tokenHash  = searchParams.get("token_hash")
+  const type       = searchParams.get("type")
 
   if (!code && !tokenHash) {
     return NextResponse.redirect(new URL("/", request.url))
@@ -105,6 +108,19 @@ export async function GET(request: NextRequest) {
           await db.from("profiles").update({ studio_id: studio.id }).eq("id", userId)
           slugToUse = studio.slug
         }
+      }
+      if (slugToUse) {
+        response.headers.set("Location", `https://${slugToUse}.fydelys.fr/dashboard`)
+        return response
+      }
+    }
+    // Adhérent ou Coach existant → rediriger vers le bon studio
+    if (existing.role === "adherent" || existing.role === "coach") {
+      let slugToUse: string | null = tenantSlug
+      if (!slugToUse && existing.studio_id) {
+        const { data: studio } = await db
+          .from("studios").select("slug").eq("id", existing.studio_id).single()
+        slugToUse = studio?.slug ?? null
       }
       if (slugToUse) {
         response.headers.set("Location", `https://${slugToUse}.fydelys.fr/dashboard`)
@@ -207,6 +223,11 @@ export async function GET(request: NextRequest) {
     }
   }
 
-  response.headers.set("Location", new URL(next, request.url).toString())
+  // Si on connaît le tenant, rediriger vers son sous-domaine
+  if (tenantSlug) {
+    response.headers.set("Location", `https://${tenantSlug}.fydelys.fr/dashboard`)
+  } else {
+    response.headers.set("Location", new URL(next, request.url).toString())
+  }
   return response
 }

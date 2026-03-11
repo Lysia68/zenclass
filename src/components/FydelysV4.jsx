@@ -936,7 +936,7 @@ function Planning({ isMobile }) {
       const sb = createClient();
       console.log("INSERT session — studioId:", studioId, "disciplineId:", sess.disciplineId, "date:", sess.date);
       const { data, error } = await sb.from("sessions").insert({
-        studio_id: studioId, discipline_id: (sess.disciplineId && typeof sess.disciplineId === 'string' && sess.disciplineId.includes('-')) ? sess.disciplineId : null,
+        studio_id: studioId, discipline_id: sess.disciplineId || null,
         teacher: sess.teacher || "", room: sess.room || "Studio A", level: sess.level || "Tous niveaux",
         session_date: sess.date, session_time: sess.time,
         duration_min: parseInt(sess.duration) || 60, spots: parseInt(sess.spots) || 12,
@@ -946,7 +946,14 @@ function Planning({ isMobile }) {
         console.error("insert session ERROR — code:", error.code, "msg:", error.message, "hint:", error.hint);
         setSessions(prev=>prev.filter(s=>s.id!==tempId));
         alert("❌ Erreur Supabase:\n" + error.message + "\nCode: " + error.code + (error.hint ? "\nHint: " + error.hint : ""));
-      } else if (data?.id) setSessions(prev => prev.map(s => s.id===tempId ? {...s, id:data.id} : s));
+      } else if (data?.id) {
+        if (isDemoData) {
+          setSessions([{ id:data.id, ...sess, booked:0, waitlist:0 }]);
+          setIsDemoData(false);
+        } else {
+          setSessions(prev => prev.map(s => s.id===tempId ? {...s, id:data.id} : s));
+        }
+      }
     } catch(e) { console.error("insert session", e); setSessions(prev=>prev.filter(s=>s.id!==tempId)); }
   };
 
@@ -971,7 +978,7 @@ function Planning({ isMobile }) {
     setRecFrom(""); setRecTo(""); setRecSlots([]); setRecPreview([]);
     try {
       const rows = recPreview.map(s => ({
-        studio_id: studioId, discipline_id: (s.disciplineId && typeof s.disciplineId === 'string' && s.disciplineId.includes('-')) ? s.disciplineId : null,
+        studio_id: studioId, discipline_id: s.disciplineId || null,
         teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
         session_date: s.date, session_time: s.time,
         duration_min: parseInt(s.duration) || 60, spots: parseInt(s.spots) || 12,
@@ -979,6 +986,11 @@ function Planning({ isMobile }) {
       }));
       const { error } = await createClient().from("sessions").insert(rows);
       if (error) console.error("insert recurring", error);
+      else if (isDemoData) {
+        // Remplacer les démos par les vraies données récurrentes
+        setSessions(recPreview);
+        setIsDemoData(false);
+      }
     } catch(e) { console.error("insert recurring", e); }
   };
 
@@ -1906,7 +1918,7 @@ function DurationPicker({ value, onChange }) {
     onChange(Math.max(15, Math.min(240, cur + dir * 15)));
   };
 
-  const label = (n) => n < 60 ? `${n}mn` : n === 60 ? `1h` : n % 60 === 0 ? `${n/60}h` : `${Math.floor(n/60)}h${String(n%60).padStart(2,"0")}`;
+  const label = (n) => n < 60 ? `${n}mn` : n % 60 === 0 ? `${n}mn` : `${Math.floor(n/60)}h${String(n%60).padStart(2,"0")}`;
   const cur = value || 60;
 
   return (
@@ -2060,6 +2072,7 @@ function DisciplinesPage({ isMobile }) {
   const [editName, setEditName]   = useState(null);
   const [confirmDel, setConfirmDel] = useState(null);
   const [loadingDb, setLoadingDb] = useState(false);
+  const [isDemoData, setIsDemoData] = useState(false);
   const [toast, setToast] = useState(null);
   const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3500); };
   const p = isMobile?16:28;
@@ -2072,8 +2085,13 @@ function DisciplinesPage({ isMobile }) {
       .select("id,name,icon,color,slots").eq("studio_id", ctxStudioId).order("created_at")
       .then(({ data, error }) => {
         if (error) { console.error("load disciplines", error); setLoadingDb(false); return; }
-        if (!data || data.length === 0) { setLoadingDb(false); return; } // garder DISCIPLINES par défaut
-        if (data && data.length > 0) setDiscs(data.map(d=>({ ...d, slots: d.slots||[] })));
+        if (data && data.length > 0) {
+          setDiscs(data.map(d=>({ ...d, slots: d.slots||[] })));
+          setIsDemoData(false);
+        } else {
+          // Garder DISCIPLINES par défaut et marquer comme démo
+          setIsDemoData(true);
+        }
         setLoadingDb(false);
       });
   }, [ctxStudioId]);
@@ -2159,7 +2177,7 @@ function DisciplinesPage({ isMobile }) {
                   style={{width:26,height:26,borderRadius:7,border:`1px solid ${C.border}`,background:C.surface,color:"#F87171",cursor:"pointer",fontSize:13,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>✕</button>
               </div>
               {/* Ligne 2 : Jour / Heure / Durée */}
-              <div style={{display:"grid", gridTemplateColumns:"2fr 1.2fr 1fr", gap:8}}>
+              <div style={{display:"grid", gridTemplateColumns:"1.8fr 1fr 1fr", gap:8}}>
                 <div>
                   <div style={{fontSize:10,fontWeight:700,color:C.textMuted,textTransform:"uppercase",letterSpacing:.6,marginBottom:4}}>Jour</div>
                   <DaySelect value={slot.day} onChange={v=>upSlot(disc.id,si,"day",v)}/>
@@ -2197,6 +2215,7 @@ function DisciplinesPage({ isMobile }) {
 
   return (
     <div style={{ padding:p }}>
+      {isDemoData && <DemoBanner/>}
       {loadingDb && (
         <div style={{ textAlign:"center", padding:"24px", color:C.textMuted, fontSize:13 }}>
           Chargement des disciplines…
@@ -2290,7 +2309,13 @@ function DisciplinesPage({ isMobile }) {
               const saved = await dbAddDisc(nD);
               if(saved) {
                 // Remplacer l'id temporaire par l'uuid Supabase
-                setDiscs(prev=>prev.map(d=>d.id===tempId?{...d,id:saved.id}:d));
+                if (isDemoData) {
+                  // Remplacer toutes les démos par cette première vraie discipline
+                  setDiscs([{...nD, id:saved.id, slots:[]}]);
+                  setIsDemoData(false);
+                } else {
+                  setDiscs(prev=>prev.map(d=>d.id===tempId?{...d,id:saved.id}:d));
+                }
               }
               showToast(`"${nD.name}" créée ✓`);
             }}>＋</Button>
@@ -3891,26 +3916,88 @@ function Settings({ isMobile }) {
   );
 
   // ── Tab: Mon compte ───────────────────────────────────────────────────────
+  const [accountForm, setAccountForm] = useState({ firstName:"", lastName:"", email:"", phone:"" });
+  const [accountSaving, setAccountSaving] = useState(false);
+  const [accountToast, setAccountToast] = useState(null);
+  const showAccountToast = (msg, ok=true) => { setAccountToast({msg,ok}); setTimeout(()=>setAccountToast(null),3000); };
+
+  useEffect(() => {
+    createClient().auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: prof } = await createClient().from("profiles")
+        .select("first_name, last_name, phone").eq("id", user.id).single();
+      setAccountForm({
+        firstName: prof?.first_name || "",
+        lastName:  prof?.last_name  || "",
+        email:     user.email || "",
+        phone:     prof?.phone || "",
+      });
+    });
+  }, []);
+
+  const saveAccount = async () => {
+    setAccountSaving(true);
+    try {
+      const { data: { user } } = await createClient().auth.getUser();
+      if (!user) { showAccountToast("Non connecté", false); return; }
+      const { error } = await createClient().from("profiles").update({
+        first_name: accountForm.firstName,
+        last_name:  accountForm.lastName,
+        phone:      accountForm.phone,
+      }).eq("id", user.id);
+      if (error) showAccountToast("Erreur : " + error.message, false);
+      else showAccountToast("Profil enregistré !");
+    } catch(e) { showAccountToast("Erreur", false); }
+    finally { setAccountSaving(false); }
+  };
+
   const TabAccount = () => (
     <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+      {accountToast && (
+        <div style={{ position:"fixed", bottom:24, left:"50%", transform:"translateX(-50%)", zIndex:9999,
+          background:accountToast.ok?"#2A1F14":"#7F1D1D", color:"#fff", borderRadius:12, padding:"11px 22px",
+          fontSize:13, fontWeight:600, boxShadow:"0 4px 20px rgba(0,0,0,.25)", whiteSpace:"nowrap" }}>
+          {accountToast.ok?"✓":"✕"} {accountToast.msg}
+        </div>
+      )}
       <Card>
         <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:18 }}>
-          <div style={{ width:56, height:56, borderRadius:14, background:C.accentBg, border:`2px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:C.accent }}>{userName?userName.split(" ").map(n=>n[0]).join("").toUpperCase().slice(0,2):"?"}</div>
+          <div style={{ width:56, height:56, borderRadius:14, background:C.accentBg, border:`2px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:18, fontWeight:800, color:C.accent }}>
+            {(accountForm.firstName?.[0]||"")+(accountForm.lastName?.[0]||"")||"?"}
+          </div>
           <div>
-            <div style={{ fontSize:17, fontWeight:800, color:C.text }}>{userName||"Utilisateur"}</div>
-            <div style={{ fontSize:13, color:C.textSoft, marginTop:2 }}>{userEmail||""}</div>
+            <div style={{ fontSize:17, fontWeight:800, color:C.text }}>{[accountForm.firstName, accountForm.lastName].filter(Boolean).join(" ")||"Utilisateur"}</div>
+            <div style={{ fontSize:13, color:C.textSoft, marginTop:2 }}>{accountForm.email}</div>
             <div style={{ marginTop:5 }}><RoleBadge role={currentRole}/></div>
           </div>
         </div>
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:12 }}>
-          {[["Prénom",userName.split(" ")[0]||""],["Nom",userName.split(" ").slice(1).join(" ")||""],["Email",userEmail||""],["Téléphone",""]].map(([lbl,val])=>(
+          {[
+            ["Prénom",    accountForm.firstName, v => setAccountForm(f=>({...f, firstName:v}))],
+            ["Nom",       accountForm.lastName,  v => setAccountForm(f=>({...f, lastName:v}))],
+            ["Email",     accountForm.email,     null],
+            ["Téléphone", accountForm.phone,     v => setAccountForm(f=>({...f, phone:v}))],
+          ].map(([lbl, val, onChange]) => (
             <div key={lbl}><FieldLabel>{lbl}</FieldLabel>
-              <input defaultValue={val} style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:C.surfaceWarm }}
-                onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
+              <input
+                value={val}
+                readOnly={!onChange}
+                onChange={onChange ? e=>onChange(e.target.value) : undefined}
+                style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8,
+                  fontSize:14, outline:"none", boxSizing:"border-box", color:C.text,
+                  background: onChange ? C.surfaceWarm : "#F0EBE4",
+                  cursor: onChange ? "text" : "default" }}
+                onFocus={e=>{ if(onChange) e.target.style.borderColor=C.accent; }}
+                onBlur={e=>e.target.style.borderColor=C.border}
+              />
             </div>
           ))}
         </div>
-        <div style={{ marginTop:14 }}><Button sm variant="primary" onClick={()=>showToast("Profil enregistré !")}>Enregistrer</Button></div>
+        <div style={{ marginTop:14 }}>
+          <Button sm variant="primary" onClick={saveAccount} disabled={accountSaving}>
+            {accountSaving ? "Enregistrement…" : "Enregistrer"}
+          </Button>
+        </div>
       </Card>
       {/* ── Facturation ── */}
       <Card noPad>

@@ -519,4 +519,4 @@ function Planning({ isMobile }) {
 }
 
 
-export { Planning, PlanningAccordion, PlanningSessionCard, stLbl, stStyle };
+export { Planning, PlanningSessionCard };

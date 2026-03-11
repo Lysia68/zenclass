@@ -4,7 +4,7 @@ import { AppCtx } from "./context";
 import { C } from "./theme";
 import { SESSIONS_INIT, MEMBERS_DEMO, DISCIPLINES, SUBSCRIPTIONS_INIT } from "./demoData";
 import { IcoCalendar, IcoUser, IcoChevron, IcoCreditCard, IcoCheck, IcoX, IcoAlert, IcoTag } from "./icons";
-import { Card, SectionHead, Button, Tag, Pill, EmptyState, DemoBanner } from "./ui";
+import { Card, SectionHead, Button, Tag, Pill, EmptyState, DemoBanner, DateLabel, Field, SessionRow } from "./ui";
 
 function AdherentView({ onSwitch, isMobile }) {
   const [page, setPage]    = useState("planning");

@@ -5,7 +5,7 @@ import { C } from "./theme";
 import { SESSIONS_INIT, DISCIPLINES } from "./demoData";
 import { IcoCalendar, IcoUsers, IcoUser, IcoChevron } from "./icons";
 import { Card, SectionHead, Button, Tag, Pill, EmptyState, DemoBanner } from "./ui";
-import { PlanningAccordion } from "./Planning";
+import { PlanningAccordion } from "./accordion";
 
 const MY_COACH_NAME = "Sophie Laurent"; // sera remplacé par le profil réel
 const MY_SESSIONS = SESSIONS_INIT.filter(s => s.teacher === MY_COACH_NAME);

@@ -5,7 +5,7 @@ import { C } from "./theme";
 import { DISCIPLINES, SESSIONS_INIT, BOOKINGS_INIT, MEMBERS, PAYMENTS } from "./demoData";
 import { IcoUsers, IcoCalendar, IcoBarChart, IcoEuro, IcoAlert, IcoChevron } from "./icons";
 import { Card, SectionHead, Pill, KpiCard, MemberRow, DemoBanner } from "./ui";
-import { PlanningAccordion } from "./Planning";
+import { PlanningAccordion } from "./accordion";
 
 function creditColor(credits, total) {
   if (credits === null) return { color:"#5C8A6A", bg:"#E8F5EE" }; // vert doux illimité

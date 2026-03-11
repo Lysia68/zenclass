@@ -2,7 +2,7 @@ import React, { useState, useEffect, useContext } from "react";
 import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
 import { C } from "./theme";
-import { SESSIONS_INIT, MEMBERS_DEMO } from "./demoData";
+import { SESSIONS_INIT, MEMBERS_DEMO, DISCIPLINES, SUBSCRIPTIONS_INIT } from "./demoData";
 import { IcoCalendar, IcoUser, IcoChevron, IcoCreditCard, IcoCheck, IcoX, IcoAlert, IcoTag } from "./icons";
 import { Card, SectionHead, Button, Tag, Pill, EmptyState, DemoBanner } from "./ui";
 

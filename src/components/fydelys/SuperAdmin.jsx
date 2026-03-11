@@ -2,6 +2,7 @@ import React, { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabase";
 import { C } from "./theme";
 import { IcoUsers, IcoUser, IcoSettings, IcoX, IcoCheck, IcoCalendar } from "./icons";
+import { SESSIONS_INIT, FYDELYS_PLANS } from "./demoData";
 import { Card, SectionHead, Button, Tag, Pill, EmptyState } from "./ui";
 
 const saInp = (f=false,err=false) => ({

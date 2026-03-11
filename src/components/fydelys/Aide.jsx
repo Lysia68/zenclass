@@ -1,5 +1,6 @@
 import React from "react";
 import { C } from "./theme";
+import { DISCIPLINES } from "./demoData";
 import { Card, SectionHead, Button } from "./ui";
 
 function AideIllustration({ type, color = "#3A6E90" }) {

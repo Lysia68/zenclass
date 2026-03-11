@@ -2212,18 +2212,13 @@ function AideIllustration({ type, color = "#3A6E90" }) {
       <text x="156" y="72" textAnchor="middle" fontSize="20">✓</text>
       <path d="M178 65 L210 65" stroke={accent} strokeWidth="1.5"/>
       {[
-        {x:218,y:20,label:"Admin",color:"#A06838",bg:"#F5EBE0",desc:"Planning complet
-Adhérents · Paiements
-Paramètres"},
-        {x:335,y:20,label:"Coach",color:"#3A6E90",bg:"#E6EFF5",desc:"Mes séances
-Liste inscrits
-Presence"},
+        {x:218,y:20,label:"Admin",color:"#A06838",bg:"#F5EBE0",desc:"Planning complet · Adhérents · Paiements · Paramètres"},
+        {x:335,y:20,label:"Coach",color:"#3A6E90",bg:"#E6EFF5",desc:"Mes séances · Liste inscrits · Présences"},
       ].map((r,i)=>(
         <g key={i}>
           <rect x={r.x} y={r.y} width="108" height="90" rx="10" fill={r.bg} stroke={r.color} strokeWidth="1.5"/>
           <text x={r.x+54} y={r.y+20} textAnchor="middle" fontSize="12" fontWeight="700" fill={r.color}>{r.label}</text>
-          {r.desc.split("
-").map((l,j)=>(
+          {r.desc.split(" · ").map((l,j)=>(
             <text key={j} x={r.x+10} y={r.y+38+j*16} fontSize="10" fill={r.color} opacity="0.8">{l}</text>
           ))}
         </g>

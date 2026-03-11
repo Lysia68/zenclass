@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
 import { C } from "./theme";
 import { PAYMENTS_DEMO } from "./demoData";
-import { IcoCreditCard, IcoMail } from "./icons";
+import { IcoCreditCard, IcoMail, IcoAlert, IcoBarChart, IcoCheck } from "./icons";
 import { Card, SectionHead, Button, Tag, Pill, DemoBanner, EmptyState } from "./ui";
 
 function Payments({ isMobile }) {

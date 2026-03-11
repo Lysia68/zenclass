@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
 import { C } from "./theme";
 import { MEMBERS_DEMO, SUBSCRIPTIONS_DEMO, SESSIONS_DEMO, BOOKINGS_DEMO } from "./demoData";
-import { IcoUserPlus, IcoMail, IcoUser, IcoCalendar, IcoX } from "./icons";
+import { IcoUserPlus, IcoMail, IcoUser, IcoCalendar, IcoX, IcoCheck, IcoTag } from "./icons";
 import { Card, SectionHead, Button, Field, Tag, Pill, MemberRow, CreditBadge, DemoBanner, EmptyState } from "./ui";
 
 function Members({ isMobile }) {

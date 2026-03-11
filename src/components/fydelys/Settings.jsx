@@ -3,7 +3,7 @@ import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
 import { C } from "./theme";
 import { FYDELYS_PLANS } from "./demoData";
-import { IcoUser, IcoUsers, IcoSettings, IcoCheck, IcoX, IcoMail, IcoLogOut } from "./icons";
+import { IcoUser, IcoUsers, IcoSettings, IcoCheck, IcoX, IcoMail, IcoLogOut, IcoCalendar, IcoAlert, IcoEuro, IcoHome, IcoLayers, IcoTag, IcoUserPlus, IcoYoga } from "./icons";
 import { Card, SectionHead, Button, Field, Tag, Pill, EmptyState } from "./ui";
 
 function RoleBadge({ role }) {

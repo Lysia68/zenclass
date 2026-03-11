@@ -212,6 +212,7 @@ export {
   SUBSCRIPTIONS_DEMO, PAYMENTS_DEMO,
   MEMBERS, DISCIPLINES, SESSIONS_INIT, BOOKINGS_INIT, SUBSCRIPTIONS_INIT,
   FYDELYS_PLANS, PAYMENTS, ROLES_DEF,
+  COACH_NAV_KEYS, ADH_NAV_KEYS, MY_COACH_NAME, TENANTS_INIT, TENANTS_DATA, USERS_DATA,
 };
 
 // ── Nav configs ───────────────────────────────────────────────────────────────
@@ -253,5 +254,3 @@ const USERS_DATA = [
   { id:"u7", fn:"Antoine", ln:"Girard",   email:"ant@flow.fr",          role:"admin",    tenant:"t3", status:"actif",    lastLogin:"Hier" },
   { id:"u8", fn:"Nadia",   ln:"Blanco",   email:"nadia@flow.fr",        role:"adherent", tenant:"t3", status:"suspendu", lastLogin:"Il y a 14j" },
 ];
-
-export { COACH_NAV_KEYS, ADH_NAV_KEYS, MY_COACH_NAME, TENANTS_INIT, TENANTS_DATA, USERS_DATA };

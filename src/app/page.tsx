@@ -99,10 +99,53 @@ const DISCIPLINES = [
   { img: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&q=75&auto=format&fit=crop",    name: "Stretching",   desc: "Souplesse, récupération, barre…",  tag: "" },
 ]
 
+// Feature : { label, included: true|false }
 const PLANS = [
-  { name: "Essentiel", price: "9",  desc: "Pour démarrer",           features: ["50 adhérents", "2 coachs", "Planning complet", "Paiements Stripe"],        popular: false },
-  { name: "Standard",  price: "29", desc: "Pour les studios actifs", features: ["200 adhérents", "5 coachs", "Tableaux de bord", "Support email prioritaire"], popular: true },
-  { name: "Pro",       price: "69", desc: "Pour les grands studios", features: ["Adhérents illimités", "Coachs illimités", "API + intégrations", "Support dédié"],   popular: false },
+  {
+    name: "Essentiel", price: "9", desc: "Pour démarrer", popular: false,
+    features: [
+      { label: "1 discipline",               included: true },
+      { label: "1 coach",                     included: true },
+      { label: "50 adhérents",                included: true },
+      { label: "Planning + présences",         included: true },
+      { label: "Espace adhérent (magic link)", included: true },
+      { label: "Séances récurrentes",          included: true },
+      { label: "Paiements adhérents (Stripe)", included: false },
+      { label: "Invitation d'équipe",          included: false },
+      { label: "Rappel cours 1h avant",        included: false },
+      { label: "Support prioritaire",          included: false },
+    ],
+  },
+  {
+    name: "Standard", price: "29", desc: "Pour les studios actifs", popular: true,
+    features: [
+      { label: "3 disciplines",               included: true },
+      { label: "3 coachs",                    included: true },
+      { label: "100 adhérents",               included: true },
+      { label: "Planning + présences",         included: true },
+      { label: "Espace adhérent (magic link)", included: true },
+      { label: "Séances récurrentes",          included: true },
+      { label: "Paiements adhérents (Stripe)", included: true },
+      { label: "Invitation d'équipe",          included: true },
+      { label: "Rappel cours 1h avant",        included: true },
+      { label: "Support prioritaire",          included: false },
+    ],
+  },
+  {
+    name: "Pro", price: "69", desc: "Pour les grands studios", popular: false,
+    features: [
+      { label: "Disciplines illimitées",       included: true },
+      { label: "Coachs illimités",             included: true },
+      { label: "Adhérents illimités",           included: true },
+      { label: "Planning + présences",          included: true },
+      { label: "Espace adhérent (magic link)",  included: true },
+      { label: "Séances récurrentes",           included: true },
+      { label: "Paiements adhérents (Stripe)",  included: true },
+      { label: "Invitation d'équipe",           included: true },
+      { label: "Rappel cours 1h avant",         included: true },
+      { label: "Support prioritaire",           included: true },
+    ],
+  },
 ]
 
 function useVisible(ref: React.RefObject<HTMLElement | null>, threshold = 0.2) {
@@ -449,20 +492,23 @@ export default function LandingPage() {
                   <span style={{fontSize:15,fontWeight:400,color:"var(--soft)",fontFamily:"var(--B)"}}>/mois</span>
                 </div>
                 <div style={{fontSize:12,color:"var(--soft)",margin:"6px 0 20px"}}>{plan.desc}</div>
-                <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:8,marginBottom:24,textAlign:"left"}}>
-                  {plan.features.map(f=>(
-                    <li key={f} style={{fontSize:13,color:"var(--mid)",display:"flex",gap:8}}>
-                      <span style={{color:"var(--accent)",fontWeight:700,flexShrink:0}}>✓</span>{f}
+                <ul style={{listStyle:"none",display:"flex",flexDirection:"column",gap:7,marginBottom:24,textAlign:"left"}}>
+                  {plan.features.map((f: any)=>(
+                    <li key={f.label} style={{fontSize:13,color:f.included?"var(--mid)":"var(--muted)",display:"flex",gap:8,alignItems:"center"}}>
+                      <span style={{flexShrink:0,fontWeight:700,fontSize:12,color:f.included?"var(--accent)":"var(--muted)"}}>
+                        {f.included ? "✓" : "✕"}
+                      </span>
+                      <span style={{textDecoration:f.included?"none":"none"}}>{f.label}</span>
                     </li>
                   ))}
                 </ul>
-                <a href="/login?tab=register" style={{display:"block",width:"100%",padding:"11px",borderRadius:10,textAlign:"center",textDecoration:"none",fontSize:14,fontWeight:700,background:"var(--btn)",color:"#fff"}}>
-                  Commencer gratuitement
+                <a href="/login?tab=register" style={{display:"block",width:"100%",padding:"11px",borderRadius:10,textAlign:"center",textDecoration:"none",fontSize:14,fontWeight:700,background:plan.popular?"var(--btn)":"transparent",color:plan.popular?"#fff":"var(--accent)",border:`1.5px solid ${"var(--accent)"}`}}>
+                  Choisir {plan.name} →
                 </a>
               </div>
             ))}
           </div>
-          <p style={{marginTop:20,fontSize:12,color:"var(--muted)"}}>Tous les plans incluent l'hébergement, les mises à jour et le support.</p>
+          <p style={{marginTop:20,fontSize:13,color:"var(--muted)"}}>15 jours d'essai gratuit inclus · Sans engagement · Résiliable à tout moment</p>
         </div>
       </section>
 

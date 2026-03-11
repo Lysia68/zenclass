@@ -1,7 +1,7 @@
 import { createClient } from "@/lib/supabase";
 import React, { useState, useEffect, useContext, createContext } from "react";
 
-const AppCtx = createContext({ studioName:"", studioSlug:"", userName:"", userEmail:"", planName:"", membersCount:0, userRole:"", discs:[], setDiscs:()=>{} });
+const AppCtx = createContext({ studioName:"", studioSlug:"", userName:"", userEmail:"", planName:"", membersCount:0, userRole:"", discs:[], setDiscs:()=>{}, studioId:null, setStudioId:()=>{} });
 
 // ── ConfirmModal — remplace window.confirm ────────────────────────────────────
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -612,8 +612,9 @@ function PlanningAccordion({ sessId, bookings, onChangeStatus, onAddBooking, onS
   );
 }
 
-function PlanningSessionCard({ sess, expandedId, bookings, onToggle, onChangeStatus }) {
-  const disc   = DISCIPLINES.find(d=>d.id===sess.disciplineId)||DISCIPLINES[0];
+function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onChangeStatus, onDelete, onCancel }) {
+  const allDiscs = discs?.length ? discs : DISCIPLINES;
+  const disc = allDiscs.find(d=>String(d.id)===String(sess.disciplineId)) || allDiscs[0] || { name:"Cours", color:C.accent, icon:"🧘" };
   const bl     = bookings[sess.id]||[];
   const booked = bl.length ? bl.filter(b=>b.st==="confirmed").length : sess.booked;
   const wait   = bl.length ? bl.filter(b=>b.st==="waitlist").length  : sess.waitlist;
@@ -641,7 +642,27 @@ function PlanningSessionCard({ sess, expandedId, bookings, onToggle, onChangeSta
           {wait>0 && <div style={{ fontSize:11, color:C.accent, fontWeight:700, marginTop:1 }}>+{wait} att.</div>}
         </div>
         <span style={{ flexShrink:0, display:"inline-flex", transition:"transform .2s", transform:isExp?"rotate(180deg)":"none" }}><IcoChevron s={16} c={C.textMuted}/></span>
+        {/* Actions rapides — visibles au hover ou si expanded */}
+        {isExp && (
+          <div onClick={e=>e.stopPropagation()} style={{ display:"flex", gap:4, flexShrink:0 }}>
+            {sess.status !== "cancelled" && onCancel && (
+              <button onClick={()=>onCancel(sess.id)}
+                style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:`1px solid ${C.border}`, background:C.surface, color:C.textMuted, cursor:"pointer", fontWeight:600 }}>
+                Annuler
+              </button>
+            )}
+            {onDelete && (
+              <button onClick={()=>{ if(window.confirm("Supprimer cette séance définitivement ?")) onDelete(sess.id); }}
+                style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:`1px solid #EFC8BC`, background:"#FFF5F5", color:C.warn, cursor:"pointer", fontWeight:600 }}>
+                ✕
+              </button>
+            )}
+          </div>
+        )}
       </div>
+      {sess.status === "cancelled" && (
+        <div style={{ background:"#FFF5F5", padding:"4px 14px", fontSize:12, color:C.warn, fontWeight:600 }}>⚠ Séance annulée</div>
+      )}
       {isExp && <PlanningAccordion sessId={sess.id} bookings={bookings} onChangeStatus={onChangeStatus}/>}
     </div>
   );
@@ -685,10 +706,10 @@ function DashboardSessionCard({ sess, expandedId, bookings, onToggle, onChangeSt
 
 // ── PLANNING ──────────────────────────────────────────────────────────────────
 function Planning({ isMobile }) {
-  // Récupérer les disciplines depuis le context global (modifiées dans DisciplinesPage)
-  const { discs } = useContext(AppCtx);
-  const [sessions, setSessions] = useState(SESSIONS_INIT);
-  const [bookings, setBookings] = useState(() => JSON.parse(JSON.stringify(BOOKINGS_INIT)));
+  const { discs, studioId } = useContext(AppCtx);
+  const [sessions, setSessions] = useState([]);
+  const [dbLoading, setDbLoading] = useState(true);
+  const [bookings, setBookings] = useState({});
   const [expandedId, setExpandedId] = useState(null);
   const [fd, setFd] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
@@ -723,6 +744,27 @@ function Planning({ isMobile }) {
       }
     });
   }, []);
+
+  // Charger les sessions depuis Supabase dès que studioId est disponible
+  useEffect(() => {
+    if (!studioId) return;
+    setDbLoading(true);
+    const sb = createClient();
+    sb.from("sessions")
+      .select("id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots, status")
+      .eq("studio_id", studioId).order("session_date").order("session_time")
+      .then(({ data, error }) => {
+        if (error) { console.error("load sessions", error); setDbLoading(false); return; }
+        if (data) setSessions(data.map(s => ({
+          id: s.id, disciplineId: s.discipline_id,
+          teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
+          date: s.session_date, time: s.session_time?.slice(0,5) || "09:00",
+          duration: s.duration_min || 60, spots: s.spots || 12,
+          status: s.status || "scheduled", booked: 0, waitlist: 0,
+        })));
+        setDbLoading(false);
+      });
+  }, [studioId]);
 
   // Recalcule le preview quand les paramètres récurrence changent
   useEffect(() => {
@@ -760,21 +802,57 @@ function Planning({ isMobile }) {
 
   const dates = [...new Set(filtered.map(s=>s.date))].sort();
 
-  const addSession = () => {
-    if (!nS.date) return;
-    setSessions(prev => [...prev, { id:Date.now(), ...nS, booked:0, waitlist:0, disciplineId:parseInt(nS.disciplineId) }]);
+  const addSession = async () => {
+    if (!nS.date || !studioId) return;
+    const sess = { ...nS, disciplineId: nS.disciplineId || null };
+    const tempId = `tmp-${Date.now()}`;
+    setSessions(prev => [...prev, { id:tempId, ...sess, booked:0, waitlist:0 }]);
     setShowAdd(false);
-    setNS({ disciplineId:1, teacher:"", date:"", time:"09:00", duration:60, spots:12, level:"Tous niveaux", room:"Studio A" });
+    setNS({ disciplineId:null, teacher:"", date:"", time:"09:00", duration:60, spots:12, level:"Tous niveaux", room:"Studio A" });
+    try {
+      const sb = createClient();
+      const { data, error } = await sb.from("sessions").insert({
+        studio_id: studioId, discipline_id: sess.disciplineId || null,
+        teacher: sess.teacher || "", room: sess.room || "Studio A", level: sess.level || "Tous niveaux",
+        session_date: sess.date, session_time: sess.time,
+        duration_min: parseInt(sess.duration) || 60, spots: parseInt(sess.spots) || 12,
+        status: "scheduled",
+      }).select("id").single();
+      if (error) { console.error("insert session", error); setSessions(prev=>prev.filter(s=>s.id!==tempId)); }
+      else if (data?.id) setSessions(prev => prev.map(s => s.id===tempId ? {...s, id:data.id} : s));
+    } catch(e) { console.error("insert session", e); setSessions(prev=>prev.filter(s=>s.id!==tempId)); }
   };
 
-  const addRecurringSessions = () => {
-    if (recPreview.length === 0) return;
+  const deleteSession = async (id) => {
+    setSessions(prev => prev.filter(s => s.id !== id));
+    if (!studioId) return;
+    try { await createClient().from("sessions").delete().eq("id", id); }
+    catch(e) { console.error("delete session", e); }
+  };
+
+  const cancelSession = async (id) => {
+    setSessions(prev => prev.map(s => s.id===id ? {...s, status:"cancelled"} : s));
+    if (!studioId) return;
+    try { await createClient().from("sessions").update({ status:"cancelled" }).eq("id", id); }
+    catch(e) { console.error("cancel session", e); }
+  };
+
+  const addRecurringSessions = async () => {
+    if (recPreview.length === 0 || !studioId) return;
     setSessions(prev => [...prev, ...recPreview]);
-    setShowAdd(false);
-    setRecMode(false);
-    setRecFrom(""); setRecTo("");
-    setRecSlots([]);
-    setRecPreview([]);
+    setShowAdd(false); setRecMode(false);
+    setRecFrom(""); setRecTo(""); setRecSlots([]); setRecPreview([]);
+    try {
+      const rows = recPreview.map(s => ({
+        studio_id: studioId, discipline_id: s.disciplineId || null,
+        teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
+        session_date: s.date, session_time: s.time,
+        duration_min: parseInt(s.duration) || 60, spots: parseInt(s.spots) || 12,
+        status: "scheduled",
+      }));
+      const { error } = await createClient().from("sessions").insert(rows);
+      if (error) console.error("insert recurring", error);
+    } catch(e) { console.error("insert recurring", e); }
   };
 
   const handleToggle = (id) => setExpandedId(prev => prev===id ? null : id);
@@ -1045,10 +1123,13 @@ function Planning({ isMobile }) {
               sess={s}
               expandedId={expandedId}
               bookings={bookings}
+              discs={discs}
               onToggle={handleToggle}
               onChangeStatus={handleChangeStatus}
               onAddBooking={handleAddBooking}
               onSendReminder={handleSendReminder}
+              onDelete={deleteSession}
+              onCancel={cancelSession}
             />
           ))}
         </div>
@@ -1058,21 +1139,73 @@ function Planning({ isMobile }) {
 }
 
 function Members({ isMobile }) {
-  const [members, setMembers] = useState(MEMBERS);
-
+  const { studioId } = useContext(AppCtx);
+  const [members, setMembers] = useState([]);
+  const [dbLoading, setDbLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [selected, setSelected] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [nM, setNM] = useState({ firstName:"", lastName:"", email:"", phone:"", subscription:"Mensuel illimité" });
-  const [modal, setModal] = useState(null); // { type: "email"|"subscription"|"history", member }
+  const [nM, setNM] = useState({ firstName:"", lastName:"", email:"", phone:"" });
+  const [modal, setModal] = useState(null);
   const p = isMobile?12:28;
   const filtered = members.filter(m=>`${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(search.toLowerCase()));
 
-  const add = () => {
-    if (!nM.firstName||!nM.email) return;
-    setMembers(prev=>[...prev, { id:Date.now(), ...nM, joined:new Date().toISOString().split("T")[0], status:"nouveau", credits:0, nextPayment:null, avatar:(nM.firstName[0]||"")+(nM.lastName[0]||"") }]);
+  useEffect(() => {
+    if (!studioId) return;
+    setDbLoading(true);
+    createClient().from("members")
+      .select("id, first_name, last_name, email, phone, status, credits, joined_at, next_payment, notes, subscriptions(name)")
+      .eq("studio_id", studioId).order("last_name")
+      .then(({ data, error }) => {
+        if (error) { console.error("load members", error); setDbLoading(false); return; }
+        if (data) setMembers(data.map(m => ({
+          id: m.id, firstName: m.first_name, lastName: m.last_name,
+          email: m.email, phone: m.phone || "", status: m.status || "actif",
+          credits: m.credits || 0, joined: m.joined_at, nextPayment: m.next_payment,
+          notes: m.notes || "", subscription: m.subscriptions?.name || "—",
+          avatar: (m.first_name?.[0]||"")+(m.last_name?.[0]||""),
+        })));
+        setDbLoading(false);
+      });
+  }, [studioId]);
+
+  const add = async () => {
+    if (!nM.firstName||!nM.email||!studioId) return;
+    const tempId = `tmp-${Date.now()}`;
+    setMembers(prev=>[...prev, { id:tempId, ...nM, joined:new Date().toISOString().split("T")[0], status:"nouveau", credits:0, nextPayment:null, subscription:"—", avatar:(nM.firstName[0]||"")+(nM.lastName[0]||"") }]);
     setShowAdd(false);
-    setNM({ firstName:"", lastName:"", email:"", phone:"", subscription:"Mensuel illimité" });
+    setNM({ firstName:"", lastName:"", email:"", phone:"" });
+    try {
+      const { data, error } = await createClient().from("members").insert({
+        studio_id: studioId, first_name: nM.firstName, last_name: nM.lastName,
+        email: nM.email, phone: nM.phone || "", status: "nouveau", credits: 0,
+        joined_at: new Date().toISOString().split("T")[0],
+      }).select("id").single();
+      if (error) { console.error("insert member", error); setMembers(prev=>prev.filter(m=>m.id!==tempId)); }
+      else if (data?.id) setMembers(prev=>prev.map(m=>m.id===tempId?{...m,id:data.id}:m));
+    } catch(e) { console.error("insert member", e); }
+  };
+
+  const updateMember = async (id, updates) => {
+    setMembers(prev=>prev.map(m=>m.id===id?{...m,...updates}:m));
+    const map = {};
+    if (updates.status !== undefined)  map.status = updates.status;
+    if (updates.credits !== undefined) map.credits = updates.credits;
+    if (updates.notes !== undefined)   map.notes = updates.notes;
+    if (updates.nextPayment !== undefined) map.next_payment = updates.nextPayment;
+    if (updates.firstName !== undefined) map.first_name = updates.firstName;
+    if (updates.lastName !== undefined)  map.last_name = updates.lastName;
+    if (updates.phone !== undefined)     map.phone = updates.phone;
+    if (Object.keys(map).length) {
+      try { await createClient().from("members").update(map).eq("id", id); }
+      catch(e) { console.error("update member", e); }
+    }
+  };
+
+  const deleteMember = async (id) => {
+    setMembers(prev=>prev.filter(m=>m.id!==id));
+    try { await createClient().from("members").delete().eq("id", id); }
+    catch(e) { console.error("delete member", e); }
   };
 
   // Mock session history per member
@@ -1248,20 +1381,41 @@ function Members({ isMobile }) {
 }
 
 function Subscriptions({ isMobile }) {
-  const [subs, setSubs] = useState(SUBSCRIPTIONS_INIT);
+  const { studioId } = useContext(AppCtx);
+  const [subs, setSubs] = useState([]);
+  const [dbLoading, setDbLoading] = useState(true);
   const [showAdd, setShowAdd] = useState(false);
   const [editId, setEditId] = useState(null);
   const [nSub, setNSub] = useState({ name:"", price:"", period:"mois", description:"" });
   const [editData, setEditData] = useState({});
   const p = isMobile?12:28;
 
+  useEffect(() => {
+    if (!studioId) return;
+    setDbLoading(true);
+    createClient().from("subscriptions")
+      .select("id, name, price, period, description, popular, color")
+      .eq("studio_id", studioId).eq("active", true).order("price")
+      .then(({ data, error }) => {
+        if (error) { console.error("load subs", error); setDbLoading(false); return; }
+        if (data) setSubs(data.map(s => ({ ...s, color: s.color || "#B8936A" })));
+        setDbLoading(false);
+      });
+  }, [studioId]);
+
   const startEdit = (sub) => {
     setEditId(sub.id);
     setEditData({ name:sub.name, price:sub.price, period:sub.period, description:sub.description, popular:sub.popular });
   };
-  const saveEdit = (id) => {
+  const saveEdit = async (id) => {
     setSubs(prev=>prev.map(s=>s.id===id?{...s,...editData,price:parseFloat(editData.price)||0}:s));
     setEditId(null);
+    try {
+      await createClient().from("subscriptions").update({
+        name: editData.name, price: parseFloat(editData.price)||0,
+        period: editData.period, description: editData.description||"", popular: editData.popular||false,
+      }).eq("id", id);
+    } catch(e) { console.error("update sub", e); }
   };
 
   return (
@@ -1277,7 +1431,22 @@ function Subscriptions({ isMobile }) {
             <Field label="Description" value={nSub.description} onChange={v=>setNSub({...nSub,description:v})} placeholder="Courte description…"/>
           </div>
           <div style={{ marginTop:14, display:"flex", gap:10 }}>
-            <Button variant="primary" onClick={()=>{ if(!nSub.name)return; setSubs(prev=>[...prev,{id:Date.now(),...nSub,price:parseFloat(nSub.price)||0,color:C.accent,popular:false}]); setShowAdd(false); setNSub({name:"",price:"",period:"mois",description:""}); }}>Créer</Button>
+            <Button variant="primary" onClick={async ()=>{
+              if(!nSub.name)return;
+              const tempId = `tmp-${Date.now()}`;
+              setSubs(prev=>[...prev,{id:tempId,...nSub,price:parseFloat(nSub.price)||0,color:C.accent,popular:false}]);
+              setShowAdd(false); setNSub({name:"",price:"",period:"mois",description:""});
+              if (studioId) {
+                try {
+                  const sb = createClient();
+                  const { data } = await sb.from("subscriptions").insert({
+                    studio_id:studioId, name:nSub.name, price:parseFloat(nSub.price)||0,
+                    period:nSub.period, description:nSub.description||"", popular:false, color:C.accent,
+                  }).select("id").single();
+                  if (data?.id) setSubs(prev=>prev.map(s=>s.id===tempId?{...s,id:data.id}:s));
+                } catch(e) { console.error("insert sub", e); }
+              }
+            }}>Créer</Button>
             <Button variant="ghost" onClick={()=>setShowAdd(false)}>Annuler</Button>
           </div>
         </Card>
@@ -1320,7 +1489,13 @@ function Subscriptions({ isMobile }) {
                 <div style={{ fontSize:15, color:C.textSoft, marginBottom:18, lineHeight:1.6 }}>{sub.description}</div>
                 <div style={{ display:"flex", gap:8 }}>
                   <Button sm variant="ghost" onClick={()=>startEdit(sub)}><span style={{display:"flex",alignItems:"center",gap:5}}><IcoSettings s={13} c={C.textMid}/>Modifier</span></Button>
-                  <Button sm variant="danger" onClick={()=>setSubs(prev=>prev.filter(s=>s.id!==sub.id))}>Supprimer</Button>
+                  <Button sm variant="danger" onClick={async ()=>{
+                    setSubs(prev=>prev.filter(s=>s.id!==sub.id));
+                    if (studioId) {
+                      try { const sb = createClient(); await sb.from("subscriptions").update({active:false}).eq("id",sub.id); }
+                      catch(e) { console.error("del sub",e); }
+                    }
+                  }}>Supprimer</Button>
                 </div>
               </>
             )}
@@ -1332,17 +1507,41 @@ function Subscriptions({ isMobile }) {
 }
 
 function Payments({ isMobile }) {
-  const [payments, setPayments] = useState(PAYMENTS);
+  const [payments, setPayments] = useState([]);
+  const { studioId } = useContext(AppCtx);
+  const [dbLoading, setDbLoading] = useState(true);
   const [toast, setToast] = useState(null);
   const total  = payments.filter(p=>p.status==="payé").reduce((s,p)=>s+p.amount,0);
   const unpaid = payments.filter(p=>p.status==="impayé").reduce((s,p)=>s+p.amount,0);
   const p = isMobile?12:28;
 
-  const relancer = (id) => {
+  useEffect(() => {
+    if (!studioId) return;
+    setDbLoading(true);
+    createClient().from("payments")
+      .select("id, member_id, amount, status, payment_date, payment_type, notes, members(first_name, last_name), subscriptions(name)")
+      .eq("studio_id", studioId).order("payment_date", { ascending: false })
+      .then(({ data, error }) => {
+        if (error) { console.error("load payments", error); setDbLoading(false); return; }
+        if (data) setPayments(data.map(pay => ({
+          id: pay.id, memberId: pay.member_id,
+          member: pay.members ? `${pay.members.first_name} ${pay.members.last_name}` : "—",
+          amount: pay.amount, status: pay.status,
+          date: pay.payment_date, type: pay.payment_type || "Carte",
+          subscription: pay.subscriptions?.name || "—", notes: pay.notes || "",
+          relance: false,
+        })));
+        setDbLoading(false);
+      });
+  }, [studioId]);
+
+  const relancer = async (id) => {
     setPayments(prev=>prev.map(p=>p.id===id?{...p,relance:true}:p));
     const pay = payments.find(p=>p.id===id);
-    setToast(`Relance envoyée à ${pay.member}`);
-    setTimeout(()=>setToast(null), 3000);
+    setToast(`Relance envoyée à ${pay?.member||""}`);
+    setTimeout(()=>setToast(null),3000);
+    try { await createClient().from("payments").update({ notes:(pay?.notes||"")+" [relancé]" }).eq("id",id); }
+    catch(e) { console.error("relancer",e); }
   };
 
   const stats = [
@@ -1395,6 +1594,99 @@ function Payments({ isMobile }) {
   );
 }
 
+
+// ── DURATION PICKER — durées prédéfinies + saisie libre ─────────────────────
+const DURATIONS = [30, 45, 60, 75, 90, 105, 120];
+function DurationPicker({ value, onChange }) {
+  const [open, setOpen] = useState(false);
+  const [inputVal, setInputVal] = useState(String(value || 60));
+  const ref = React.useRef(null);
+  const listRef = React.useRef(null);
+
+  React.useEffect(() => { setInputVal(String(value || 60)); }, [value]);
+
+  React.useEffect(() => {
+    if (!open) return;
+    const handler = (e) => { if (ref.current && !ref.current.contains(e.target)) setOpen(false); };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [open]);
+
+  React.useEffect(() => {
+    if (open && listRef.current) {
+      const active = listRef.current.querySelector('[data-active="true"]');
+      if (active) active.scrollIntoView({ block:"center" });
+    }
+  }, [open]);
+
+  const commit = (v) => {
+    const n = parseInt(v);
+    if (n >= 5 && n <= 240) { setInputVal(String(n)); onChange(n); }
+    else setInputVal(String(value || 60));
+    setOpen(false);
+  };
+
+  const step = (dir) => {
+    const cur = parseInt(inputVal) || (value || 60);
+    const next = Math.max(5, Math.min(240, cur + dir * 15));
+    setInputVal(String(next)); onChange(next);
+  };
+
+  // Position dropdown
+  const triggerRef = React.useRef(null);
+  const [dropUp, setDropUp] = React.useState(false);
+  React.useEffect(() => {
+    if (open && triggerRef.current) {
+      const r = triggerRef.current.getBoundingClientRect();
+      setDropUp(window.innerHeight - r.bottom < 200 && r.top > 200);
+    }
+  }, [open]);
+
+  const label = (n) => n < 60 ? `${n}mn` : n === 60 ? `1h` : n % 60 === 0 ? `${n/60}h` : `${Math.floor(n/60)}h${String(n%60).padStart(2,"0")}`;
+
+  return (
+    <div ref={ref} style={{ position:"relative", width:92, flexShrink:0 }}>
+      <div ref={triggerRef} style={{ display:"flex", alignItems:"center", border:`1.5px solid ${open ? C.accent : C.border}`, borderRadius:9, background:C.surfaceWarm, overflow:"hidden", transition:"border-color .15s" }}>
+        <button onMouseDown={e=>{e.preventDefault();step(-1);}} tabIndex={-1}
+          style={{ background:"none", border:"none", borderRight:`1px solid ${C.border}`, padding:"0 6px", height:38, cursor:"pointer", color:C.textMuted, fontSize:13, flexShrink:0 }}>
+          ▼
+        </button>
+        <input
+          value={inputVal}
+          onChange={e=>setInputVal(e.target.value)}
+          onBlur={e=>commit(e.target.value)}
+          onKeyDown={e=>{ if(e.key==="Enter") e.target.blur(); if(e.key==="ArrowUp"){e.preventDefault();step(1);} if(e.key==="ArrowDown"){e.preventDefault();step(-1);} }}
+          style={{ width:0, flex:1, border:"none", outline:"none", background:"transparent", padding:"0 4px", fontSize:13, color:C.text, fontWeight:700, textAlign:"center", height:38 }}
+        />
+        <button onMouseDown={e=>{e.preventDefault();step(1);}} tabIndex={-1}
+          style={{ background:"none", border:"none", borderLeft:`1px solid ${C.border}`, padding:"0 6px", height:38, cursor:"pointer", color:C.textMuted, fontSize:13, flexShrink:0 }}>
+          ▲
+        </button>
+        <button onMouseDown={e=>{e.preventDefault();setOpen(o=>!o);}} tabIndex={-1}
+          style={{ background:"none", border:"none", borderLeft:`1px solid ${C.border}`, padding:"0 7px", height:38, cursor:"pointer", color:open?C.accent:C.textMuted, fontSize:10, flexShrink:0 }}>
+          ☰
+        </button>
+      </div>
+      {open && (
+        <div ref={listRef} style={{ position:"absolute", left:0, right:0, [dropUp?"bottom":"top"]:"calc(100% + 4px)", background:C.surface, border:`1.5px solid ${C.accent}`, borderRadius:10, boxShadow:"0 8px 32px rgba(42,31,20,.18)", zIndex:9999, maxHeight:220, overflowY:"auto" }}>
+          {DURATIONS.map(d => (
+            <button key={d} data-active={d===value?"true":"false"}
+              onMouseDown={e=>{e.preventDefault();setInputVal(String(d));onChange(d);setOpen(false);}}
+              style={{ display:"block", width:"100%", textAlign:"center", padding:"9px 12px", border:"none",
+                background: d===value ? C.accentLight : "transparent",
+                color: d===value ? C.accent : C.text,
+                fontWeight: d===value ? 700 : 400, fontSize:13, cursor:"pointer",
+                borderBottom:`1px solid ${C.border}20` }}
+              onMouseEnter={e=>{if(d!==value)e.currentTarget.style.background="rgba(160,104,56,.06)";}}
+              onMouseLeave={e=>{e.currentTarget.style.background=d===value?C.accentLight:"transparent";}}>
+              {label(d)} <span style={{color:C.textMuted,fontSize:11}}>({d} min)</span>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // ── TIME PICKER — spinners ▲▼ + saisie libre + dropdown optionnel ────────────
 function TimePicker({ value, onChange }) {
@@ -1547,9 +1839,7 @@ function DaySelect({ value, onChange }) {
 const DAYS_FR = ["Lun","Mar","Mer","Jeu","Ven","Sam","Dim"];
 
 function DisciplinesPage({ isMobile }) {
-  // Utiliser le context global pour partager les discs avec Planning (récurrence)
-  const { discs, setDiscs } = useContext(AppCtx);
-  const { studioSlug } = useContext(AppCtx);
+  const { discs, setDiscs, studioId: ctxStudioId } = useContext(AppCtx);
   const [nD, setND]         = useState({ name:"", icon:"🏃", color:C.accent });
   const [editDisc, setEditDisc]   = useState(null);
   const [editName, setEditName]   = useState(null);
@@ -1559,71 +1849,55 @@ function DisciplinesPage({ isMobile }) {
   const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3500); };
   const p = isMobile?16:28;
 
-  // ── Charger les disciplines depuis Supabase au montage ──────────────────
+  // ── Charger les disciplines depuis Supabase quand studioId dispo ─────────
   useEffect(() => {
-    const load = async () => {
-      setLoadingDb(true);
-      try {
-        const { createClient } = await import("@/lib/supabase").catch(()=>({ createClient: null }));
-        if (!createClient) return;
-        const sb = createClient();
-        const { data: profile } = await sb.from("profiles").select("studio_id").eq("id",(await sb.auth.getUser()).data.user?.id).single();
-        if (!profile?.studio_id) return;
-        const { data } = await sb.from("disciplines").select("id,name,icon,color,slots").eq("studio_id", profile.studio_id).order("created_at");
-        if (data && data.length > 0) {
-          setDiscs(data.map(d=>({ ...d, slots: d.slots||[] })));
-        }
-      } catch(e) { console.error("load disciplines", e); }
-      finally { setLoadingDb(false); }
-    };
-    load();
-  }, []);
+    if (!ctxStudioId) return;
+    setLoadingDb(true);
+    createClient().from("disciplines")
+      .select("id,name,icon,color,slots").eq("studio_id", ctxStudioId).order("created_at")
+      .then(({ data, error }) => {
+        if (error) { console.error("load disciplines", error); setLoadingDb(false); return; }
+        if (data && data.length > 0) setDiscs(data.map(d=>({ ...d, slots: d.slots||[] })));
+        setLoadingDb(false);
+      });
+  }, [ctxStudioId]);
 
   // ── Helpers DB ──────────────────────────────────────────────────────────
-  const getStudioId = async (sb) => {
-    const { data: p } = await sb.from("profiles").select("studio_id").eq("id",(await sb.auth.getUser()).data.user?.id).single();
-    return p?.studio_id;
-  };
-
   const dbSaveSlots = async (discId, slots) => {
-    try {
-      const { createClient } = await import("@/lib/supabase");
-      const sb = createClient();
-      await sb.from("disciplines").update({ slots }).eq("id", discId);
-    } catch(e) { console.error("save slots", e); }
+    try { await createClient().from("disciplines").update({ slots }).eq("id", discId); }
+    catch(e) { console.error("save slots", e); }
   };
 
   const dbAddDisc = async (disc) => {
+    if (!ctxStudioId) return null;
     try {
-      const { createClient } = await import("@/lib/supabase");
-      const sb = createClient();
-      const studioId = await getStudioId(sb);
-      const { data } = await sb.from("disciplines").insert({ studio_id:studioId, name:disc.name, icon:disc.icon, color:disc.color||C.accent, slots:[] }).select().single();
+      const { data } = await createClient().from("disciplines")
+        .insert({ studio_id:ctxStudioId, name:disc.name, icon:disc.icon, color:disc.color||C.accent, slots:[] }).select().single();
       return data;
     } catch(e) { console.error("add disc", e); return null; }
   };
 
   const dbUpdateDisc = async (discId, updates) => {
-    try {
-      const { createClient } = await import("@/lib/supabase");
-      const sb = createClient();
-      await sb.from("disciplines").update(updates).eq("id", discId);
-    } catch(e) { console.error("update disc", e); }
+    try { await createClient().from("disciplines").update(updates).eq("id", discId); }
+    catch(e) { console.error("update disc", e); }
   };
 
   const dbDeleteDisc = async (discId) => {
-    try {
-      const { createClient } = await import("@/lib/supabase");
-      const sb = createClient();
-      await sb.from("disciplines").delete().eq("id", discId);
-    } catch(e) { console.error("delete disc", e); }
+    try { await createClient().from("disciplines").delete().eq("id", discId); }
+    catch(e) { console.error("delete disc", e); }
   };
 
   // Slots helpers (state local + sync DB)
   const addSlot = (id) => setDiscs(prev=>prev.map(d=>{
     if(d.id!==id) return d;
     const lastSlot = (d.slots||[]).at(-1);
-    return {...d, slots:[...(d.slots||[]), {day: lastSlot?.day||"Lun", time:"09:00"}]};
+    let nextTime = "09:00";
+    if (lastSlot?.time) {
+      const [h, m] = lastSlot.time.split(":").map(Number);
+      const next = Math.min(h + 1, 22);
+      nextTime = `${String(next).padStart(2,"0")}:${String(m).padStart(2,"0")}`;
+    }
+    return {...d, slots:[...(d.slots||[]), {day: lastSlot?.day||"Lun", time: nextTime, duration: lastSlot?.duration||60}]};
   }));
   const rmSlot  = (id,si) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:d.slots.filter((_,j)=>j!==si)}:d));
   const upSlot  = (id,si,field,val) => setDiscs(prev=>prev.map(d=>d.id===id?{...d,slots:d.slots.map((s,j)=>j===si?{...s,[field]:val}:s)}:d));
@@ -1657,6 +1931,7 @@ function DisciplinesPage({ isMobile }) {
             <div key={si} style={{display:"flex",alignItems:"center",gap:8,marginBottom:8}}>
               <DaySelect value={slot.day} onChange={v=>upSlot(disc.id,si,"day",v)}/>
               <TimePicker value={slot.time} onChange={v=>upSlot(disc.id,si,"time",v)}/>
+              <DurationPicker value={slot.duration||60} onChange={v=>upSlot(disc.id,si,"duration",v)}/>
               <button onClick={()=>rmSlot(disc.id,si)}
                 style={{width:32,height:38,borderRadius:9,border:`1px solid ${C.border}`,background:C.surface,color:"#F87171",cursor:"pointer",fontSize:16,flexShrink:0,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
             </div>
@@ -4954,7 +5229,18 @@ export default function App({ initialRole = "admin", studioSlug = "", studioName
   if (role === "adherent")   return <AdherentView   onSwitch={setRole} isMobile={isMobile}/>;
   // admin avec is_coach → vue admin normale (ils ont accès à tout)
   const Page = PAGES[page] || Dashboard;
-  const appCtxValue = { studioName, studioSlug, userName, planName, membersCount, userRole, userEmail: "", discs, setDiscs };
+  // studioId partagé dans le context pour éviter les fetches profiles répétés
+  const [sharedStudioId, setSharedStudioId] = useState(null);
+  useEffect(() => {
+    if (sharedStudioId) return;
+    const sb = createClient();
+    sb.auth.getUser().then(async ({ data: { user } }) => {
+      if (!user) return;
+      const { data: prof } = await sb.from("profiles").select("studio_id").eq("id", user.id).single();
+      if (prof?.studio_id) setSharedStudioId(prof.studio_id);
+    });
+  }, []);
+  const appCtxValue = { studioName, studioSlug, userName, planName, membersCount, userRole, userEmail: "", discs, setDiscs, studioId: sharedStudioId, setStudioId: setSharedStudioId };
   return (
     <AppCtx.Provider value={appCtxValue}>
     <div style={{ display:"flex", minHeight:"100vh", background:C.bg }}>

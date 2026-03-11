@@ -27,16 +27,127 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
   );
 }
 
-const MEMBERS = [];
-const DISCIPLINES = [
-  { id:1, name:"Yoga Vinyasa", icon:"🧘", color:"#C4956A", slots:[{day:"Lun",time:"09:00",duration:60},{day:"Mer",time:"18:30",duration:60},{day:"Sam",time:"10:00",duration:75}] },
-  { id:2, name:"Pilates",      icon:"⚡", color:"#6B9E7A", slots:[{day:"Mar",time:"17:30",duration:60},{day:"Jeu",time:"12:00",duration:45}] },
-  { id:3, name:"Méditation",   icon:"☯",  color:"#6A8FAE", slots:[{day:"Mer",time:"07:30",duration:30},{day:"Dim",time:"09:30",duration:45}] },
-  { id:4, name:"Yin Yoga",     icon:"🌙", color:"#AE7A7A", slots:[{day:"Ven",time:"19:00",duration:75},{day:"Dim",time:"17:00",duration:75}] },
+
+// ══════════════════════════════════════════════════════════════════════════════
+// DONNÉES DE DÉMONSTRATION — remplacées automatiquement par les vraies données
+// dès que le studio aura des enregistrements en base Supabase.
+// ══════════════════════════════════════════════════════════════════════════════
+const DISC_IDS = {
+  yoga:   "demo-disc-yoga-vinyasa",
+  pilates:"demo-disc-pilates",
+  medit:  "demo-disc-meditation",
+  yin:    "demo-disc-yin-yoga",
+};
+
+const MEMBERS_DEMO = [
+  { id:"dm1", firstName:"Sophie",   lastName:"Martin",    email:"sophie.martin@gmail.com",   phone:"06 12 34 56 78", status:"actif",    subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-09-15", notes:"Pratique avancée" },
+  { id:"dm2", firstName:"Lucas",    lastName:"Bernard",   email:"lucas.bernard@gmail.com",    phone:"06 23 45 67 89", status:"actif",    subscription:"Carnet 10 séances", credits:6,    joinedAt:"2025-11-02", notes:"" },
+  { id:"dm3", firstName:"Emma",     lastName:"Dubois",    email:"emma.dubois@yahoo.fr",       phone:"06 34 56 78 90", status:"actif",    subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-10-20", notes:"Genou droit fragile" },
+  { id:"dm4", firstName:"Thomas",   lastName:"Petit",     email:"thomas.petit@outlook.com",   phone:"06 45 67 89 01", status:"actif",    subscription:"Trimestriel",       credits:null, joinedAt:"2026-01-08", notes:"" },
+  { id:"dm5", firstName:"Léa",      lastName:"Robert",    email:"lea.robert@gmail.com",       phone:"06 56 78 90 12", status:"actif",    subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-08-30", notes:"" },
+  { id:"dm6", firstName:"Julien",   lastName:"Moreau",    email:"julien.moreau@gmail.com",    phone:"06 67 89 01 23", status:"actif",    subscription:"Carnet 10 séances", credits:2,    joinedAt:"2026-02-14", notes:"Rappeler renouvellement" },
+  { id:"dm7", firstName:"Marie",    lastName:"Lefebvre",  email:"marie.lefebvre@orange.fr",   phone:"06 78 90 12 34", status:"actif",    subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-07-12", notes:"" },
+  { id:"dm8", firstName:"Antoine",  lastName:"Garcia",    email:"antoine.garcia@gmail.com",   phone:"06 89 01 23 45", status:"inactif",  subscription:"Carnet 10 séances", credits:0,    joinedAt:"2025-12-01", notes:"Carnet épuisé" },
+  { id:"dm9", firstName:"Camille",  lastName:"Roux",      email:"camille.roux@gmail.com",     phone:"06 90 12 34 56", status:"actif",    subscription:"Mensuel illimité",  credits:null, joinedAt:"2026-01-22", notes:"" },
+  { id:"dm10",firstName:"Nicolas",  lastName:"Simon",     email:"nicolas.simon@sfr.fr",       phone:"07 01 23 45 67", status:"actif",    subscription:"Trimestriel",       credits:null, joinedAt:"2025-10-05", notes:"Professeur de collège" },
+  { id:"dm11",firstName:"Inès",     lastName:"Laurent",   email:"ines.laurent@gmail.com",     phone:"07 12 34 56 78", status:"actif",    subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-09-01", notes:"" },
+  { id:"dm12",firstName:"Paul",     lastName:"Michel",    email:"paul.michel@gmail.com",      phone:"07 23 45 67 89", status:"suspendu", subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-06-15", notes:"Impayé février" },
 ];
-const SESSIONS_INIT = [];
-const BOOKINGS_INIT = {};
-const SUBSCRIPTIONS_INIT = [];
+
+const SESSIONS_DEMO = [
+  // Lundi 9 mars
+  { id:"ds1",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-09", time:"09:00", duration:60,  spots:12, status:"scheduled" },
+  { id:"ds2",  disciplineId:DISC_IDS.pilates,  discName:"Pilates",      discColor:"#6B9E7A", discIcon:"⚡", teacher:"Brigitte GUTHMANN", room:"Studio B", level:"Intermédiaire", date:"2026-03-09", time:"17:30", duration:60,  spots:10, status:"scheduled" },
+  // Mardi 10 mars
+  { id:"ds3",  disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Débutant",      date:"2026-03-10", time:"07:30", duration:30,  spots:15, status:"scheduled" },
+  { id:"ds4",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Avancé",        date:"2026-03-10", time:"19:00", duration:75,  spots:8,  status:"scheduled" },
+  // Mercredi 11 mars (aujourd'hui)
+  { id:"ds5",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-11", time:"09:00", duration:60,  spots:12, status:"scheduled" },
+  { id:"ds6",  disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-11", time:"18:30", duration:45,  spots:15, status:"scheduled" },
+  // Jeudi 12 mars
+  { id:"ds7",  disciplineId:DISC_IDS.pilates,  discName:"Pilates",      discColor:"#6B9E7A", discIcon:"⚡", teacher:"Brigitte GUTHMANN", room:"Studio B", level:"Débutant",      date:"2026-03-12", time:"12:00", duration:45,  spots:10, status:"scheduled" },
+  { id:"ds8",  disciplineId:DISC_IDS.yin,     discName:"Yin Yoga",     discColor:"#AE7A7A", discIcon:"🌙", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-12", time:"19:00", duration:75,  spots:12, status:"scheduled" },
+  // Vendredi 13 mars
+  { id:"ds9",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-13", time:"09:00", duration:60,  spots:12, status:"scheduled" },
+  { id:"ds10", disciplineId:DISC_IDS.yin,     discName:"Yin Yoga",     discColor:"#AE7A7A", discIcon:"🌙", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Débutant",      date:"2026-03-13", time:"18:00", duration:75,  spots:12, status:"cancelled" },
+  // Samedi 14 mars
+  { id:"ds11", disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-14", time:"10:00", duration:75,  spots:16, status:"scheduled" },
+  { id:"ds12", disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Brigitte GUTHMANN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-15", time:"09:30", duration:45,  spots:15, status:"scheduled" },
+];
+
+const BOOKINGS_DEMO = {
+  "ds1":  [
+    { id:"b1",  st:"confirmed", member:"Sophie Martin",   avatar:"SM" },
+    { id:"b2",  st:"confirmed", member:"Emma Dubois",     avatar:"ED" },
+    { id:"b3",  st:"confirmed", member:"Thomas Petit",    avatar:"TP" },
+    { id:"b4",  st:"confirmed", member:"Léa Robert",      avatar:"LR" },
+    { id:"b5",  st:"confirmed", member:"Marie Lefebvre",  avatar:"ML" },
+    { id:"b6",  st:"confirmed", member:"Camille Roux",    avatar:"CR" },
+    { id:"b7",  st:"confirmed", member:"Nicolas Simon",   avatar:"NS" },
+    { id:"b8",  st:"confirmed", member:"Inès Laurent",    avatar:"IL" },
+    { id:"b9",  st:"waitlist",  member:"Lucas Bernard",   avatar:"LB" },
+  ],
+  "ds2":  [
+    { id:"b10", st:"confirmed", member:"Sophie Martin",  avatar:"SM" },
+    { id:"b11", st:"confirmed", member:"Lucas Bernard",  avatar:"LB" },
+    { id:"b12", st:"confirmed", member:"Emma Dubois",    avatar:"ED" },
+    { id:"b13", st:"confirmed", member:"Julien Moreau",  avatar:"JM" },
+    { id:"b14", st:"confirmed", member:"Camille Roux",   avatar:"CR" },
+  ],
+  "ds5":  [
+    { id:"b20", st:"confirmed", member:"Sophie Martin",  avatar:"SM" },
+    { id:"b21", st:"confirmed", member:"Thomas Petit",   avatar:"TP" },
+    { id:"b22", st:"confirmed", member:"Léa Robert",     avatar:"LR" },
+    { id:"b23", st:"confirmed", member:"Nicolas Simon",  avatar:"NS" },
+    { id:"b24", st:"confirmed", member:"Inès Laurent",   avatar:"IL" },
+    { id:"b25", st:"waitlist",  member:"Marie Lefebvre", avatar:"ML" },
+  ],
+  "ds11": [
+    { id:"b30", st:"confirmed", member:"Sophie Martin",  avatar:"SM" },
+    { id:"b31", st:"confirmed", member:"Emma Dubois",    avatar:"ED" },
+    { id:"b32", st:"confirmed", member:"Thomas Petit",   avatar:"TP" },
+    { id:"b33", st:"confirmed", member:"Léa Robert",     avatar:"LR" },
+    { id:"b34", st:"confirmed", member:"Marie Lefebvre", avatar:"ML" },
+    { id:"b35", st:"confirmed", member:"Camille Roux",   avatar:"CR" },
+    { id:"b36", st:"confirmed", member:"Nicolas Simon",  avatar:"NS" },
+    { id:"b37", st:"confirmed", member:"Inès Laurent",   avatar:"IL" },
+    { id:"b38", st:"confirmed", member:"Lucas Bernard",  avatar:"LB" },
+    { id:"b39", st:"confirmed", member:"Julien Moreau",  avatar:"JM" },
+    { id:"b40", st:"waitlist",  member:"Antoine Garcia", avatar:"AG" },
+  ],
+};
+
+const SUBSCRIPTIONS_DEMO = [
+  { id:"sub1", name:"Mensuel illimité",  price:89,  period:"mois",      credits:null, members:7,  revenue:623 },
+  { id:"sub2", name:"Carnet 10 séances", price:120, period:"carnet",    credits:10,   members:3,  revenue:240 },
+  { id:"sub3", name:"Trimestriel",       price:229, period:"trimestre", credits:null, members:2,  revenue:152 },
+  { id:"sub4", name:"Séance à l'unité",  price:18,  period:"séance",    credits:1,    members:0,  revenue:0   },
+];
+
+const PAYMENTS_DEMO = [
+  { id:"p1",  member:"Sophie Martin",  amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p2",  member:"Emma Dubois",    amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p3",  member:"Thomas Petit",   amount:229, date:"2026-01-08", type:"Carte",       status:"payé",    subscription:"Trimestriel"       },
+  { id:"p4",  member:"Léa Robert",     amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p5",  member:"Julien Moreau",  amount:120, date:"2026-02-14", type:"Carte",       status:"impayé",  subscription:"Carnet 10 séances" },
+  { id:"p6",  member:"Marie Lefebvre", amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p7",  member:"Camille Roux",   amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p8",  member:"Nicolas Simon",  amount:229, date:"2026-01-05", type:"Virement",    status:"payé",    subscription:"Trimestriel"       },
+  { id:"p9",  member:"Inès Laurent",   amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p10", member:"Paul Michel",    amount:89,  date:"2026-02-01", type:"Prélèvement", status:"impayé",  subscription:"Mensuel illimité"  },
+  { id:"p11", member:"Lucas Bernard",  amount:120, date:"2026-02-20", type:"Espèces",     status:"payé",    subscription:"Carnet 10 séances" },
+];
+// ══════════════════════════════════════════════════════════════════════════════
+const MEMBERS = MEMBERS_DEMO;
+const DISCIPLINES = [
+  { id:"demo-disc-yoga-vinyasa", name:"Yoga Vinyasa", icon:"🧘", color:"#C4956A", slots:[{day:"Lun",time:"09:00",duration:60},{day:"Mer",time:"09:00",duration:60},{day:"Sam",time:"10:00",duration:75}] },
+  { id:"demo-disc-pilates",      name:"Pilates",      icon:"⚡", color:"#6B9E7A", slots:[{day:"Lun",time:"17:30",duration:60},{day:"Jeu",time:"12:00",duration:45}] },
+  { id:"demo-disc-meditation",   name:"Méditation",   icon:"☯",  color:"#6A8FAE", slots:[{day:"Mar",time:"07:30",duration:30},{day:"Mer",time:"18:30",duration:45}] },
+  { id:"demo-disc-yin-yoga",     name:"Yin Yoga",     icon:"🌙", color:"#AE7A7A", slots:[{day:"Jeu",time:"19:00",duration:75},{day:"Dim",time:"17:00",duration:75}] },
+];
+const SESSIONS_INIT = SESSIONS_DEMO;
+const BOOKINGS_INIT = BOOKINGS_DEMO;
+const SUBSCRIPTIONS_INIT = SUBSCRIPTIONS_DEMO;
 
 // ── Plans Fydelys — modifier ici pour changer tarifs/limites ─────────────────
 // NOTE : toutes les formules incluent 15 jours d'essai gratuit avant paiement.
@@ -116,7 +227,7 @@ const FYDELYS_PLANS = [
     ]
   },
 ];
-const PAYMENTS = [];
+const PAYMENTS = PAYMENTS_DEMO;
 
 // ── SVG ICON SYSTEM ───────────────────────────────────────────────────────────
 const IC = ({d,size=16,color="currentColor",sw=1.5,fill="none"}) => (
@@ -457,6 +568,17 @@ function EmptyState({ icon="📋", title, sub }) {
   );
 }
 
+function DemoBanner() {
+  const [hidden, setHidden] = React.useState(false);
+  if (hidden) return null;
+  return (
+    <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", gap:10, padding:"8px 16px", background:"#FEF3C7", borderBottom:"1.5px solid #F59E0B", fontSize:13, color:"#92400E" }}>
+      <span>⚠️ <strong>Données de démonstration</strong> — Ces données illustrent l'interface. Elles seront automatiquement remplacées par vos vraies données dès votre premier enregistrement.</span>
+      <button onClick={()=>setHidden(true)} style={{ background:"none", border:"none", cursor:"pointer", fontSize:16, color:"#92400E", flexShrink:0 }}>✕</button>
+    </div>
+  );
+}
+
 function Dashboard({ isMobile }) {
   const p = isMobile?12:28;
   const [expandedId, setExpandedId] = useState(null);
@@ -466,53 +588,58 @@ function Dashboard({ isMobile }) {
     setBookings(prev => { const nb={...prev}; nb[sid]=(nb[sid]||[]).map(b=>b.id===bid?{...b,st:ns}:b); return nb; });
   };
 
+  // Date du jour formatée
+  const today = new Date();
+  const todayStr = today.toISOString().slice(0,10);
+  const todayLabel = today.toLocaleDateString("fr-FR",{weekday:"short",day:"numeric",month:"long"});
+  const todaySessions = SESSIONS_INIT.filter(s=>s.date===todayStr);
 
-  if (SESSIONS_INIT.length === 0) return (
-    <div style={{ padding:p }}>
-      
-    </div>
-  );
+  // KPIs démo
+  const activeMembers = MEMBERS.filter(m=>m.status==="actif").length;
+  const monthSessions = SESSIONS_INIT.filter(s=>s.date.startsWith("2026-03")).length;
+  const totalSpots = SESSIONS_INIT.reduce((acc,s)=>{const bks=BOOKINGS_INIT[s.id]||[];return acc+bks.filter(b=>b.st==="confirmed").length;},0);
+  const totalCap = SESSIONS_INIT.reduce((acc,s)=>acc+s.spots,0);
+  const fillRate = totalCap>0 ? Math.round(totalSpots/totalCap*100) : 0;
+  const monthRevenue = PAYMENTS.filter(p=>p.date?.startsWith("2026-03")&&p.status==="payé").reduce((s,p)=>s+p.amount,0);
 
   return (
-    <div style={{ padding:p }}>
-      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:isMobile?8:14, marginBottom:isMobile?12:20 }}>
-        <KpiCard icon={<IcoUsers s={isMobile?16:18} c={C.ok}/>}      label="Adhérents actifs" value="124"     delta="+8 ce mois"  accentColor={C.ok}     isMobile={isMobile}/>
-        <KpiCard icon={<IcoCalendar s={isMobile?16:18} c="#6B9E7A"/>} label="Séances ce mois"  value="186"     delta="+12 vs mars" accentColor="#6B9E7A"  isMobile={isMobile}/>
-        <KpiCard icon={<IcoBarChart s={isMobile?16:18} c="#6A8FAE"/>} label="Taux remplissage" value="76 %"    delta="+4 pts"      accentColor="#6A8FAE"  isMobile={isMobile}/>
-        <KpiCard icon={<IcoEuro s={isMobile?16:18} c={C.accent}/>}   label="CA du mois"       value="6 240 €" delta="+18 %"       accentColor={C.accent} isMobile={isMobile}/>
-      </div>
-      <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1.6fr 1fr", gap:16 }}>
-        <Card noPad>
-          <SectionHead action={<Pill>Lun. 9 mars</Pill>}>Séances du jour</SectionHead>
-          {SESSIONS_INIT.filter(s=>s.date==="2026-03-09").map(s=>(
-            <DashboardSessionCard
-              key={s.id}
-              sess={s}
-              expandedId={expandedId}
-              bookings={bookings}
-              onToggle={handleToggle}
-              onChangeStatus={handleChangeStatus}
-            />
-          ))}
-        </Card>
-        <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+    <div>
+      <DemoBanner/>
+      <div style={{ padding:p }}>
+        <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:isMobile?8:14, marginBottom:isMobile?12:20 }}>
+          <KpiCard icon={<IcoUsers s={isMobile?16:18} c={C.ok}/>}      label="Adhérents actifs" value={String(activeMembers)}       delta="+3 ce mois"   accentColor={C.ok}     isMobile={isMobile}/>
+          <KpiCard icon={<IcoCalendar s={isMobile?16:18} c="#6B9E7A"/>} label="Séances ce mois"  value={String(monthSessions)}      delta="4 disciplines" accentColor="#6B9E7A"  isMobile={isMobile}/>
+          <KpiCard icon={<IcoBarChart s={isMobile?16:18} c="#6A8FAE"/>} label="Taux remplissage" value={fillRate+" %"}               delta="+5 pts"        accentColor="#6A8FAE"  isMobile={isMobile}/>
+          <KpiCard icon={<IcoEuro s={isMobile?16:18} c={C.accent}/>}   label="CA du mois"       value={monthRevenue.toLocaleString("fr-FR")+" €"} delta="+12 %" accentColor={C.accent} isMobile={isMobile}/>
+        </div>
+        <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1.6fr 1fr", gap:16 }}>
           <Card noPad>
-            <SectionHead><span style={{display:"flex",alignItems:"center",gap:6}}><IcoAlert s={15} c={C.warn}/>Alertes</span></SectionHead>
-            {[
-              {label:"Impayés en cours",     value:"89 €",      c:C.warn,   bg:C.warnBg},
-              {label:"Abonnements expirant", value:"3",         c:C.accent, bg:C.accentBg},
-              {label:"Liste d'attente",      value:"6 membres", c:C.info,   bg:C.infoBg},
-            ].map(a=>(
-              <div key={a.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 16px", borderBottom:`1.5px solid ${C.borderSoft}` }}>
-                <span style={{ fontSize:15, color:C.textMid }}>{a.label}</span>
-                <span style={{ fontSize:15, fontWeight:700, color:a.c, background:a.bg, padding:"3px 12px", borderRadius:12 }}>{a.value}</span>
-              </div>
-            ))}
+            <SectionHead action={<Pill>{todayLabel}</Pill>}>Séances du jour</SectionHead>
+            {todaySessions.length === 0
+              ? <div style={{padding:"28px",textAlign:"center",color:C.textMuted,fontSize:14}}>Aucune séance programmée aujourd'hui</div>
+              : todaySessions.map(s=>(
+                <DashboardSessionCard key={s.id} sess={s} expandedId={expandedId} bookings={bookings} onToggle={handleToggle} onChangeStatus={handleChangeStatus}/>
+              ))}
           </Card>
-          <Card noPad style={{ flex:1 }}>
-            <SectionHead>Derniers inscrits</SectionHead>
-            {MEMBERS.slice(-3).reverse().map(m=><MemberRow key={m.id} m={m} onSelect={()=>{}} selected={false}/>)}
-          </Card>
+          <div style={{ display:"flex", flexDirection:"column", gap:14 }}>
+            <Card noPad>
+              <SectionHead><span style={{display:"flex",alignItems:"center",gap:6}}><IcoAlert s={15} c={C.warn}/>Alertes</span></SectionHead>
+              {[
+                {label:"Impayés en cours",     value:"178 €",     c:C.warn,   bg:C.warnBg},
+                {label:"Abonnements expirant", value:"2",         c:C.accent, bg:C.accentBg},
+                {label:"Liste d'attente",      value:"3 membres", c:C.info,   bg:C.infoBg},
+              ].map(a=>(
+                <div key={a.label} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"10px 16px", borderBottom:`1.5px solid ${C.borderSoft}` }}>
+                  <span style={{ fontSize:15, color:C.textMid }}>{a.label}</span>
+                  <span style={{ fontSize:15, fontWeight:700, color:a.c, background:a.bg, padding:"3px 12px", borderRadius:12 }}>{a.value}</span>
+                </div>
+              ))}
+            </Card>
+            <Card noPad style={{ flex:1 }}>
+              <SectionHead>Derniers inscrits</SectionHead>
+              {MEMBERS.slice(-3).reverse().map(m=><MemberRow key={m.id} m={m} onSelect={()=>{}} selected={false}/>)}
+            </Card>
+          </div>
         </div>
       </div>
     </div>
@@ -713,7 +840,7 @@ function Planning({ isMobile }) {
   const [expandedId, setExpandedId] = useState(null);
   const [fd, setFd] = useState(null);
   const [showAdd, setShowAdd] = useState(false);
-  const [nS, setNS] = useState({ disciplineId:1, teacher:"", date:"", time:"09:00", duration:60, spots:12, level:"Tous niveaux", room:"Studio A" });
+  const [nS, setNS] = useState({ disciplineId:null, teacher:"", date:"", time:"09:00", duration:60, spots:12, level:"Tous niveaux", room:"Studio A" });
   const [coachesList, setCoachesList] = useState([]);
   // Mode récurrence
   const [recMode, setRecMode] = useState(false); // false = séance unique, true = récurrence
@@ -748,13 +875,15 @@ function Planning({ isMobile }) {
       .eq("studio_id", studioId).order("session_date").order("session_time")
       .then(({ data, error }) => {
         if (error) console.error("load sessions", error);
-        else if (data) setSessions(data.map(s => ({
+        else if (data && data.length > 0) setSessions(data.map(s => ({
           id: s.id, disciplineId: s.discipline_id,
           teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
           date: s.session_date, time: s.session_time?.slice(0,5) || "09:00",
           duration: s.duration_min || 60, spots: s.spots || 12,
           status: s.status || "scheduled", booked: 0, waitlist: 0,
         })));
+        // Données démo si base vide
+        else if (!error && (!data || data.length === 0)) setSessions(SESSIONS_DEMO);
         setDbLoading(false);
       });
   }, [studioId]);
@@ -774,7 +903,7 @@ function Planning({ isMobile }) {
       while (cur <= to) {
         generated.push({
           id: Date.now() + Math.random(),
-          disciplineId: parseInt(slot.disciplineId),
+          disciplineId: slot.disciplineId,
           teacher: slot.teacher || nS.teacher || "",
           date: cur.toISOString().slice(0,10),
           time: slot.time,
@@ -806,7 +935,7 @@ function Planning({ isMobile }) {
       const sb = createClient();
       console.log("INSERT session — studioId:", studioId, "disciplineId:", sess.disciplineId, "date:", sess.date);
       const { data, error } = await sb.from("sessions").insert({
-        studio_id: studioId, discipline_id: sess.disciplineId || null,
+        studio_id: studioId, discipline_id: (sess.disciplineId && typeof sess.disciplineId === 'string' && sess.disciplineId.includes('-')) ? sess.disciplineId : null,
         teacher: sess.teacher || "", room: sess.room || "Studio A", level: sess.level || "Tous niveaux",
         session_date: sess.date, session_time: sess.time,
         duration_min: parseInt(sess.duration) || 60, spots: parseInt(sess.spots) || 12,
@@ -841,7 +970,7 @@ function Planning({ isMobile }) {
     setRecFrom(""); setRecTo(""); setRecSlots([]); setRecPreview([]);
     try {
       const rows = recPreview.map(s => ({
-        studio_id: studioId, discipline_id: s.disciplineId || null,
+        studio_id: studioId, discipline_id: (s.disciplineId && typeof s.disciplineId === 'string' && s.disciplineId.includes('-')) ? s.disciplineId : null,
         teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
         session_date: s.date, session_time: s.time,
         duration_min: parseInt(s.duration) || 60, spots: parseInt(s.spots) || 12,
@@ -1158,6 +1287,7 @@ function Members({ isMobile }) {
       .eq("studio_id", studioId).order("last_name")
       .then(({ data, error }) => {
         if (error) { console.error("load members", error); setDbLoading(false); return; }
+        if (!data || data.length === 0) { setMembers(MEMBERS_DEMO); setDbLoading(false); return; }
         if (data) setMembers(data.map(m => ({
           id: m.id, firstName: m.first_name, lastName: m.last_name,
           email: m.email, phone: m.phone || "", status: m.status || "actif",
@@ -1398,6 +1528,7 @@ function Subscriptions({ isMobile }) {
       .eq("studio_id", studioId).eq("active", true).order("price")
       .then(({ data, error }) => {
         if (error) { console.error("load subs", error); setDbLoading(false); return; }
+        if (!data || data.length === 0) { setSubs(SUBSCRIPTIONS_DEMO); setDbLoading(false); return; }
         if (data) setSubs(data.map(s => ({ ...s, color: s.color || "#B8936A" })));
         setDbLoading(false);
       });
@@ -1523,6 +1654,7 @@ function Payments({ isMobile }) {
       .eq("studio_id", studioId).order("payment_date", { ascending: false })
       .then(({ data, error }) => {
         if (error) { console.error("load payments", error); setDbLoading(false); return; }
+        if (!data || data.length === 0) { setPayments(PAYMENTS_DEMO); setDbLoading(false); return; }
         if (data) setPayments(data.map(pay => ({
           id: pay.id, memberId: pay.member_id,
           member: pay.members ? `${pay.members.first_name} ${pay.members.last_name}` : "—",
@@ -1924,6 +2056,7 @@ function DisciplinesPage({ isMobile }) {
       .select("id,name,icon,color,slots").eq("studio_id", ctxStudioId).order("created_at")
       .then(({ data, error }) => {
         if (error) { console.error("load disciplines", error); setLoadingDb(false); return; }
+        if (!data || data.length === 0) { setLoadingDb(false); return; } // garder DISCIPLINES par défaut
         if (data && data.length > 0) setDiscs(data.map(d=>({ ...d, slots: d.slots||[] })));
         setLoadingDb(false);
       });

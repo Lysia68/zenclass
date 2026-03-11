@@ -69,18 +69,7 @@ export default function App({
   const width = useWidth();
   const isMobile = width < 768;
 
-  const trialDaysLeft = trialEndsAt
-    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
-    : 0;
-  const showTrialBanner   = billingStatus === "trialing" && trialDaysLeft <= 7;
-  const showPastDueBanner = billingStatus === "past_due";
-
-  if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile} onSignOut={onSignOut}/>;
-  if (role === "coach")      return <CoachView onSwitch={setRole} isMobile={isMobile} coachName={coachName||MY_COACH_NAME} coachDisciplines={coachDisciplines}/>;
-  if (role === "adherent")   return <AdherentView onSwitch={setRole} isMobile={isMobile}/>;
-
-  const Page = PAGES[page] || Dashboard;
-
+  // ── ALL HOOKS MUST BE BEFORE CONDITIONAL RETURNS ──────────────────────────
   const [sharedStudioId, setSharedStudioId] = useState(propStudioId || null);
   useEffect(() => {
     if (propStudioId) { setSharedStudioId(propStudioId); return; }
@@ -91,6 +80,19 @@ export default function App({
       if (prof?.studio_id) setSharedStudioId(prof.studio_id);
     });
   }, [propStudioId]);
+
+  const trialDaysLeft = trialEndsAt
+    ? Math.max(0, Math.ceil((new Date(trialEndsAt).getTime() - Date.now()) / 86400000))
+    : 0;
+  const showTrialBanner   = billingStatus === "trialing" && trialDaysLeft <= 7;
+  const showPastDueBanner = billingStatus === "past_due";
+
+  // ── CONDITIONAL RENDERS (after all hooks) ─────────────────────────────────
+  if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile} onSignOut={onSignOut}/>;
+  if (role === "coach")      return <CoachView onSwitch={setRole} isMobile={isMobile} coachName={coachName||MY_COACH_NAME} coachDisciplines={coachDisciplines}/>;
+  if (role === "adherent")   return <AdherentView onSwitch={setRole} isMobile={isMobile}/>;
+
+  const Page = PAGES[page] || Dashboard;
 
   const appCtxValue = {
     studioName, studioSlug, userName, planName, membersCount,

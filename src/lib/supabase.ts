@@ -6,10 +6,12 @@ export function createClient() {
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
+      auth: {
+        // Implicit flow : Supabase envoie #access_token dans le hash
+        // PKCE cause des problèmes cross-domain (code_verifier lié au sous-domaine)
+        flowType: "implicit",
+      },
       cookieOptions: {
-        // Partager TOUS les cookies (session + PKCE verifier) sur .fydelys.fr
-        // Indispensable pour que le code_verifier créé sur slug.fydelys.fr
-        // soit accessible depuis fydelys.fr/auth/callback
         domain: isProduction ? ".fydelys.fr" : undefined,
         sameSite: "lax",
         secure: isProduction,

@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import dynamicImport from "next/dynamic"
 
-const FydelysV4 = dynamicImport(() => import("@/components/fydelys/FydelysApp"), { ssr: false })
+const FydelysV4 = dynamicImport(() => import("@/components/fydelys/FydelysApp").then(m => ({ default: m.default })), { ssr: false })
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()

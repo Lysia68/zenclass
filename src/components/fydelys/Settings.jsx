@@ -517,7 +517,7 @@ function Settings({ isMobile, onImpersonate }) {
 
   // ── Tab: Users ────────────────────────────────────────────────────────────
   const TabUsers = () => {
-    const handleImpersonate = (role, userId) => onImpersonate && onImpersonate(role, userId);
+    const handleImpersonate = (role, userId, name) => onImpersonate && onImpersonate(role, userId, name);
     const realUsers = teamData.coaches;
     const loadingUsers = !teamData.loaded;
     const [confirmAction, setConfirmAction] = React.useState(null);
@@ -575,7 +575,7 @@ function Settings({ isMobile, onImpersonate }) {
                 <div style={{ display:"flex", gap:6, flexWrap:"wrap", justifyContent:"flex-end" }}>
                   {/* Se connecter en tant que */}
                   {isAdmin && (u.role === "coach" || u.role === "adherent") && (
-                    <button onClick={()=>handleImpersonate(u.role, u.id)}
+                    <button onClick={()=>handleImpersonate(u.role, u.id, `${u.fn||''} ${u.ln||''}`.trim())}
                       style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:`1.5px solid ${C.accent}`, background:C.accentLight, color:C.accentDark, cursor:"pointer", fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
                       👁 Vue {u.role === "coach" ? "coach" : "membre"}
                     </button>

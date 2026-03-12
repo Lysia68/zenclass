@@ -52,21 +52,26 @@ const PAGE_TITLES = {
   const [impersonating, setImpersonating] = useState(null);
   const [impersonatedCoach, setImpersonatedCoach] = useState({ name:"", disciplines:[] });
 
-  const startImpersonate = React.useCallback(async (asRole, userId=null) => {
+  const startImpersonate = React.useCallback(async (asRole, userId=null, nameHint="") => {
     if (asRole === "coach" && userId) {
       try {
         const sb = createClient();
-        const { data: prof } = await sb.from("profiles").select("first_name, last_name").eq("id", userId).single();
+        // Charger les disciplines du coach
         const { data: discLinks } = await sb.from("coach_disciplines")
           .select("discipline_id, disciplines(id,name,icon,color)").eq("profile_id", userId);
-        const name = prof ? `${prof.first_name||""} ${prof.last_name||""}`.trim() : "";
         const disciplines = discLinks?.map(r=>r.disciplines).filter(Boolean) || [];
-        // Mettre à jour tous les états en un seul batch React
+        // Utiliser le nom passé directement depuis Settings (déjà chargé)
+        // Fallback sur Supabase seulement si nameHint vide
+        let name = nameHint;
+        if (!name) {
+          const { data: prof } = await sb.from("profiles").select("first_name, last_name").eq("id", userId).single();
+          name = prof ? `${prof.first_name||""} ${prof.last_name||""}`.trim() : "";
+        }
         setImpersonatedCoach({ name, disciplines });
         setImpersonating({ as: asRole, fromRole: role, userId });
         setRole(asRole);
       } catch(e) {
-        setImpersonatedCoach({ name:"", disciplines:[] });
+        setImpersonatedCoach({ name: nameHint || "", disciplines:[] });
         setImpersonating({ as: asRole, fromRole: role, userId });
         setRole(asRole);
       }

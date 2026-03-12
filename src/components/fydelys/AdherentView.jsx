@@ -37,6 +37,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const { data: member } = await sb.from("members")
         .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete")
         .eq("studio_id", studioId).eq("email", email).maybeSingle();
+      console.log("MEMBER:", JSON.stringify(member));
       if (member) setMe(member);
 
       // Bookings actifs (sessions futures)

@@ -81,7 +81,7 @@ function InviteCoachModal({ C, studioSlug, onClose, onSubmit }) {
   );
 }
 
-function Settings({ isMobile }) {
+function Settings({ isMobile, onImpersonate }) {
   const { studioName, studioSlug, userName, userEmail, planName, membersCount, userRole, studioId, discs } = useContext(AppCtx);
   const p = isMobile?12:28;
   const realRole = userRole || "admin";
@@ -517,6 +517,7 @@ function Settings({ isMobile }) {
 
   // ── Tab: Users ────────────────────────────────────────────────────────────
   const TabUsers = () => {
+    const handleImpersonate = (role, userId) => onImpersonate && onImpersonate(role, userId);
     const realUsers = teamData.coaches;
     const loadingUsers = !teamData.loaded;
     const [confirmAction, setConfirmAction] = React.useState(null);
@@ -571,9 +572,16 @@ function Settings({ isMobile }) {
                     )}
                   </div>
                 </div>
-                {isAdmin && u.role !== "admin" && (
-                  <div style={{ display:"flex", gap:6 }}>
-                    {confirmAction?.id === u.id ? (
+                <div style={{ display:"flex", gap:6, flexWrap:"wrap", justifyContent:"flex-end" }}>
+                  {/* Se connecter en tant que */}
+                  {isAdmin && (u.role === "coach" || u.role === "adherent") && (
+                    <button onClick={()=>handleImpersonate(u.role, u.id)}
+                      style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:`1.5px solid ${C.accent}`, background:C.accentLight, color:C.accentDark, cursor:"pointer", fontWeight:600, display:"flex", alignItems:"center", gap:4 }}>
+                      👁 Vue {u.role === "coach" ? "coach" : "membre"}
+                    </button>
+                  )}
+                  {isAdmin && u.role !== "admin" && (
+                    confirmAction?.id === u.id ? (
                       <>
                         <button onClick={()=> confirmAction.action==="delete" ? handleDelete(u.id) : handleSuspend(u.id)}
                           style={{ fontSize:11, padding:"4px 10px", borderRadius:6, border:"1px solid #EFC8BC", background:C.warnBg, color:C.warn, cursor:"pointer", fontWeight:700 }}>
@@ -595,9 +603,9 @@ function Settings({ isMobile }) {
                           Supprimer
                         </button>
                       </>
-                    )}
-                  </div>
-                )}
+                    )
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -627,7 +635,10 @@ function Settings({ isMobile }) {
             </span>
           </div>
           <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:6 }}>
-            {[["Planning",["superadmin","admin","staff"]],["Membres",["superadmin","admin","staff"]],["Paiements",["superadmin","admin"]],["Paramètres",["superadmin","admin"]],["Tous les tenants",["superadmin"]],["Config plateforme",["superadmin"]]].map(([perm,roles])=>{
+            {(isSA
+              ? [["Planning",["superadmin","admin","staff"]],["Membres",["superadmin","admin","staff"]],["Paiements",["superadmin","admin"]],["Paramètres",["superadmin","admin"]],["Tous les tenants",["superadmin"]],["Config plateforme",["superadmin"]]]
+              : [["Planning",["admin","staff"]],["Membres",["admin","staff"]],["Paiements",["admin"]],["Paramètres",["admin"]],["Disciplines",["admin"]],["Équipe",["admin"]]]
+            ).map(([perm,roles])=>{
               const has = roles.includes(key);
               return (
                 <div key={perm} style={{ display:"flex", alignItems:"center", gap:7, padding:"5px 8px", borderRadius:7, background:has?r.bg+"80":C.bg }}>

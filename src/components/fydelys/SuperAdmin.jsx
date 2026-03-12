@@ -43,7 +43,7 @@ function SelectSA({ label, k, opts, required, value, onChange }) {
   );
 }
 
-function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
+function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) {
   const [tenants, setTenants] = useState(TENANTS_INIT);
   const [search, setSearch]   = useState("");
   const [filter, setFilter]   = useState("tous");
@@ -435,6 +435,11 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut }) {
                 <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.status==="actif"?"rgba(52,211,153,.15)":"rgba(248,113,113,.15)",color:t.status==="actif"?"#34D399":"#F87171"}}>{t.status==="actif"?"Actif":"Suspendu"}</span>
               </div>
               <div style={{display:"flex",gap:6,flexShrink:0}}>
+                <button
+                  onClick={()=>onImpersonateStudio && onImpersonateStudio(t.slug)}
+                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1.5px solid rgba(124,58,237,.35)",background:"rgba(124,58,237,.08)",color:"#7C3AED",cursor:"pointer",fontWeight:700}}>
+                  👁 Vue Studio
+                </button>
                 <button
                   onClick={()=>window.open(`https://${t.slug}.fydelys.fr/dashboard`,"_blank")}
                   style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(160,104,56,.3)",background:"rgba(160,104,56,.08)",color:"#A06838",cursor:"pointer",fontWeight:600}}>

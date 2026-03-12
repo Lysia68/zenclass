@@ -44,6 +44,23 @@ export default function App({
     settings:Settings, aide:AidePage,
   };
   const [role, setRole] = useState(initialRole);
+  const [impersonating, setImpersonating] = useState(null); // { as: "coach"|"adherent"|"admin", fromRole: "admin"|"superadmin", userId?, studioId? }
+
+  const startImpersonate = React.useCallback((asRole, userId=null) => {
+    setImpersonating({ as: asRole, fromRole: role, userId });
+    setRole(asRole);
+  }, [role]);
+
+  const stopImpersonate = React.useCallback(() => {
+    if (!impersonating) return;
+    setRole(impersonating.fromRole);
+    setImpersonating(null);
+  }, [impersonating]);
+
+  const startImpersonateStudio = React.useCallback((studioSlugTarget) => {
+    setImpersonating({ as: "admin", fromRole: "superadmin", studioSlug: studioSlugTarget });
+    setRole("admin");
+  }, []);
 
   // Lire la page initiale depuis l'URL (ex: /members → "members")
   const getPageFromUrl = () => {
@@ -63,18 +80,20 @@ export default function App({
   };
 
   // Disciplines persistées dans localStorage
-  const discStorageKey = `fydelys_discs_${studioSlug||"default"}`;
-  const [discs, setDiscs] = useState(() => {
-    try {
-      const saved = typeof window !== "undefined" && localStorage.getItem(discStorageKey);
-      if (saved) return JSON.parse(saved);
-    } catch {}
-    return DISCIPLINES.map(d => ({ ...d, slots: [] }));
-  });
+  const [discs, setDiscs] = useState(DISCIPLINES.map(d => ({ ...d, slots: [] })));
 
+  // Charger les disciplines + slots depuis Supabase dès que studioId est connu
   useEffect(() => {
-    try { localStorage.setItem(discStorageKey, JSON.stringify(discs)); } catch {}
-  }, [discs, discStorageKey]);
+    if (!propStudioId) return;
+    const sb = createClient();
+    sb.from("disciplines")
+      .select("id,name,icon,color,slots")
+      .eq("studio_id", propStudioId)
+      .order("created_at")
+      .then(({ data }) => {
+        if (data?.length) setDiscs(data.map(d => ({ ...d, slots: d.slots||[] })));
+      });
+  }, [propStudioId]);
 
   const width = useWidth();
   const isMobile = width < 768;
@@ -98,11 +117,40 @@ export default function App({
   const showPastDueBanner = billingStatus === "past_due";
 
   // ── CONDITIONAL RENDERS (after all hooks) ─────────────────────────────────
-  if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile} onSignOut={onSignOut}/>;
-  if (role === "coach")      return <CoachView onSwitch={setRole} isMobile={isMobile} coachName={coachName||MY_COACH_NAME} coachDisciplines={coachDisciplines} studioName={studioName}/>;
-  if (role === "adherent")   return <AdherentView onSwitch={setRole} isMobile={isMobile} studioName={studioName}/>;
+  if (role === "superadmin") return <SuperAdminView onSwitch={setRole} isMobile={isMobile} onSignOut={onSignOut} onImpersonateStudio={startImpersonateStudio}/>;
+  if (role === "coach") return (
+    <>
+      {impersonating && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999, background:"#2A1F14", color:"white", padding:"8px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, fontSize:13, fontWeight:600 }}>
+          <span>👁 Vue coach — {impersonating.fromRole === "superadmin" ? "Super Admin" : "Admin"}</span>
+          <button onClick={stopImpersonate} style={{ background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"white", padding:"4px 14px", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
+            ← Retour {impersonating.fromRole === "superadmin" ? "Super Admin" : "Admin"}
+          </button>
+        </div>
+      )}
+      <div style={{ marginTop: impersonating ? 38 : 0 }}>
+        <CoachView onSwitch={setRole} isMobile={isMobile} coachName={coachName||MY_COACH_NAME} coachDisciplines={coachDisciplines} studioName={studioName}/>
+      </div>
+    </>
+  );
+  if (role === "adherent") return (
+    <>
+      {impersonating && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999, background:"#2A1F14", color:"white", padding:"8px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, fontSize:13, fontWeight:600 }}>
+          <span>👁 Vue membre — {impersonating.fromRole === "superadmin" ? "Super Admin" : "Admin"}</span>
+          <button onClick={stopImpersonate} style={{ background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"white", padding:"4px 14px", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
+            ← Retour {impersonating.fromRole === "superadmin" ? "Super Admin" : "Admin"}
+          </button>
+        </div>
+      )}
+      <div style={{ marginTop: impersonating ? 38 : 0 }}>
+        <AdherentView onSwitch={setRole} isMobile={isMobile} studioName={studioName}/>
+      </div>
+    </>
+  );
 
   const Page = PAGES[page] || Dashboard;
+  const isImpersonatingAdmin = impersonating?.as === "admin" && impersonating?.fromRole === "superadmin";
 
   const appCtxValue = {
     studioName, studioSlug, userName, planName, membersCount,
@@ -112,7 +160,15 @@ export default function App({
 
   return (
     <AppCtx.Provider value={appCtxValue}>
-      <div style={{ display:"flex", minHeight:"100vh", background:C.bg }}>
+      {isImpersonatingAdmin && (
+        <div style={{ position:"fixed", top:0, left:0, right:0, zIndex:9999, background:"#4C1D95", color:"white", padding:"8px 16px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, fontSize:13, fontWeight:600 }}>
+          <span>👁 Vue Studio : {studioName || studioSlug}</span>
+          <button onClick={stopImpersonate} style={{ background:"rgba(255,255,255,.15)", border:"1px solid rgba(255,255,255,.3)", color:"white", padding:"4px 14px", borderRadius:6, cursor:"pointer", fontWeight:700, fontSize:12 }}>
+            ← Retour Super Admin
+          </button>
+        </div>
+      )}
+      <div style={{ display:"flex", minHeight:"100vh", background:C.bg, marginTop: isImpersonatingAdmin ? 38 : 0 }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
           * { box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }
@@ -152,7 +208,10 @@ export default function App({
             </div>
           )}
           <div style={{ flex:1, overflowY:"auto" }}>
-            <Page isMobile={isMobile}/>
+            {page === "settings"
+              ? <Settings isMobile={isMobile} onImpersonate={startImpersonate}/>
+              : <Page isMobile={isMobile}/>
+            }
           </div>
         </div>
         {isMobile && <BottomNav active={page} onNav={handleNav}/>}

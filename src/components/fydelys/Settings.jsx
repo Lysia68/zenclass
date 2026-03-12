@@ -28,10 +28,10 @@ function InviteCoachModal({ C, inviteEmail, setInviteEmail, inviteName, setInvit
           <button onClick={onClose} style={{background:"none",border:`1.5px solid ${C.border}`,borderRadius:8,padding:"4px 8px",cursor:"pointer"}}><IcoX s={14} c={C.textSoft}/></button>
         </div>
         <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12,marginBottom:12}}>
-          {[["Prénom","fn","Marie"],["Nom","ln","Laurent"]].map(([lbl,k,ph])=>(
+          {[["Prénom","fn","Marie"],["Nom","ln","Laurent"]].map(([lbl,k,ph],i)=>(
             <div key={k}>
               <FieldLabel>{lbl}</FieldLabel>
-              <input value={inviteName[k]} onChange={e=>setInviteName(p=>({...p,[k]:e.target.value}))} placeholder={ph}
+              <input autoFocus={i===0} autoComplete="off" value={inviteName[k]} onChange={e=>setInviteName(p=>({...p,[k]:e.target.value}))} placeholder={ph}
                 style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
                 onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
             </div>
@@ -39,12 +39,12 @@ function InviteCoachModal({ C, inviteEmail, setInviteEmail, inviteName, setInvit
         </div>
         <div style={{marginBottom:16}}>
           <FieldLabel>Email professionnel</FieldLabel>
-          <input autoFocus type="email" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="coach@studio.fr"
+          <input type="text" inputMode="email" autoComplete="off" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="coach@studio.fr"
             style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
             onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
         </div>
         <div style={{padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accentDark,marginBottom:16}}>
-          🔗 Un magic link sera envoyé à <strong>{inviteEmail||"…"}</strong>. Le coach accédera au studio via <strong>slug.fydelys.fr</strong>
+          🔗 Un magic link sera envoyé à <strong>{inviteEmail||"…"}</strong>. Le coach accédera au studio via <strong>son URL Fydelys</strong>
         </div>
         <div style={{display:"flex",gap:10}}>
           <Button variant="primary" onClick={onSubmit}>
@@ -862,22 +862,43 @@ function Settings({ isMobile }) {
         onClose={()=>setInviteModal(false)}
         onSubmit={async ()=>{
           if(!inviteEmail||!inviteName.fn) return;
-          const newCoach = { id:`c${Date.now()}`, fn:inviteName.fn, ln:inviteName.ln, email:inviteEmail, isCoach:true, disciplines:[], status:"invité" };
-          setCoaches(prev=>[...prev, newCoach]);
+          const emailSent = inviteEmail;
           setInviteModal(false); setInviteEmail(""); setInviteName({fn:"",ln:""});
-          // Appel API pour envoyer le magic link d'invitation
           try {
-            await fetch("/api/invite-coach", {
+            const res = await fetch("/api/invite-coach", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
-                email: inviteEmail,
+                email: emailSent,
                 firstName: inviteName.fn,
                 lastName: inviteName.ln,
               }),
             });
-          } catch(e) { console.error("invite error", e); }
-          showToast(`Invitation envoyée à ${inviteEmail} ✓`);
+            if (!res.ok) {
+              const err = await res.json().catch(()=>({}));
+              showToast(`Erreur : ${err.error||"envoi échoué"}`);
+              return;
+            }
+            showToast(`Invitation envoyée à ${emailSent} ✓`);
+            // Recharger la liste des coaches depuis Supabase
+            if (studioId) {
+              const sb = createClient();
+              const { data: profiles } = await sb.from("profiles")
+                .select("id, first_name, last_name, email, role")
+                .eq("studio_id", studioId).in("role", ["coach","admin"]);
+              const { data: links } = await sb.from("coach_disciplines")
+                .select("profile_id, discipline_id").eq("studio_id", studioId);
+              const discMap = {};
+              (links||[]).forEach(l => { if(!discMap[l.profile_id]) discMap[l.profile_id]=[]; discMap[l.profile_id].push(l.discipline_id); });
+              if (profiles) setCoaches(profiles.map(p => ({
+                id:p.id, fn:p.first_name||"", ln:p.last_name||"", email:p.email||"",
+                role:p.role, disciplines:discMap[p.id]||[], status:"actif"
+              })));
+            }
+          } catch(e) {
+            console.error("invite error", e);
+            showToast("Erreur réseau lors de l'invitation");
+          }
         }}
       />}
 

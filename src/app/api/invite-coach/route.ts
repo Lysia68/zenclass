@@ -12,9 +12,6 @@ export async function POST(request: NextRequest) {
   }
 
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
-  if (!SENDGRID_API_KEY) {
-    return NextResponse.json({ error: "Config email manquante" }, { status: 500 })
-  }
 
   // Récupérer le studio depuis la session de l'admin connecté
   const supabase = createServerClient(
@@ -68,6 +65,22 @@ export async function POST(request: NextRequest) {
     used: false,
     expires_at: new Date(Date.now() + 7 * 24 * 3600 * 1000).toISOString(), // 7 jours
   }, { onConflict: "email,studio_id" })
+
+  // Créer le user s'il n'existe pas encore (coach nouvellement invité)
+  const { data: existingUsers } = await db.auth.admin.listUsers()
+  const userExists = existingUsers?.users?.some((u: any) => u.email === email)
+  if (!userExists) {
+    const { error: createErr } = await db.auth.admin.createUser({
+      email,
+      email_confirm: false,
+      app_metadata: { studio_id: studio.id, studio_slug: studioSlug },
+      user_metadata: { role: "coach", first_name: firstName || "", last_name: lastName || "" },
+    })
+    if (createErr && !createErr.message?.includes("already registered")) {
+      console.error("createUser coach error:", createErr)
+      return NextResponse.json({ error: "Impossible de créer le compte coach" }, { status: 500 })
+    }
+  }
 
   // Générer le magic link via Supabase Admin API
   const { data: linkData, error: linkError } = await db.auth.admin.generateLink({
@@ -177,6 +190,25 @@ export async function POST(request: NextRequest) {
 </body>
 </html>`
     }]
+  }
+
+  // ── Fallback Supabase OTP si SendGrid non configuré ─────────────────────────
+  if (!SENDGRID_API_KEY) {
+    const { createClient } = await import("@supabase/supabase-js")
+    const anonClient = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    )
+    const redirectTo = `https://fydelys.fr/auth/callback?tenant=${studioSlug}&next=/dashboard`
+    const { error: otpErr } = await anonClient.auth.signInWithOtp({
+      email,
+      options: { emailRedirectTo: redirectTo }
+    })
+    if (otpErr) {
+      console.error("OTP fallback error:", otpErr)
+      return NextResponse.json({ error: "Erreur envoi email" }, { status: 500 })
+    }
+    return NextResponse.json({ ok: true, studioName, email, fallback: true })
   }
 
   const res = await fetch("https://api.sendgrid.com/v3/mail/send", {

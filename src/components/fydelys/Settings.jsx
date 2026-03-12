@@ -58,7 +58,7 @@ function InviteCoachModal({ C, inviteEmail, setInviteEmail, inviteName, setInvit
 }
 
 function Settings({ isMobile }) {
-  const { studioName, userName, userEmail, planName, membersCount, userRole, studioId } = useContext(AppCtx);
+  const { studioName, userName, userEmail, planName, membersCount, userRole, studioId, discs } = useContext(AppCtx);
   const p = isMobile?12:28;
   const realRole = userRole || "admin";
   const [currentRole, setCurrentRole] = useState(realRole);
@@ -740,14 +740,56 @@ function Settings({ isMobile }) {
 
   const TabTeam = () => {
     const [coaches, setCoaches]         = useState(COACHES_INIT);
-    const [editCoach, setEditCoach]     = useState(null); // coach en cours d'édition disciplines
-    // inviteModal/inviteEmail/inviteName remontés dans Settings pour éviter perte de focus
+    const [editCoach, setEditCoach]     = useState(null);
 
-    // Sauvegarder disciplines d'un coach
-    const saveDisciplines = (coachId, discIds) => {
+    // ── Charger les coachs + leurs disciplines depuis Supabase ────────────────
+    useEffect(() => {
+      if (!studioId) return;
+      const sb = createClient();
+      sb.from("profiles")
+        .select("id, first_name, last_name, email, role, is_coach")
+        .eq("studio_id", studioId)
+        .in("role", ["coach", "admin"])
+        .then(async ({ data: profiles }) => {
+          if (!profiles?.length) return;
+          const { data: links } = await sb
+            .from("coach_disciplines")
+            .select("profile_id, discipline_id")
+            .eq("studio_id", studioId);
+          const discMap = {};
+          (links||[]).forEach(l => {
+            if (!discMap[l.profile_id]) discMap[l.profile_id] = [];
+            discMap[l.profile_id].push(l.discipline_id);
+          });
+          setCoaches(profiles.map(p => ({
+            id: p.id,
+            fn: p.first_name || "",
+            ln: p.last_name || "",
+            email: p.email || "",
+            role: p.role,
+            disciplines: discMap[p.id] || [],
+          })));
+        });
+    }, [studioId]);
+
+    // ── Sauvegarder disciplines → coach_disciplines ───────────────────────────
+    const saveDisciplines = async (coachId, discIds) => {
       setCoaches(prev => prev.map(c => c.id===coachId ? {...c, disciplines:discIds} : c));
       setEditCoach(null);
-      showToast("Disciplines mises à jour ✓");
+      try {
+        const sb = createClient();
+        // Supprimer les anciens liens puis réinsérer
+        await sb.from("coach_disciplines").delete().eq("profile_id", coachId).eq("studio_id", studioId);
+        if (discIds.length > 0) {
+          await sb.from("coach_disciplines").insert(
+            discIds.map(dId => ({ profile_id: coachId, discipline_id: dId, studio_id: studioId }))
+          );
+        }
+        showToast("Disciplines mises à jour ✓");
+      } catch(e) {
+        console.error("saveDisciplines", e);
+        showToast("Erreur lors de la sauvegarde");
+      }
     };
 
     // Modal affectation disciplines
@@ -772,7 +814,7 @@ function Settings({ isMobile }) {
             </div>
             {/* Grid disciplines */}
             <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8,marginBottom:20}}>
-              {DISCIPLINES.map(d => {
+              {(discs && discs.length ? discs : DISCIPLINES).map(d => {
                 const on = selected.includes(d.id);
                 return (
                   <div key={d.id} onClick={()=>toggle(d.id)}
@@ -893,8 +935,7 @@ function Settings({ isMobile }) {
         {coaches.length===0 && (
           <div style={{textAlign:"center",padding:"48px 16px",color:C.textMuted}}>
             <div style={{fontSize:36,marginBottom:12}}>👥</div>
-            <div style={{fontSize:15,fontWeight:600,color:C.textSoft,marginBottom:8}}>Aucun coach dans l'équipe</div>
-            <Button sm variant="primary" onClick={()=>setInviteModal(true)}>+ Inviter le premier coach</Button>
+            <div style={{fontSize:15,fontWeight:600,color:C.textSoft}}>Aucun coach dans l'équipe</div>
           </div>
         )}
       </div>

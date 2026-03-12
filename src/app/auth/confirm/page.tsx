@@ -17,10 +17,18 @@ export default function AuthConfirmPage() {
 
     setDetail(`code=${code?"oui":"non"} | hash=${hash.includes("access_token")?"oui":"non"} | token_hash=${tokenHash?"oui":"non"} | tenant=${tenant||"(vide)"}`)
 
+    const isProduction = window.location.hostname.includes("fydelys.fr")
     const supabase = createBrowserClient(
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      { auth: { flowType: "implicit" } }
+      {
+        cookieOptions: {
+          domain: isProduction ? ".fydelys.fr" : undefined,
+          sameSite: "lax",
+          secure: isProduction,
+          path: "/",
+        },
+      }
     )
 
     function redirectFinal(slug: string) {

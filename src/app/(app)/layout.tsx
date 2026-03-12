@@ -6,7 +6,13 @@ import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import dynamicImport from "next/dynamic"
 
-const FydelysV4 = dynamicImport<React.ComponentType<any>>(
+type FydelysProps = {
+  initialRole: string; studioSlug: string; studioName: string; studioId: string
+  planName: string; membersCount: number; userName: string; userRole: string
+  coachName: string; coachDisciplines: any[]; billingStatus: string
+  trialEndsAt: string | null; onSignOut: () => Promise<void>
+}
+const FydelysV4 = dynamicImport<FydelysProps>(
   () => import("@/components/fydelys/FydelysApp") as any,
   { ssr: false }
 )

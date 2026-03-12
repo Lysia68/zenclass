@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
+import { createServerClient } from "@supabase/ssr"
 
 export const dynamic = "force-dynamic"
 

@@ -18,6 +18,8 @@ function Members({ isMobile }) {
   const [showAdd, setShowAdd] = useState(false);
   const [nM, setNM] = useState({ firstName:"", lastName:"", email:"", phone:"" });
   const [modal, setModal] = useState(null);
+  const [toast, setToast] = useState(null);
+  const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),3500); };
   const p = isMobile?12:28;
   const filtered = members.filter(m=>`${m.firstName} ${m.lastName} ${m.email}`.toLowerCase().includes(search.toLowerCase()));
 

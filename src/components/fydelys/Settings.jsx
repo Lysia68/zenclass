@@ -872,6 +872,7 @@ function Settings({ isMobile }) {
                 email: emailSent,
                 firstName: inviteName.fn,
                 lastName: inviteName.ln,
+                studioId,
               }),
             });
             if (!res.ok) {

@@ -1,11 +1,10 @@
 import { NextResponse, type NextRequest } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
-import { createServerClient } from "@supabase/ssr"
 
 export const dynamic = "force-dynamic"
 
 export async function POST(request: NextRequest) {
-  const { email, firstName, lastName } = await request.json()
+  const { email, firstName, lastName, studioId: clientStudioId } = await request.json()
 
   if (!email) {
     return NextResponse.json({ error: "Email requis" }, { status: 400 })
@@ -13,40 +12,34 @@ export async function POST(request: NextRequest) {
 
   const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
 
-  // Récupérer le studio depuis la session de l'admin connecté
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return request.cookies.getAll() },
-        setAll() {},
-      },
-    }
-  )
-
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) {
-    return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
-  }
-
   const db = createServiceSupabase()
 
-  // Récupérer le profil + studio de l'admin
-  const { data: profile } = await db
-    .from("profiles")
-    .select("studio_id")
-    .eq("id", user.id)
-    .single()
+  // Récupérer le studio : priorité au studioId envoyé par le client
+  // (évite les problèmes de cookies cross-subdomain)
+  let studioIdToUse: string | null = clientStudioId || null
 
-  if (!profile?.studio_id) {
+  if (!studioIdToUse) {
+    // Fallback : lire depuis la session cookie
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll() { return request.cookies.getAll() }, setAll() {} } }
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (user) {
+      const { data: profile } = await db.from("profiles").select("studio_id").eq("id", user.id).single()
+      studioIdToUse = profile?.studio_id || null
+    }
+  }
+
+  if (!studioIdToUse) {
     return NextResponse.json({ error: "Studio introuvable" }, { status: 404 })
   }
 
   const { data: studio } = await db
     .from("studios")
     .select("id, name, slug, email")
-    .eq("id", profile.studio_id)
+    .eq("id", studioIdToUse)
     .single()
 
   if (!studio) {

@@ -43,14 +43,14 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const today = new Date().toISOString().split("T")[0];
       const { data: bk } = await sb.from("bookings")
         .select("session_id, status")
-        .eq("member_id", user.id)
+        .eq("member_id", member?.id)
         .in("status", ["confirmed","waitlist"]);
       setMyBookings((bk||[]).map(b => b.session_id));
 
       // Historique (séances passées)
       const { data: hist } = await sb.from("bookings")
         .select("session_id, status, sessions(session_date, session_time, discipline_id, teacher, disciplines(name,color))")
-        .eq("member_id", user.id)
+        .eq("member_id", member?.id)
         .lte("sessions.session_date", today)
         .order("session_id", { ascending: false })
         .limit(50);
@@ -113,11 +113,12 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const sb = createClient();
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
-      const { error } = await sb.from("bookings").insert({
+      if (!me?.id) return;
+      const { error } = await sb.from("bookings").upsert({
         session_id: s.id,
-        member_id: user.id,
+        member_id: me.id,
         status: s.booked >= s.spots ? "waitlist" : "confirmed",
-      });
+      }, { onConflict: "session_id,member_id", ignoreDuplicates: true });
       if (!error) {
         setMyBookings(p=>[...p, s.id]);
         setSessions(p=>p.map(x=>x.id===s.id?{...x,booked:x.booked+1}:x));
@@ -132,7 +133,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
       const { error } = await sb.from("bookings")
-        .delete().eq("session_id", s.id).eq("member_id", user.id);
+        .delete().eq("session_id", s.id).eq("member_id", me.id);
       if (!error) {
         setMyBookings(p=>p.filter(id=>id!==s.id));
         setSessions(p=>p.map(x=>x.id===s.id?{...x,booked:Math.max(0,x.booked-1)}:x));

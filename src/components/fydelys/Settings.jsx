@@ -18,12 +18,15 @@ function RoleBadge({ role }) {
 
 // ── AIDE ILLUSTRATIONS — visuels SVG pour les guides ────────────────────────
 
-function InviteCoachModal({ C, studioSlug, inviteEmail, setInviteEmail, inviteName, setInviteName, onClose, onSubmit }) {
-  const firstInputRef = React.useRef(null);
+function InviteCoachModal({ C, studioSlug, onClose, onSubmit }) {
+  const [email, setEmail]   = React.useState("");
+  const [name, setName]     = React.useState({ fn:"", ln:"" });
+  const firstInputRef       = React.useRef(null);
   React.useEffect(() => {
     const t = setTimeout(() => firstInputRef.current?.focus(), 50);
     return () => clearTimeout(t);
   }, []);
+  const inpStyle = { width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:C.surfaceWarm };
   return (
     <div onClick={e=>e.target===e.currentTarget&&onClose()}
       style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:600,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -36,23 +39,23 @@ function InviteCoachModal({ C, studioSlug, inviteEmail, setInviteEmail, inviteNa
           {[["Prénom","fn","Marie"],["Nom","ln","Laurent"]].map(([lbl,k,ph],i)=>(
             <div key={k}>
               <FieldLabel>{lbl}</FieldLabel>
-              <input ref={i===0 ? firstInputRef : null} autoComplete="off" value={inviteName[k]} onChange={e=>setInviteName(p=>({...p,[k]:e.target.value}))} placeholder={ph}
-                style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
+              <input ref={i===0 ? firstInputRef : null} autoComplete="off" value={name[k]}
+                onChange={e=>setName(p=>({...p,[k]:e.target.value}))} placeholder={ph} style={inpStyle}
                 onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
             </div>
           ))}
         </div>
         <div style={{marginBottom:16}}>
           <FieldLabel>Email professionnel</FieldLabel>
-          <input type="text" inputMode="email" autoComplete="off" value={inviteEmail} onChange={e=>setInviteEmail(e.target.value)} placeholder="coach@studio.fr"
-            style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:14,outline:"none",boxSizing:"border-box",color:C.text,background:C.surfaceWarm}}
+          <input type="text" inputMode="email" autoComplete="off" value={email}
+            onChange={e=>setEmail(e.target.value)} placeholder="coach@studio.fr" style={inpStyle}
             onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
         </div>
         <div style={{padding:"10px 14px",background:C.accentLight,borderRadius:8,fontSize:12,color:C.accentDark,marginBottom:16}}>
-          🔗 Un magic link sera envoyé à <strong>{inviteEmail||"…"}</strong>. Le coach accédera via <strong>{studioSlug ? `${studioSlug}.fydelys.fr` : "votre studio"}</strong>
+          🔗 Un magic link sera envoyé à <strong>{email||"…"}</strong>. Le coach accédera via <strong>{studioSlug ? `${studioSlug}.fydelys.fr` : "votre studio"}</strong>
         </div>
         <div style={{display:"flex",gap:10}}>
-          <Button variant="primary" onClick={onSubmit}>
+          <Button variant="primary" onClick={()=>onSubmit(email, name.fn, name.ln)} disabled={!email||!name.fn}>
             <IcoMail s={14} c="white"/> Envoyer l'invitation
           </Button>
           <Button variant="ghost" onClick={onClose}>Annuler</Button>
@@ -128,10 +131,7 @@ function Settings({ isMobile }) {
   const [confirmDelete, setConfirmDelete] = useState(null);
   const [modal, setModal] = useState(null); // type: "newTenant"|"inviteUser"|"editUser"|"password"|"2fa"|"sessions"|"deleteAccount"
   const [toast, setToast] = useState(null);
-  // States invitation coach remontés ici pour éviter perte de focus (TabTeam recréé à chaque render)
   const [inviteModal, setInviteModal] = useState(false);
-  const [inviteEmail, setInviteEmail] = useState("");
-  const [inviteName, setInviteName]   = useState({ fn:"", ln:"" });
 
   const isSA = realRole === "superadmin";       // vrai rôle pour les onglets/accès
   const isAdmin = realRole === "admin" || isSA; // vrai rôle pour les permissions
@@ -861,23 +861,18 @@ function Settings({ isMobile }) {
         {inviteModal && <InviteCoachModal
         C={C}
         studioSlug={studioSlug}
-          inviteEmail={inviteEmail}
-        setInviteEmail={setInviteEmail}
-        inviteName={inviteName}
-        setInviteName={setInviteName}
         onClose={()=>setInviteModal(false)}
-        onSubmit={async ()=>{
-          if(!inviteEmail||!inviteName.fn) return;
-          const emailSent = inviteEmail;
-          setInviteModal(false); setInviteEmail(""); setInviteName({fn:"",ln:""});
+        onSubmit={async (emailSent, fn, ln)=>{
+          if(!emailSent||!fn) return;
+          setInviteModal(false);
           try {
             const res = await fetch("/api/invite-coach", {
               method: "POST",
               headers: { "Content-Type": "application/json" },
               body: JSON.stringify({
                 email: emailSent,
-                firstName: inviteName.fn,
-                lastName: inviteName.ln,
+                firstName: fn,
+                lastName: ln,
                 studioId,
               }),
             });

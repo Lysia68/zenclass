@@ -197,8 +197,9 @@ export default function LandingPage() {
         .nav-link:hover{background:rgba(160,104,56,.08);color:var(--accent);}
         .nav-cta{padding:9px 20px;background:var(--btn);border-radius:9px;font-size:14px;font-weight:600;color:#fff;text-decoration:none;box-shadow:0 2px 8px rgba(154,96,48,.3);transition:opacity .2s,transform .15s;}
         .nav-cta:hover{opacity:.9;transform:translateY(-1px);}
-        .nav-cta-ghost{display:none;}
-        @media(max-width:768px){.nav-cta-ghost{display:inline-block;font-size:13px!important;padding:7px 12px!important;}.nav-cta{font-size:13px;padding:8px 14px;}}
+        .nav-cta-ghost{display:inline-block;padding:9px 20px;border:1.5px solid rgba(160,104,56,.35);border-radius:9px;font-size:14px;font-weight:600;color:var(--accent);text-decoration:none;background:transparent;transition:background .2s,border-color .2s;}
+        .nav-cta-ghost:hover{background:rgba(160,104,56,.07);border-color:rgba(160,104,56,.55);}
+        @media(max-width:768px){.nav-links .nav-link{display:none;}.nav-cta-ghost{font-size:13px;padding:7px 12px;}.nav-cta{font-size:13px;padding:8px 14px;}}
 
         /* Hero */
         @keyframes fadeUp{from{opacity:0;transform:translateY(22px)}to{opacity:1;transform:translateY(0)}}

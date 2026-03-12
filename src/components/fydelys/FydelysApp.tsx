@@ -19,19 +19,7 @@ import { SuperAdminView } from "./SuperAdmin";
 import { CoachView } from "./CoachView";
 import { AdherentView } from "./AdherentView";
 
-// ── DIAGNOSTIC: log any undefined imports at module evaluation time ──────────
-if (typeof window !== "undefined") {
-  const _check = { Dashboard, Planning, Members, Subscriptions, Payments, DisciplinesPage, Settings, AidePage, SuperAdminView, CoachView, AdherentView, Sidebar, BottomNav, TopBar, C, useWidth, DISCIPLINES, MY_COACH_NAME, AppCtx };
-  const _bad = Object.entries(_check).filter(([,v]) => v === undefined || v === null);
-  if (_bad.length > 0) console.error("🔴 FYDELYS UNDEFINED IMPORTS:", _bad.map(([k]) => k).join(", "));
-  else console.log("✅ FYDELYS: all imports resolved");
-}
 
-const PAGE_TITLES = {
-  dashboard:"Tableau de bord", planning:"Planning", members:"Adhérents",
-  subscriptions:"Abonnements", payments:"Paiements", disciplines:"Disciplines",
-  settings:"Paramètres", aide:"Aide"
-};
 
 export default function App({
   initialRole = "admin", studioSlug = "", studioName = "",
@@ -44,6 +32,11 @@ export default function App({
     subscriptions:Subscriptions, payments:Payments, disciplines:DisciplinesPage,
     settings:Settings, aide:AidePage,
   };
+const PAGE_TITLES = {
+  dashboard:"Tableau de bord", planning:"Planning", members:"Adhérents",
+  subscriptions:"Abonnements", payments:"Paiements", disciplines:"Disciplines",
+  settings:"Paramètres", aide:"Aide"
+};
   const [role, setRole] = useState(initialRole);
   const [impersonating, setImpersonating] = useState(null);
   const [impersonatedCoach, setImpersonatedCoach] = useState({ name:"", disciplines:[] });

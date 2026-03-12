@@ -12,13 +12,7 @@ type FydelysProps = {
   coachName: string; coachDisciplines: any[]; billingStatus: string
   trialEndsAt: string | null; onSignOut: () => Promise<void>
 }
-const FydelysV4 = dynamicImport<FydelysProps>(
-  async () => {
-    const mod = await import("@/components/fydelys/FydelysApp" as any)
-    return (mod.default ?? mod) as any
-  },
-  { ssr: false }
-)
+const FydelysV4 = dynamicImport<FydelysProps>(() => import("@/components/fydelys/FydelysAppWrapper"), { ssr: false })
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()

@@ -131,7 +131,9 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(new URL("/dashboard", request.url))
   }
   // Sur fydelys.fr : si connecté et va sur /login → redirect /dashboard
-  if (user && pathname === "/login" && isApp) {
+  // Sauf si ?force=1 (clic volontaire sur "Connexion" depuis la landing)
+  const forceLogin = searchParams.get("force") === "1"
+  if (user && pathname === "/login" && isApp && !forceLogin) {
     const { data: profile } = await supabase
       .from("profiles").select("role, studio_id").eq("id", user.id).single()
     if (profile?.role === "superadmin") {

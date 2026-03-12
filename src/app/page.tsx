@@ -319,7 +319,7 @@ export default function LandingPage() {
         <div className="nav-links">
           <a href="#fonctionnalites" className="nav-link">Fonctionnalités</a>
           <a href="#tarifs" className="nav-link">Tarifs</a>
-          <a href="/login" className="nav-cta-ghost">Connexion</a>
+          <a href="/login?force=1" className="nav-cta-ghost">Connexion</a>
           <a href="/login?tab=register" className="nav-cta">Créer mon studio</a>
         </div>
       </nav>

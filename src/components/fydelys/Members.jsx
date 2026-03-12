@@ -28,7 +28,7 @@ function Members({ isMobile }) {
     if (!studioId) return;
     setDbLoading(true);
     createClient().from("members")
-      .select("id, first_name, last_name, email, phone, address, postal_code, city, status, credits, joined_at, next_payment, notes, subscription_id, profile_complete"ubscriptions(name)")
+      .select("id, first_name, last_name, email, phone, address, postal_code, city, status, credits, joined_at, next_payment, notes, subscription_id, profile_complete, subscriptions(name)")
       .eq("studio_id", studioId).order("last_name")
       .then(({ data, error }) => {
         if (error) { console.error("load members", error); setDbLoading(false); return; }

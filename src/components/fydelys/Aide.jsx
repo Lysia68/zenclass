@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useContext } from "react";
 import { C } from "./theme";
 import { DISCIPLINES } from "./demoData";

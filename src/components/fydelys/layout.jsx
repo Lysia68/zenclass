@@ -1,8 +1,12 @@
+"use client";
+
 import React, { useState } from "react";
 import { C } from "./theme";
 import { IcoYoga, NAV_ICONS, IcoLogOut } from "./icons";
+
+// ── Pill & ConfirmModal inline (évite la dépendance layout→ui) ────────────────
 function Pill({ children, color, bg }) {
-  return <span style={{ background:bg||"#F4EFE8", color:color||"#8C7B6C", padding:"3px 10px", borderRadius:12, fontSize:13, fontWeight:500 }}>{children}</span>;
+  return <span style={{ background:bg||C.bg, color:color||C.textSoft, padding:"3px 10px", borderRadius:12, fontSize:13, fontWeight:500 }}>{children}</span>;
 }
 
 function ConfirmModal({ message, onConfirm, onCancel }) {
@@ -14,13 +18,20 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
         <div style={{ fontSize:16, fontWeight:700, color:"#2A1F14", marginBottom:8 }}>Déconnexion</div>
         <div style={{ fontSize:14, color:"#8C7B6C", lineHeight:1.6, marginBottom:24 }}>{message}</div>
         <div style={{ display:"flex", gap:10 }}>
-          <button onClick={onCancel} style={{ flex:1, padding:"10px", background:"transparent", border:"1.5px solid #DDD5C8", borderRadius:9, color:"#8C7B6C", fontSize:14, fontWeight:600, cursor:"pointer" }}>Annuler</button>
-          <button onClick={onConfirm} style={{ flex:1, padding:"10px", background:"linear-gradient(145deg,#B88050,#9A6030)", border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>Se déconnecter</button>
+          <button onClick={onCancel}
+            style={{ flex:1, padding:"10px", background:"transparent", border:"1.5px solid #DDD5C8", borderRadius:9, color:"#8C7B6C", fontSize:14, fontWeight:600, cursor:"pointer" }}>
+            Annuler
+          </button>
+          <button onClick={onConfirm}
+            style={{ flex:1, padding:"10px", background:"linear-gradient(145deg,#B88050,#9A6030)", border:"none", borderRadius:9, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+            Se déconnecter
+          </button>
         </div>
       </div>
     </div>
   );
 }
+
 const NAV = [
   {key:"dashboard",     label:"Tableau de bord"},
   {key:"planning",      label:"Planning"},
@@ -78,8 +89,6 @@ const MOBILE_NAV = [
   {key:"settings",  label:"Plus"},
 ];
 
-
-
 function BottomNav({ active, onNav }) {
   return (
     <nav style={{ position:"fixed", bottom:0, left:0, right:0, background:C.surface, borderTop:`1px solid ${C.border}`, display:"flex", zIndex:200, height:62, boxShadow:"0 -2px 16px rgba(42,31,20,.07)" }}>
@@ -132,6 +141,5 @@ function TopBar({ title, isMobile, onSignOut, isSuperAdmin, studioName = "" }) {
     </>
   );
 }
-
 
 export { NAV, Sidebar, BottomNav, TopBar };

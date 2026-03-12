@@ -1,3 +1,5 @@
+"use client";
+
 // ══════════════════════════════════════════════════════════════════════════════
 // DONNÉES DE DÉMONSTRATION — remplacées automatiquement par les vraies données
 // dès que le studio aura des enregistrements en base Supabase.

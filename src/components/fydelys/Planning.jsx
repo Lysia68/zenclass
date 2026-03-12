@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState, useEffect, useContext } from "react";
 import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
@@ -180,7 +182,10 @@ function Planning({ isMobile }) {
       if (error) {
         console.error("insert session ERROR — code:", error.code, "msg:", error.message, "hint:", error.hint);
         setSessions(prev=>prev.filter(s=>s.id!==tempId));
-        alert("❌ Erreur Supabase:\n" + error.message + "\nCode: " + error.code + (error.hint ? "\nHint: " + error.hint : ""));
+        alert("❌ Erreur Supabase:
+" + error.message + "
+Code: " + error.code + (error.hint ? "
+Hint: " + error.hint : ""));
       } else if (data?.id) {
         if (isDemoData) {
           setSessions([{ id:data.id, ...sess, booked:0, waitlist:0 }]);

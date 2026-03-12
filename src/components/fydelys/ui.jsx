@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { C, statusMap } from "./theme";
 import { DISCIPLINES } from "./demoData";

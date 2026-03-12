@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 import { C } from "./theme";
 import { IcoCheck, IcoX, IcoUndo, IcoUserPlus, IcoMail } from "./icons";

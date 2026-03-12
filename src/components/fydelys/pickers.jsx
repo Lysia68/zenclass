@@ -1,3 +1,5 @@
+"use client";
+
 import React, { useState } from "react";
 import { C } from "./theme";
 import { Button } from "./ui";

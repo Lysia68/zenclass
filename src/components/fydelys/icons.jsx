@@ -1,3 +1,5 @@
+"use client";
+
 import React from "react";
 
 const IC = ({d,size=16,color="currentColor",sw=1.5,fill="none"}) => (

@@ -28,7 +28,7 @@ function Members({ isMobile }) {
     if (!studioId) return;
     setDbLoading(true);
     createClient().from("members")
-      .select("id, first_name, last_name, email, phone, status, credits, joined_at, next_payment, notes, subscriptions(name)")
+      .select("id, first_name, last_name, email, phone, address, postal_code, city, status, credits, joined_at, next_payment, notes, subscription_id, profile_complete"ubscriptions(name)")
       .eq("studio_id", studioId).order("last_name")
       .then(({ data, error }) => {
         if (error) { console.error("load members", error); setDbLoading(false); return; }
@@ -254,7 +254,15 @@ function Members({ isMobile }) {
               <div style={{ width:46, height:46, borderRadius:"50%", background:C.accentBg, border:`1.5px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, fontWeight:700, color:C.accent }}>{selected.avatar}</div>
               <div>
                 <div style={{ fontSize:20, fontWeight:700, color:C.text }}>{selected.firstName} {selected.lastName}</div>
-                <div style={{ fontSize:14, color:C.textSoft }}>{selected.email} · {selected.phone}</div>
+                <div style={{ fontSize:14, color:C.textSoft }}>{selected.email} · {selected.phone||"—"}</div>
+                {selected.address && (
+                  <div style={{ fontSize:12, color:C.textMuted, marginTop:2 }}>
+                    📍 {selected.address}, {selected.postal_code} {selected.city}
+                  </div>
+                )}
+                {selected.profile_complete === false && (
+                  <div style={{ fontSize:11, color:C.warn, fontWeight:600, marginTop:4 }}>⚠ Profil non complété</div>
+                )}
               </div>
             </div>
             <button onClick={()=>setSelected(null)} style={{ background:"none", border:`1.5px solid ${C.border}`, borderRadius:8, padding:"5px 8px", cursor:"pointer", color:C.textSoft, display:"flex", alignItems:"center" }}><IcoX s={16} c={C.textSoft}/></button>

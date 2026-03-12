@@ -114,6 +114,7 @@ export async function GET(request: NextRequest) {
             first_name: data.user.user_metadata?.first_name || "Nouveau",
             last_name:  data.user.user_metadata?.last_name  || "Membre",
             email: userEmail, status: "nouveau", credits: 0, credits_total: 0,
+            profile_complete: false,
           })
         } else {
           await db.from("members").update({ auth_user_id: userId })
@@ -226,6 +227,7 @@ export async function GET(request: NextRequest) {
             first_name: firstName || "Nouveau",
             last_name:  lastName  || "Membre",
             email: userEmail, status: "nouveau", credits: 0, credits_total: 0,
+            profile_complete: false,
           })
         } else {
           await db.from("members").update({ auth_user_id: userId })

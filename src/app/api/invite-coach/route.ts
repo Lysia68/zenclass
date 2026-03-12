@@ -52,12 +52,15 @@ export async function POST(request: NextRequest) {
   const studioEmail = studio.email || "noreply@fydelys.fr"
 
   // Insérer l'invitation en base (le callback en tiendra compte pour le rôle)
-  await db.from("invitations").upsert({
-    email,
+  // Supprimer l'ancienne invitation si existante, puis réinsérer
+  await db.from("invitations").delete().eq("email", email.toLowerCase()).eq("studio_id", studio.id)
+  const { error: inviteErr } = await db.from("invitations").insert({
+    email: email.toLowerCase(),
     studio_id: studio.id,
     role: "coach",
     used: false,
-  }, { onConflict: "email,studio_id" })
+  })
+  if (inviteErr) console.error("invitations insert error:", inviteErr)
 
   // Créer le user s'il n'existe pas encore (coach nouvellement invité)
   const { data: { users: allUsers } } = await db.auth.admin.listUsers({ perPage: 1000 })

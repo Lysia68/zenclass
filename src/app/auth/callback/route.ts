@@ -208,7 +208,11 @@ export async function GET(request: NextRequest) {
         .select("role").eq("email", userEmail).eq("studio_id", studio.id)
         .eq("used", false).single()
 
-      const role = invite ? (invite.role as string) : "adherent"
+      // Fallback: lire le rôle depuis user_metadata si pas d'invitation en base
+      const metaRole = data.user.user_metadata?.role
+      const role = invite
+        ? (invite.role as string)
+        : (metaRole === "coach" ? "coach" : "adherent")
 
       await db.from("profiles").insert({
         id: userId, role, studio_id: studio.id,

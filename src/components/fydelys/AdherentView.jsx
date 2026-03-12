@@ -5,13 +5,13 @@ import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
 import { C } from "./theme";
 import { SESSIONS_INIT, MEMBERS_DEMO, DISCIPLINES, SUBSCRIPTIONS_INIT, ADH_NAV_KEYS } from "./demoData";
-import { IcoCalendar, IcoUser, IcoChevron, IcoCreditCard, IcoCheck, IcoX, IcoAlert, IcoTag, IcoUsers, IcoBarChart } from "./icons";
+import { IcoCalendar, IcoUser, IcoChevron, IcoCreditCard, IcoCheck, IcoX, IcoAlert, IcoTag, IcoUsers, IcoBarChart, IcoActivity, IcoHeart, IcoStar, IcoZap } from "./icons";
 import { Card, SectionHead, Button, Tag, Pill, EmptyState, DemoBanner, DateLabel, Field, SessionRow } from "./ui";
 
-const ADH_NAV = ADH_NAV_KEYS.map((n,i) => ({ ...n, icon:[IcoCalendar,IcoUsers,IcoBarChart,IcoCreditCard][i] }));
+const ADH_NAV = ADH_NAV_KEYS.map((n,i) => ({ ...n, icon:[IcoCalendar,IcoHeart,IcoActivity,IcoCreditCard][i] }));
 const ADH_MOBILE_NAV = ADH_NAV;
 
-function AdherentView({ onSwitch, isMobile }) {
+function AdherentView({ onSwitch, isMobile, studioName = "" }) {
   const [page, setPage]    = useState("planning");
   const [myBookings, setMyBookings] = useState([1,3]);
   const [toast, setToast]  = useState(null);
@@ -352,8 +352,12 @@ function AdherentView({ onSwitch, isMobile }) {
       {!isMobile && (
         <aside style={{ width:220, background:C.surface, borderRight:`1.5px solid ${C.border}`, minHeight:"100vh", display:"flex", flexDirection:"column", flexShrink:0 }}>
           <div style={{ padding:"24px 20px 18px" }}>
-            <div style={{ fontSize:24, fontWeight:700, color:C.text, letterSpacing:-0.3, lineHeight:1 }}>Fyde<span style={{ color:C.accent }}>lys</span></div>
-            <div style={{ fontSize:12, color:C.textMuted, letterSpacing:0.2, textTransform:"uppercase", marginTop:4 }}>Mon espace</div>
+            <div style={{ fontSize:17, fontWeight:800, color:C.text, letterSpacing:-0.4, lineHeight:1.2 }}>
+              {studioName || <span>Fyde<span style={{ color:C.accent }}>lys</span></span>}
+            </div>
+            <div style={{ fontSize:10, color:C.textMuted, fontWeight:500, marginTop:4 }}>
+              Propulsé par <a href="https://fydelys.fr" target="_blank" rel="noopener" style={{ color:C.accent, textDecoration:"none", fontWeight:600 }}>Fydelys.fr</a>
+            </div>
           </div>
           <div style={{ margin:"0 12px 12px", padding:"10px 12px", background:C.accentLight, borderRadius:10, border:`1.5px solid ${C.border}`, display:"flex", alignItems:"center", gap:10 }}>
             <div style={{ width:34, height:34, borderRadius:"50%", background:C.accentBg, border:`1.5px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, fontWeight:700, color:C.accent, flexShrink:0 }}>{ME.avatar}</div>
@@ -388,7 +392,12 @@ function AdherentView({ onSwitch, isMobile }) {
       <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?62:0 }}>
         <div style={{ background:C.surface, borderBottom:`1.5px solid ${C.border}`, padding:`0 ${isMobile?16:28}px`, height:isMobile?48:56, display:"flex", alignItems:"center", justifyContent:"space-between", flexShrink:0, position:"sticky", top:0, zIndex:50 }}>
           <div style={{ fontSize:isMobile?18:20, fontWeight:700, color:C.text, letterSpacing:isMobile?-0.3:0 }}>
-            {isMobile ? <>Fyde<span style={{ color:C.accent }}>lys</span></> : ADH_PAGE_TITLES[page]}
+            {isMobile ? (
+              <div>
+                <div style={{ fontSize:14, fontWeight:800, color:C.text, lineHeight:1.1 }}>{studioName || <span>Fyde<span style={{ color:C.accent }}>lys</span></span>}</div>
+                <div style={{ fontSize:9, color:C.textMuted }}>via <span style={{ color:C.accent, fontWeight:600 }}>Fydelys</span></div>
+              </div>
+            ) : ADH_PAGE_TITLES[page]}
           </div>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             {!isMobile && <Pill color={C.ok} bg={C.okBg}>💳 {ME.credits} crédits</Pill>}

@@ -5,12 +5,12 @@ import { createClient } from "@/lib/supabase";
 import { AppCtx } from "./context";
 import { C } from "./theme";
 import { SESSIONS_INIT, BOOKINGS_INIT, DISCIPLINES, MY_COACH_NAME, COACH_NAV_KEYS, ADH_NAV_KEYS } from "./demoData";
-import { IcoCalendar, IcoUsers, IcoUser, IcoChevron, IcoBarChart, IcoCreditCard, IcoLogOut } from "./icons";
+import { IcoBookOpen, IcoGraduate, IcoAward, IcoLogOut, IcoActivity } from "./icons";
 import { Card, SectionHead, Button, Tag, Pill, EmptyState, DemoBanner } from "./ui";
 import { PlanningAccordion } from "./accordion";
 
 const MY_SESSIONS = SESSIONS_INIT.filter(s => s.teacher === MY_COACH_NAME);
-const COACH_NAV = COACH_NAV_KEYS.map((n,i) => ({ ...n, icon:[IcoCalendar,IcoUsers,IcoUser][i] }));
+const COACH_NAV = COACH_NAV_KEYS.map((n,i) => ({ ...n, icon:[IcoBookOpen,IcoGraduate,IcoAward][i] }));
 const ADH_NAV = ADH_NAV_KEYS.map((n,i) => ({ ...n, icon:[IcoCalendar,IcoUsers,IcoBarChart,IcoCreditCard][i] }));
 const ADH_MOBILE_NAV = ADH_NAV;
 
@@ -59,10 +59,12 @@ function CoachView({ onSwitch, isMobile, coachName = MY_COACH_NAME, coachDiscipl
       <div style={{ width:220, minHeight:"100vh", background:C.surface, borderRight:`1px solid ${C.border}`, display:"flex", flexDirection:"column", flexShrink:0 }}>
         {/* Logo */}
         <div style={{ padding:"24px 20px 20px", borderBottom:`1px solid ${C.borderSoft}` }}>
-          <div style={{ fontSize:18, fontWeight:800, color:C.text, letterSpacing:-0.5, lineHeight:1.2 }}>
+          <div style={{ fontSize:17, fontWeight:800, color:C.text, letterSpacing:-0.4, lineHeight:1.2 }}>
             {studioName || <span>Fyde<span style={{ color:C.accent }}>lys</span></span>}
           </div>
-          <div style={{ fontSize:11, color:C.textMuted, fontWeight:600, textTransform:"uppercase", letterSpacing:1, marginTop:2 }}>Espace Coach</div>
+          <div style={{ fontSize:10, color:C.textMuted, fontWeight:500, marginTop:4 }}>
+            Propulsé par <a href="https://fydelys.fr" target="_blank" rel="noopener" style={{ color:C.accent, textDecoration:"none", fontWeight:600 }}>Fydelys.fr</a>
+          </div>
         </div>
         {/* Profil mini */}
         <div style={{ padding:"16px 20px", borderBottom:`1px solid ${C.borderSoft}`, display:"flex", alignItems:"center", gap:10 }}>
@@ -103,7 +105,10 @@ function CoachView({ onSwitch, isMobile, coachName = MY_COACH_NAME, coachDiscipl
     <div style={{ padding:`${p}px ${p}px 0`, marginBottom:20 }}>
       {isMobile && (
         <div style={{ display:"flex", alignItems:"center", justifyContent:"space-between", marginBottom:16 }}>
-          <div style={{ fontSize:16, fontWeight:800, color:C.text, letterSpacing:-0.3 }}>{studioName || <span>Fyde<span style={{ color:C.accent }}>lys</span></span>}</div>
+          <div>
+            <div style={{ fontSize:15, fontWeight:800, color:C.text, letterSpacing:-0.3, lineHeight:1.1 }}>{studioName || <span>Fyde<span style={{ color:C.accent }}>lys</span></span>}</div>
+            <div style={{ fontSize:9, color:C.textMuted }}>via <span style={{ color:C.accent, fontWeight:600 }}>Fydelys</span></div>
+          </div>
           <div style={{ display:"flex", alignItems:"center", gap:8 }}>
             <button onClick={handleSignOut} style={{ background:"none", border:`1px solid ${C.border}`, borderRadius:8, padding:"6px 8px", cursor:"pointer", display:"flex", alignItems:"center" }}>
               <IcoLogOut s={16} c={C.textMuted}/>

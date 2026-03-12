@@ -52,6 +52,19 @@ export async function POST(request: NextRequest) {
   const studioEmail = studio.email || "noreply@fydelys.fr"
 
   // Insérer l'invitation en base (le callback en tiendra compte pour le rôle)
+  // Vérifier si l'email est déjà utilisé par un autre user auth
+  const { data: { users: allUsers } } = await db.auth.admin.listUsers({ perPage: 1000 })
+  const existingAuthUser = allUsers?.find((u: any) => u.email?.toLowerCase() === email.toLowerCase())
+  
+  // Si l'user existe déjà et a déjà un profil dans CE studio → erreur
+  if (existingAuthUser) {
+    const { data: existingProfile } = await db.from("profiles")
+      .select("id, role").eq("id", existingAuthUser.id).eq("studio_id", studio.id).single()
+    if (existingProfile) {
+      return NextResponse.json({ error: `${email} est déjà membre de ce studio (rôle: ${existingProfile.role})` }, { status: 409 })
+    }
+  }
+
   // Supprimer l'ancienne invitation si existante, puis réinsérer
   await db.from("invitations").delete().eq("email", email.toLowerCase()).eq("studio_id", studio.id)
   const { error: inviteErr } = await db.from("invitations").insert({

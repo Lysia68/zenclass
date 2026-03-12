@@ -1,6 +1,5 @@
 "use client"
 import { useEffect, useState } from "react"
-import { createBrowserClient } from "@supabase/ssr"
 
 export default function AuthConfirmPage() {
   const [status, setStatus] = useState("Connexion en cours…")
@@ -17,73 +16,60 @@ export default function AuthConfirmPage() {
 
     setDetail(`code=${code?"oui":"non"} | hash=${hash.includes("access_token")?"oui":"non"} | token_hash=${tokenHash?"oui":"non"} | tenant=${tenant||"(vide)"}`)
 
-    const isProduction = window.location.hostname.includes("fydelys.fr")
-    const supabase = createBrowserClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookieOptions: {
-          domain: isProduction ? ".fydelys.fr" : undefined,
-          sameSite: "lax",
-          secure: isProduction,
-          path: "/",
-        },
+    function redirectFinal(slug: string | null) {
+      if (!slug) {
+        window.location.href = "https://fydelys.fr/dashboard"
+      } else {
+        window.location.href = `https://${slug}.fydelys.fr/dashboard`
       }
-    )
-
-    function redirectFinal(slug: string) {
-      window.location.href = `https://${slug}.fydelys.fr/dashboard`
     }
 
-    // ── Flow 1 : ?code= (PKCE — Supabase envoie ça après /verify) ───────────
-    if (code) {
-      setStatus("Échange du code PKCE…")
-      fetch("/api/exchange-code", {
+    async function callServerRoute(route: string, body: object) {
+      const res = await fetch(route, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, tenantSlug: tenant }),
-      }).then(async (res) => {
-        const result = await res.json()
-        if (!res.ok || !result.ok) {
-          setIsError(true)
-          setStatus(`Erreur: ${result.error || "exchange_failed"}`)
-          setTimeout(() => { window.location.href = "/login?error=lien_expire" }, 3000)
-          return
-        }
-        setStatus(`Redirection…`)
-        const slug = result.slug || tenant
-        if (!slug) {
-          window.location.href = "https://fydelys.fr/dashboard"
-        } else {
-          redirectFinal(slug)
-        }
-      }).catch(e => {
-        setIsError(true)
-        setStatus(`Erreur réseau: ${e.message}`)
+        body: JSON.stringify(body),
+        credentials: "include",
       })
-      return
+      const result = await res.json()
+      if (!res.ok || !result.ok) {
+        setIsError(true)
+        setStatus(`Erreur: ${result.error || "failed"}`)
+        setTimeout(() => { window.location.href = "/login?error=lien_expire" }, 3000)
+        return null
+      }
+      return result
     }
 
-    // ── Flow 2 : ?token_hash= (lien reconstruit via generateLink) ───────────
+    // ── Flow 1 : ?token_hash= ────────────────────────────────────────────────
     if (tokenHash) {
       setStatus("Vérification token…")
-      supabase.auth.verifyOtp({ token_hash: tokenHash, type: type as any })
-        .then(async ({ data, error }) => {
-          if (error || !data?.user) {
-            setIsError(true)
-            setStatus(`Erreur: ${error?.message || "no_user"}`)
-            setTimeout(() => { window.location.href = "/login?error=lien_expire" }, 3000)
-            return
-          }
-          await handleSessionClient(data.user)
+      callServerRoute("/api/verify-token", { tokenHash, type, tenantSlug: tenant })
+        .then(result => {
+          if (!result) return
+          setStatus("Redirection…")
+          redirectFinal(result.slug || tenant)
         })
       return
     }
 
-    // ── Flow 3 : #access_token= (flow implicit) ──────────────────────────────
+    // ── Flow 2 : ?code= (PKCE) ───────────────────────────────────────────────
+    if (code) {
+      setStatus("Échange du code…")
+      callServerRoute("/api/exchange-code", { code, tenantSlug: tenant })
+        .then(result => {
+          if (!result) return
+          setStatus("Redirection…")
+          const slug = result.slug || tenant
+          redirectFinal(slug)
+        })
+      return
+    }
+
+    // ── Flow 3 : #access_token= (implicit) ──────────────────────────────────
     if (hash && hash.includes("access_token=")) {
       setStatus("Lecture du token…")
-      const hp           = new URLSearchParams(hash.replace("#", ""))
+      const hp = new URLSearchParams(hash.replace("#", ""))
       const accessToken  = hp.get("access_token")
       const refreshToken = hp.get("refresh_token")
       if (!accessToken || !refreshToken) {
@@ -92,43 +78,20 @@ export default function AuthConfirmPage() {
         setTimeout(() => { window.location.href = "/login?error=lien_expire" }, 3000)
         return
       }
-      supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken })
-        .then(async ({ data, error }) => {
-          if (error || !data?.user) {
-            setIsError(true)
-            setStatus(`setSession échoué: ${error?.message}`)
-            setTimeout(() => { window.location.href = "/login?error=lien_expire" }, 3000)
-            return
-          }
-          await handleSessionClient(data.user)
-        })
+      callServerRoute("/api/verify-token", {
+        accessToken, refreshToken, tenantSlug: tenant
+      }).then(result => {
+        if (!result) return
+        setStatus("Redirection…")
+        redirectFinal(result.slug || tenant)
+      })
       return
     }
 
-    // Aucun token trouvé
+    // Aucun token
     setIsError(true)
     setStatus("Aucun token trouvé — lien expiré ou déjà utilisé")
     setTimeout(() => { window.location.href = "/login?error=lien_expire" }, 3000)
-
-    async function handleSessionClient(user: any) {
-      const tenantSlug = tenant || user.app_metadata?.studio_slug
-      if (!tenantSlug) {
-        setStatus("Redirection admin…")
-        window.location.href = "https://fydelys.fr/dashboard"
-        return
-      }
-      setStatus("Création du profil…")
-      const res = await fetch("/api/create-profile", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          userId: user.id, userEmail: user.email,
-          userMetadata: user.user_metadata, tenantSlug,
-        }),
-      })
-      const result = await res.json()
-      redirectFinal(result.slug || tenantSlug)
-    }
   }, [])
 
   return (

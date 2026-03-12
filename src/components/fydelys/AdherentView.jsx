@@ -18,7 +18,6 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
   const p = isMobile ? 16 : 28;
 
   const { studioId, discs } = useContext(AppCtx);
-  console.log("ADHERENT_VIEW studioId:", studioId);
   const allDiscs = discs?.length ? discs : DISCIPLINES;
 
   // ── Données membre chargées depuis Supabase ─────────────────────────────────
@@ -38,21 +37,20 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const { data: member } = await sb.from("members")
         .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete")
         .eq("studio_id", studioId).eq("email", email).maybeSingle();
-      console.log("MEMBER:", JSON.stringify(member));
       if (member) setMe(member);
 
       // Bookings actifs (sessions futures)
       const today = new Date().toISOString().split("T")[0];
       const { data: bk } = await sb.from("bookings")
         .select("session_id, status")
-        .eq("studio_id", studioId).eq("member_email", email)
+        .eq("member_id", user.id)
         .in("status", ["confirmed","waitlist"]);
       setMyBookings((bk||[]).map(b => b.session_id));
 
       // Historique (séances passées)
       const { data: hist } = await sb.from("bookings")
         .select("session_id, status, sessions(session_date, session_time, discipline_id, teacher, disciplines(name,color))")
-        .eq("studio_id", studioId).eq("member_email", email)
+        .eq("member_id", user.id)
         .lte("sessions.session_date", today)
         .order("session_id", { ascending: false })
         .limit(50);
@@ -75,7 +73,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       createClient().from("sessions")
         .select("id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots, status, disciplines(name,color,icon)")
         .eq("studio_id", studioId)
-        .eq("status", "active")
+        .eq("status", "scheduled")
         .gte("session_date", today)
         .order("session_date").order("session_time")
         .limit(60)
@@ -116,8 +114,8 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
       const { error } = await sb.from("bookings").insert({
-        session_id: s.id, studio_id: studioId,
-        member_email: user.email,
+        session_id: s.id,
+        member_id: user.id,
         status: s.booked >= s.spots ? "waitlist" : "confirmed",
       });
       if (!error) {
@@ -134,7 +132,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "" }) {
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
       const { error } = await sb.from("bookings")
-        .delete().eq("session_id", s.id).eq("member_email", user.email);
+        .delete().eq("session_id", s.id).eq("member_id", user.id);
       if (!error) {
         setMyBookings(p=>p.filter(id=>id!==s.id));
         setSessions(p=>p.map(x=>x.id===s.id?{...x,booked:Math.max(0,x.booked-1)}:x));

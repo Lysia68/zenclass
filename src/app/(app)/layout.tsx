@@ -1,11 +1,15 @@
 "use client"
+import React from "react"
 export const dynamic = "force-dynamic"
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import { createClient } from "@/lib/supabase"
 import dynamicImport from "next/dynamic"
 
-const FydelysV4 = dynamicImport(() => import("@/components/fydelys/FydelysApp").then(m => ({ default: m.default })), { ssr: false })
+const FydelysV4 = dynamicImport<React.ComponentType<any>>(
+  () => import("@/components/fydelys/FydelysApp") as any,
+  { ssr: false }
+)
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const router = useRouter()

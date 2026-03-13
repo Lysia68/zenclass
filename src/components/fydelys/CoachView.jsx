@@ -325,9 +325,17 @@ function CoachView({ onSwitch, isMobile, coachName = MY_COACH_NAME, coachDiscipl
                       </div>
                       <div style={{ flex:1 }}>
                         <div style={{ fontSize:13, fontWeight:600, color:C.text }}>{b.fn} {b.ln}</div>
-                        <div style={{ fontSize:11, color:C.textMuted }}>{b.sub}{b.credits!=null ? ` · ${b.credits}/${b.total} crédits` : ""}</div>
+                        <div style={{ fontSize:11, color:C.textMuted, display:"flex", alignItems:"center", gap:8, marginTop:2, flexWrap:"wrap" }}>
+                          {b.phone && <span style={{ display:"flex", alignItems:"center", gap:3 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                            {b.phone}
+                          </span>}
+                          {b.email && <span style={{ display:"flex", alignItems:"center", gap:3 }}>
+                            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+                            {b.email}
+                          </span>}
+                        </div>
                       </div>
-                      <div style={{ fontSize:11, color:C.textMuted }}>{b.phone}</div>
                     </div>
                   ))}
 
@@ -391,7 +399,16 @@ function CoachView({ onSwitch, isMobile, coachName = MY_COACH_NAME, coachDiscipl
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{b.fn} {b.ln}</div>
-                  <div style={{ fontSize:12, color:C.textMuted }}>{b.sub}</div>
+                  <div style={{ fontSize:12, color:C.textMuted, display:"flex", alignItems:"center", gap:8, marginTop:2, flexWrap:"wrap" }}>
+                    {b.phone && <span style={{ display:"flex", alignItems:"center", gap:3 }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07A19.5 19.5 0 0 1 4.15 12a19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 3.06 1h3a2 2 0 0 1 2 1.72c.127.96.361 1.903.7 2.81a2 2 0 0 1-.45 2.11L7.09 8.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0 1 22 16.92z"/></svg>
+                      {b.phone}
+                    </span>}
+                    {b.email && <span style={{ display:"flex", alignItems:"center", gap:3 }}>
+                      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m2 7 10 7 10-7"/></svg>
+                      {b.email}
+                    </span>}
+                  </div>
                 </div>
                 <div style={{ textAlign:"right", flexShrink:0 }}>
                   <div style={{ fontSize:14, fontWeight:700, color:C.accent }}>{nbSessions}</div>

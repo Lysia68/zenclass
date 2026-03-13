@@ -83,7 +83,7 @@ function Dashboard({ isMobile }) {
 
     Promise.all([
       sb.from("sessions").select("id,discipline_id,teacher,room,duration_min,spots,session_date,session_time,status").eq("studio_id", studioId),
-      sb.from("members").select("id,status").eq("studio_id", studioId),
+      sb.from("members").select("id,first_name,last_name,email,phone,status,joined_at,subscription_id,subscriptions(name)").eq("studio_id", studioId),
       sb.from("payments").select("id,amount,status,payment_date").eq("studio_id", studioId),
       sb.from("disciplines").select("id,name,color,icon").eq("studio_id", studioId),
     ]).then(async ([sessRes, membRes, payRes, discRes]) => {
@@ -123,7 +123,17 @@ function Dashboard({ isMobile }) {
 
         setSessions(mappedSessions);
         setBookings(bkMap);
-        setMembers(membData);
+        setMembers(membData.map(m=>({
+          ...m,
+          firstName: m.first_name||"",
+          lastName: m.last_name||"",
+          email: m.email||"",
+          phone: m.phone||"",
+          subscription: m.subscriptions?.name||"—",
+          joined: m.joined_at||"",
+          avatar: (m.first_name?.[0]||"") + (m.last_name?.[0]||""),
+          credits: 0,
+        })));
         setPayments(payData.map(p=>({...p, date:p.payment_date, status:p.status})));
         if (discData.length > 0) {
           setLocalDiscs(discData);

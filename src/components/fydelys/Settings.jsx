@@ -87,7 +87,7 @@ function Settings({ isMobile, onImpersonate }) {
   const realRole = userRole || "admin";
   const [currentRole, setCurrentRole] = useState(realRole);
   // ── Données studio depuis Supabase
-  const [studioForm, setStudioForm] = useState({ name:"", address:"", phone:"", email:"", website:"", cancel_delay_h:12, booking_days_ahead:7, waitlist_max:10 });
+  const [studioForm, setStudioForm] = useState({ name:"", address:"", phone:"", email:"", website:"", cancel_delay_hours:12, booking_days_ahead:7, waitlist_max:10 });
   const [studioSaving, setStudioSaving] = useState(false);
   const [studioToast, setStudioToast] = useState(null);
   const showStudioToast = (msg, ok=true) => { setStudioToast({msg,ok}); setTimeout(()=>setStudioToast(null),3000); };
@@ -95,7 +95,7 @@ function Settings({ isMobile, onImpersonate }) {
   React.useEffect(() => {
     if (!studioId) return;
     createClient().from("studios")
-      .select("name, address, city, phone, email, website, cancel_delay_h, booking_days_ahead, waitlist_max")
+      .select("name, address, city, phone, email, website, cancel_delay_hours, booking_days_ahead, waitlist_max")
       .eq("id", studioId).single()
       .then(({ data }) => {
         if (data) setStudioForm({
@@ -105,7 +105,7 @@ function Settings({ isMobile, onImpersonate }) {
           phone: data.phone || "",
           email: data.email || "",
           website: data.website || "",
-          cancel_delay_h: data.cancel_delay_h ?? 12,
+          cancel_delay_hours: data.cancel_delay_hours ?? 12,
           booking_days_ahead: data.booking_days_ahead ?? 7,
           waitlist_max: data.waitlist_max ?? 10,
         });
@@ -122,7 +122,7 @@ function Settings({ isMobile, onImpersonate }) {
       phone: studioForm.phone,
       email: studioForm.email,
       website: studioForm.website,
-      cancel_delay_h: parseInt(studioForm.cancel_delay_h) || 12,
+      cancel_delay_hours: parseInt(studioForm.cancel_delay_hours) || 12,
       booking_days_ahead: parseInt(studioForm.booking_days_ahead) || 7,
       waitlist_max: parseInt(studioForm.waitlist_max) || 10,
     }).eq("id", studioId);
@@ -491,7 +491,7 @@ function Settings({ isMobile, onImpersonate }) {
         <Card noPad style={{ marginBottom:14 }}>
           <SectionHead>Paramètres de réservation</SectionHead>
           <div style={{ padding:"16px 18px", display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr", gap:12 }}>
-            <SI label="Délai annulation (h)" fkey="cancel_delay_h" type="number"/>
+            <SI label="Délai annulation (h)" fkey="cancel_delay_hours" type="number"/>
             <SI label="Ouverture résa (j avant)" fkey="booking_days_ahead" type="number"/>
             <SI label="Liste d'attente max" fkey="waitlist_max" type="number"/>
           </div>

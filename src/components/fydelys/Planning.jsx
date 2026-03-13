@@ -173,11 +173,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
         {/* Boutons actions inline (séance expanded) */}
         {isExp && (
           <div onClick={e => e.stopPropagation()} style={{ display: "flex", gap: 5, flexShrink: 0 }}>
-            <button onClick={() => onAddBooking && onAddBooking(sess.id)}
-              title="Inscrire un adhérent"
-              style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, padding: "5px 10px", borderRadius: 8, border: `1px solid #DFC0A0`, background: C.accentBg, color: C.accentDark, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
-              <IcoUserPlus2 s={13} c={C.accentDark} /> Inscrire
-            </button>
+
             <button onClick={() => onSendReminder && onSendReminder(sess.id)}
               title="Envoyer rappel"
               style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 12, padding: "5px 10px", borderRadius: 8, border: `1px solid ${C.border}`, background: C.surfaceWarm, color: C.textSoft, cursor: "pointer", fontWeight: 600, whiteSpace: "nowrap" }}>
@@ -212,6 +208,33 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
         {sessionStatus === "cancelled" && <span style={{ fontSize:12 }}>⚠</span>}
         {sessionStatus === "closed"    && <span style={{ fontSize:12 }}>🔒</span>}
         <span style={{ fontSize:11, fontWeight:700, color:statusStyle.color, letterSpacing:.3, textTransform:"uppercase" }}>{statusLabel[sessionStatus]}</span>
+        {sessionStatus === "past" && (() => {
+          const bl = bookings[sess.id] || [];
+          const confirmed = bl.filter(b => b.st === "confirmed");
+          const present  = confirmed.filter(b => b.attended === true).length;
+          const absent   = confirmed.filter(b => b.attended === false).length;
+          const pending  = confirmed.length - present - absent;
+          if (confirmed.length === 0) return null;
+          return (
+            <span style={{ marginLeft:"auto", display:"flex", alignItems:"center", gap:6 }}>
+              {present > 0 && (
+                <span style={{ fontSize:11, fontWeight:700, padding:"1px 7px", borderRadius:10, background:C.okBg, color:C.ok }}>
+                  ✓ {present} présent{present>1?"s":""}
+                </span>
+              )}
+              {absent > 0 && (
+                <span style={{ fontSize:11, fontWeight:700, padding:"1px 7px", borderRadius:10, background:C.warnBg, color:C.warn }}>
+                  ✗ {absent} absent{absent>1?"s":""}
+                </span>
+              )}
+              {pending > 0 && (
+                <span style={{ fontSize:11, fontWeight:600, padding:"1px 7px", borderRadius:10, background:"#EDE9E3", color:C.textMuted }}>
+                  ⏳ {pending} en attente
+                </span>
+              )}
+            </span>
+          );
+        })()}
       </div>
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
       {isExp && (
@@ -337,6 +360,7 @@ function Planning({ isMobile }) {
   const [recFilterDisc, setRecFilterDisc] = useState(null);
   const [isDemoData, setIsDemoData]   = useState(false);
   const [bookingModal, setBookingModal] = useState(null);
+  const [roomsList, setRoomsList]     = useState([]);
   const [closures, setClosures]       = useState([]);
   const [showClosures, setShowClosures] = useState(false);
   const [closureForm, setClosureForm] = useState({ label:"Fermeture", date_start:"", date_end:"", single:true });
@@ -398,6 +422,9 @@ function Planning({ isMobile }) {
           data.map(c => ({ id: c.id, name: `${c.first_name || ""} ${c.last_name || ""}`.trim() })).filter(c => c.name)
         );
       });
+    // Salles
+    sb.from("rooms").select("id, name, capacity, color").eq("studio_id", studioId).order("name")
+      .then(({ data }) => { if (data?.length) setRoomsList(data); });
     // Fermetures
     sb.from("studio_closures").select("*").eq("studio_id", studioId).order("date_start")
       .then(({ data }) => { if (data) setClosures(data); });
@@ -421,7 +448,7 @@ function Planning({ isMobile }) {
           status: s.status || "scheduled", booked: 0, waitlist: 0,
         }));
         const { data: bkData } = await sb.from("bookings")
-          .select("id, session_id, member_id, status, attended, members(first_name, last_name, email, phone)")
+          .select("id, session_id, member_id, status, attended, members(id, first_name, last_name, email, phone, credits, credits_total)")
           .in("session_id", mapped.map(s => s.id));
         const map = {};
         (bkData || []).forEach(b => {
@@ -430,6 +457,7 @@ function Planning({ isMobile }) {
             id: b.id, memberId: b.member_id, st: b.status, attended: b.attended ?? null,
             name: b.members ? `${b.members.first_name || ""} ${b.members.last_name || ""}`.trim() : "—",
             email: b.members?.email || "", phone: b.members?.phone || "",
+            credits: b.members?.credits ?? null, total: b.members?.credits_total ?? null,
           });
         });
         setBookings(map);
@@ -760,9 +788,34 @@ function Planning({ isMobile }) {
                     <TimePicker value={nS.time} onChange={v => setNS({ ...nS, time: v })} />
                   </div>
                   <Field label="Durée (min)" type="number" value={nS.duration} onChange={v => setNS({ ...nS, duration: v })} />
-                  <Field label="Places" type="number" value={nS.spots} onChange={v => setNS({ ...nS, spots: v })} />
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>Salle</div>
+                    {roomsList.length > 0 ? (
+                      <select value={nS.room} onChange={e => {
+                        const room = roomsList.find(r => r.name === e.target.value);
+                        setNS(prev => ({ ...prev, room: e.target.value, spots: room ? room.capacity : prev.spots }));
+                      }} style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", background:C.surfaceWarm, color:C.text, cursor:"pointer" }}>
+                        <option value="">— Choisir une salle —</option>
+                        {roomsList.map(r => (
+                          <option key={r.id} value={r.name}>{r.name} ({r.capacity} places)</option>
+                        ))}
+                      </select>
+                    ) : (
+                      <input value={nS.room} onChange={e => setNS({ ...nS, room: e.target.value })} placeholder="Studio A"
+                        style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", background:C.surfaceWarm, color:C.text, boxSizing:"border-box" }}/>
+                    )}
+                  </div>
+                  <div>
+                    <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>Places</div>
+                    <input type="number" min={1} value={nS.spots} onChange={e => setNS({ ...nS, spots: parseInt(e.target.value)||1 })}
+                      style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", background:C.surfaceWarm, color:C.text, boxSizing:"border-box" }}/>
+                    {nS.room && roomsList.find(r => r.name === nS.room) && nS.spots !== roomsList.find(r => r.name === nS.room).capacity && (
+                      <div style={{ fontSize:11, color:C.textMuted, marginTop:3 }}>
+                        Capacité salle : {roomsList.find(r => r.name === nS.room).capacity} — modifié manuellement
+                      </div>
+                    )}
+                  </div>
                   <Field label="Niveau" value={nS.level} onChange={v => setNS({ ...nS, level: v })} opts={["Tous niveaux", "Débutant", "Intermédiaire", "Avancé"]} />
-                  <Field label="Salle" value={nS.room} onChange={v => setNS({ ...nS, room: v })} placeholder="Studio A" />
                 </div>
                 <div style={{ marginTop: 16, display: "flex", gap: 10 }}>
                   <Button variant="primary" onClick={addSession} disabled={!nS.date}>✦ Créer la séance</Button>
@@ -886,8 +939,28 @@ function Planning({ isMobile }) {
                         {coachesList.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                       </select>
                     </div>
-                    <Field label="Places" type="number" value={nS.spots} onChange={v => setNS({ ...nS, spots: v })} />
-                    <Field label="Salle" value={nS.room} onChange={v => setNS({ ...nS, room: v })} placeholder="Studio A" />
+                    <div>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>Salle</div>
+                      {roomsList.length > 0 ? (
+                        <select value={nS.room} onChange={e => {
+                          const room = roomsList.find(r => r.name === e.target.value);
+                          setNS(prev => ({ ...prev, room: e.target.value, spots: room ? room.capacity : prev.spots }));
+                        }} style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", background:C.surfaceWarm, color:C.text, cursor:"pointer" }}>
+                          <option value="">— Choisir une salle —</option>
+                          {roomsList.map(r => (
+                            <option key={r.id} value={r.name}>{r.name} ({r.capacity} places)</option>
+                          ))}
+                        </select>
+                      ) : (
+                        <input value={nS.room} onChange={e => setNS({ ...nS, room: e.target.value })} placeholder="Studio A"
+                          style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", background:C.surfaceWarm, color:C.text, boxSizing:"border-box" }}/>
+                      )}
+                    </div>
+                    <div>
+                      <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>Places</div>
+                      <input type="number" min={1} value={nS.spots} onChange={e => setNS({ ...nS, spots: parseInt(e.target.value)||1 })}
+                        style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", background:C.surfaceWarm, color:C.text, boxSizing:"border-box" }}/>
+                    </div>
                   </div>
 
                   {/* Étape 3 — Période */}

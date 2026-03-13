@@ -129,15 +129,28 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       const { data: { user } } = await sb.auth.getUser();
       if (!user) return;
       if (!me?.id) return;
+
+      // Vérifier crédits si le membre en a un système de crédits actif
+      const hasCredits = me.credits !== null && me.credits !== undefined && me.credits_total > 0;
+      if (hasCredits && me.credits <= 0) {
+        showToast("Crédits insuffisants — rechargez votre compte", false);
+        return;
+      }
+
+      const isFull = s.booked >= s.spots;
       const { error } = await sb.from("bookings").upsert({
         session_id: s.id,
         member_id: me.id,
-        status: s.booked >= s.spots ? "waitlist" : "confirmed",
+        status: isFull ? "waitlist" : "confirmed",
       }, { onConflict: "session_id,member_id", ignoreDuplicates: true });
       if (!error) {
         setMyBookings(p=>[...p, s.id]);
         setSessions(p=>p.map(x=>x.id===s.id?{...x,booked:x.booked+1}:x));
-        showToast(`Réservé : ${s.discName} — ${s.time}`);
+        if (isFull) {
+          showToast(`Ajouté à la liste d'attente — ${s.discName}`);
+        } else {
+          showToast(`Réservé : ${s.discName} — ${s.time}`);
+        }
       } else {
         showToast("Erreur lors de la réservation", false);
       }
@@ -187,28 +200,45 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                 <div style={{ fontSize:13, color:C.textSoft }}>{new Date(confirmSess.date).toLocaleDateString("fr-FR",{weekday:"long",day:"numeric",month:"long"})}</div>
                 <div style={{ fontSize:13, color:C.textSoft }}>{confirmSess.time} · {confirmSess.duration_min} min · {confirmSess.room}</div>
                 <div style={{ fontSize:13, color:C.textSoft }}>{confirmSess.teacher}</div>
-                {me?.credits > 0 && (
-                  <div style={{ marginTop:10, padding:"8px 12px", background:C.surface, borderRadius:8, fontSize:13, color:C.textMid }}>
-                    💳 Cette séance utilisera <strong>1 crédit</strong> (il vous en restera {me.credits-1})
-                  </div>
-                )}
+                {(() => {
+                  const hasCredits = me?.credits !== null && me?.credits !== undefined && me?.credits_total > 0;
+                  if (!hasCredits) return null;
+                  if (me.credits <= 0) return (
+                    <div style={{ marginTop:10, padding:"8px 12px", background:"#FEE2E2", borderRadius:8, fontSize:13, color:"#991B1B", fontWeight:600 }}>
+                      ⛔ Crédits insuffisants — vous ne pouvez pas réserver cette séance.
+                    </div>
+                  );
+                  return (
+                    <div style={{ marginTop:10, padding:"8px 12px", background:C.surface, borderRadius:8, fontSize:13, color:C.textMid }}>
+                      💳 Cette séance utilisera <strong>1 crédit</strong> (il vous en restera {me.credits - 1})
+                    </div>
+                  );
+                })()}
               </div>
               <div style={{ display:"flex", gap:10 }}>
-                <Button sm onClick={()=>book(confirmSess)}>Confirmer</Button>
-                <Button sm variant="ghost" onClick={()=>setConfirmSess(null)}>Annuler</Button>
+                {(() => {
+                  const hasCredits = me?.credits !== null && me?.credits !== undefined && me?.credits_total > 0;
+                  const blocked = hasCredits && me.credits <= 0;
+                  return blocked
+                    ? <Button sm variant="ghost" onClick={()=>setConfirmSess(null)}>Fermer</Button>
+                    : <><Button sm onClick={()=>book(confirmSess)}>Confirmer</Button>
+                       <Button sm variant="ghost" onClick={()=>setConfirmSess(null)}>Annuler</Button></>;
+                })()}
               </div>
             </div>
           </div>
         )}
 
-        {/* Barre crédits */}
-        {me?.credits > 0 && (
-          <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", background:C.accentLight, borderRadius:12, marginBottom:18, border:`1px solid ${C.accentBg}` }}>
-            <IcoCreditCard2 s={20} c={C.accent}/>
+        {/* Barre crédits — visible si système crédits actif */}
+        {me?.credits_total > 0 && (
+          <div style={{ display:"flex", alignItems:"center", gap:14, padding:"12px 16px", background:me.credits<=0?C.warnBg:C.accentLight, borderRadius:12, marginBottom:18, border:`1px solid ${me.credits<=0?C.warn:C.accentBg}` }}>
+            <IcoCreditCard2 s={20} c={me.credits<=0?C.warn:C.accent}/>
             <div style={{ flex:1 }}>
-              <div style={{ fontSize:13, fontWeight:600, color:C.text }}>Crédits restants : {me.credits}/{me.credits_total||me.credits}</div>
+              <div style={{ fontSize:13, fontWeight:600, color:me.credits<=0?C.warn:C.text }}>
+                {me.credits<=0 ? "⛔ Plus de crédits disponibles" : `Crédits restants : ${me.credits}/${me.credits_total}`}
+              </div>
               <div style={{ height:4, background:C.bgDeep, borderRadius:2, marginTop:5 }}>
-                <div style={{ width:`${(me.credits/(me.credits_total||me.credits))*100}%`, height:"100%", background:C.accent, borderRadius:2 }}/>
+                <div style={{ width:`${Math.min((me.credits/me.credits_total)*100,100)}%`, height:"100%", background:me.credits<=0?C.warn:me.credits/me.credits_total<0.25?C.warn:C.accent, borderRadius:2 }}/>
               </div>
             </div>
           </div>
@@ -264,7 +294,13 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                           ? <Button sm variant="danger" onClick={()=>cancel(s)}>Annuler</Button>
                           : isFull
                             ? <Button sm variant="secondary" onClick={()=>showToast("Ajouté à la liste d'attente")}>Liste d'attente</Button>
-                            : <Button sm onClick={()=>setConfirmSess(s)}>Réserver</Button>
+                            : (() => {
+                                const hasC = me?.credits_total > 0;
+                                const blocked = hasC && me.credits <= 0;
+                                return blocked
+                                  ? <button disabled style={{ fontSize:12, padding:"5px 12px", borderRadius:8, border:"1px solid #EFC8BC", background:C.warnBg, color:C.warn, cursor:"not-allowed", fontWeight:600 }}>⛔ Crédits épuisés</button>
+                                  : <Button sm onClick={()=>setConfirmSess(s)}>Réserver</Button>;
+                              })()
                         }
                       </div>
                     </div>

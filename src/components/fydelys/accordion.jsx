@@ -94,19 +94,44 @@ export function PlanningAccordion({ sess, sessId, bookings, onChangeStatus, onAd
   const pendingCount = conf.length - presentCount - absentCount;
 
   async function handleMark(bookingId, val) {
-    const { error } = await createClient().from("bookings").update({ attended: val }).eq("id", bookingId);
+    const sb = createClient();
+    const { error } = await sb.from("bookings").update({ attended: val }).eq("id", bookingId);
     if (!error) {
+      const prevVal = attended[bookingId];
       setAttended(prev => ({ ...prev, [bookingId]: val }));
       onAttendanceChange && onAttendanceChange(bookingId, val);
+
+      // Déduction crédits : présent → -1 crédit / annulation présence → +1 crédit
+      const booking = conf.find(b => b.id === bookingId);
+      if (booking?.memberId && booking?.credits !== null && booking?.credits !== undefined) {
+        if (val === true && prevVal !== true) {
+          // Marquer présent → déduire 1 crédit si credits > 0
+          if (booking.credits > 0) {
+            await sb.from("members").update({ credits: booking.credits - 1 }).eq("id", booking.memberId);
+          }
+        } else if (val !== true && prevVal === true) {
+          // Annuler présence → restituer 1 crédit
+          await sb.from("members").update({ credits: booking.credits + 1 }).eq("id", booking.memberId);
+        }
+      }
     }
   }
 
   async function handleValidateAll() {
     const toMark = conf.filter(b => attended[b.id] === null || attended[b.id] === undefined);
     if (!toMark.length) return;
+    const sb = createClient();
     const ids = toMark.map(b => b.id);
-    const { error } = await createClient().from("bookings").update({ attended: true }).in("id", ids);
-    if (!error) setAttended(prev => { const n={...prev}; ids.forEach(id=>{n[id]=true;}); return n; });
+    const { error } = await sb.from("bookings").update({ attended: true }).in("id", ids);
+    if (!error) {
+      setAttended(prev => { const n={...prev}; ids.forEach(id=>{n[id]=true;}); return n; });
+      // Déduire 1 crédit par membre présent (si crédits > 0)
+      for (const b of toMark) {
+        if (b.memberId && b.credits > 0) {
+          await sb.from("members").update({ credits: b.credits - 1 }).eq("id", b.memberId);
+        }
+      }
+    }
   }
 
   if (!bl.length) return (

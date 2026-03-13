@@ -2,7 +2,7 @@
 
 import React, { useState } from "react";
 import { C } from "./theme";
-import { IcoCheck, IcoX, IcoUndo, IcoUserPlus2, IcoMail, IcoPhone } from "./icons";
+import { IcoCheck, IcoX, IcoUndo, IcoUserPlus2, IcoMail, IcoPhone, IcoClipboard, IcoUsers } from "./icons";
 import { CreditBadge } from "./ui";
 import { createClient } from "@/lib/supabase";
 
@@ -40,7 +40,7 @@ function AttendanceRow({ b, onMark }) {
             <IcoCheck s={12} c={C.ok}/> Présent
           </button>
         )}
-        {!isAbsent && (
+        {!isPresent && (
           <button onClick={()=>mark(false)} disabled={loading}
             style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #EFC8BC`, color:C.warn, background:C.warnBg, cursor:"pointer", whiteSpace:"nowrap" }}>
             <IcoX s={12} c={C.warn}/> Absent
@@ -110,7 +110,7 @@ export function PlanningAccordion({ sess, sessId, bookings, onChangeStatus, onAd
 
       {isPast && (
         <div style={{ display:"flex", borderBottom:`1px solid ${C.borderSoft}`, background:"#F7F3EE" }}>
-          {[["reservations","📋 Réservations"],["presences","✅ Présences"]].map(([key,label])=>(
+          {[["reservations", <><IcoClipboard s={13} c={tab==="reservations" ? C.accent : C.textMuted}/> Réservations</>],["presences", <><IcoUsers s={13} c={tab==="presences" ? C.accent : C.textMuted}/> Présences</>]].map(([key,label])=>(
             <button key={key} onClick={()=>setTab(key)}
               style={{ flex:1, padding:"9px 0", fontSize:13, fontWeight:700, border:"none", cursor:"pointer", background:"transparent",
                 color: tab===key ? C.accent : C.textMuted,

@@ -235,36 +235,82 @@ function Members({ isMobile }) {
     </Modal>;
   };
 
-  const SESSION_HISTORY=[
-    {date:"2026-03-09",disc:"Yoga Vinyasa",teacher:"Sophie Laurent",status:"présent"},
-    {date:"2026-03-05",disc:"Pilates",teacher:"Marie Dubois",status:"présent"},
-    {date:"2026-02-28",disc:"Méditation",teacher:"Camille Morin",status:"présent"},
-    {date:"2026-02-24",disc:"Yoga Vinyasa",teacher:"Sophie Laurent",status:"absent"},
-    {date:"2026-02-18",disc:"Yin Yoga",teacher:"Camille Morin",status:"présent"},
-  ];
-  const HistoryModal = () => <Modal>
-    <ModalHeader title={`Séances — ${modal.member.firstName} ${modal.member.lastName}`} onClose={()=>setModal(null)}/>
-    <div style={{display:"flex",gap:14,marginBottom:16}}>
-      {[["Séances",SESSION_HISTORY.length],["Présences",SESSION_HISTORY.filter(s=>s.status==="présent").length],["Absences",SESSION_HISTORY.filter(s=>s.status==="absent").length]].map(([l,v])=>(
-        <div key={l} style={{flex:1,textAlign:"center",padding:"10px 8px",background:C.bg,borderRadius:10,border:`1.5px solid ${C.border}`}}>
-          <div style={{fontSize:22,fontWeight:800,color:C.text}}>{v}</div>
-          <div style={{fontSize:11,color:C.textSoft}}>{l}</div>
+  const HistoryModal = () => {
+    const [history, setHistory] = React.useState(null); // null=loading, []=empty, [...]=data
+    const memberId = modal?.member?.id;
+
+    React.useEffect(() => {
+      if (!memberId) return;
+      // Via API service role pour contourner RLS bookings
+      fetch(`/api/members/history?memberId=${memberId}`)
+        .then(r => r.ok ? r.json() : null)
+        .then(json => {
+          if (!json?.bookings) { setHistory([]); return; }
+          const today = new Date(); today.setHours(0,0,0,0);
+          setHistory(json.bookings.map(b => {
+            const s = b.sessions;
+            const sessionDate = s?.session_date ? new Date(s.session_date) : null;
+            const past = sessionDate && sessionDate < today;
+            const statut = past
+              ? (b.status === "cancelled" ? "absent" : "présent")
+              : "à venir";
+            return {
+              date: s?.session_date || "",
+              disc: s?.disciplines?.name || "—",
+              icon: s?.disciplines?.icon || "🏃",
+              teacher: s?.teacher || "—",
+              status: statut,
+            };
+          }).filter(b => b.date));
+        })
+        .catch(() => setHistory([]));
+    }, [memberId]);
+
+    const presences = history?.filter(s => s.status === "présent").length || 0;
+    const absences  = history?.filter(s => s.status === "absent").length || 0;
+    const avenir    = history?.filter(s => s.status === "à venir").length || 0;
+
+    return (
+      <Modal>
+        <ModalHeader title={`Séances — ${modal.member.firstName} ${modal.member.lastName}`} onClose={()=>setModal(null)}/>
+        <div style={{display:"flex",gap:10,marginBottom:16}}>
+          {[["Séances",(history?.length||0)],["Présences",presences],["Absences",absences],["À venir",avenir]].map(([l,v])=>(
+            <div key={l} style={{flex:1,textAlign:"center",padding:"10px 6px",background:C.bg,borderRadius:10,border:`1.5px solid ${C.border}`}}>
+              <div style={{fontSize:20,fontWeight:800,color:C.text}}>{history===null?"…":v}</div>
+              <div style={{fontSize:10,color:C.textSoft}}>{l}</div>
+            </div>
+          ))}
         </div>
-      ))}
-    </div>
-    {SESSION_HISTORY.map((s,i)=>(
-      <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:`1px solid ${C.borderSoft}`}}>
-        <div style={{width:32,height:32,borderRadius:8,background:s.status==="présent"?C.okBg:C.warnBg,display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
-          {s.status==="présent"?<IcoCheck s={14} c={C.ok}/>:<IcoX s={14} c={C.warn}/>}
-        </div>
-        <div style={{flex:1}}>
-          <div style={{fontSize:14,fontWeight:700,color:C.text}}>{s.disc}</div>
-          <div style={{fontSize:12,color:C.textSoft}}>{s.teacher} · {new Date(s.date).toLocaleDateString("fr-FR")}</div>
-        </div>
-        <span style={{fontSize:12,fontWeight:600,color:s.status==="présent"?C.ok:C.warn}}>{s.status}</span>
-      </div>
-    ))}
-  </Modal>;
+        {history === null && (
+          <div style={{textAlign:"center",padding:"32px 0",color:C.textMuted,fontSize:13}}>Chargement…</div>
+        )}
+        {history !== null && history.length === 0 && (
+          <div style={{textAlign:"center",padding:"32px 0"}}>
+            <div style={{fontSize:28,marginBottom:8}}>📅</div>
+            <div style={{fontSize:14,fontWeight:700,color:C.text}}>Aucune séance</div>
+            <div style={{fontSize:12,color:C.textMuted,marginTop:4}}>Cet adhérent n'a pas encore de réservations.</div>
+          </div>
+        )}
+        {history !== null && history.map((s,i)=>(
+          <div key={i} style={{display:"flex",alignItems:"center",gap:12,padding:"9px 0",borderBottom:`1px solid ${C.borderSoft}`}}>
+            <div style={{width:32,height:32,borderRadius:8,
+              background:s.status==="présent"?C.okBg:s.status==="absent"?C.warnBg:C.accentBg,
+              display:"flex",alignItems:"center",justifyContent:"center",flexShrink:0}}>
+              {s.status==="présent"?<IcoCheck s={14} c={C.ok}/>:s.status==="absent"?<IcoX s={14} c={C.warn}/>:<IcoCalendar2 s={14} c={C.accent}/>}
+            </div>
+            <div style={{flex:1}}>
+              <div style={{fontSize:14,fontWeight:700,color:C.text}}>{s.icon} {s.disc}</div>
+              <div style={{fontSize:12,color:C.textSoft}}>{s.teacher} · {s.date ? new Date(s.date+"T12:00:00").toLocaleDateString("fr-FR") : ""}</div>
+            </div>
+            <span style={{fontSize:12,fontWeight:600,
+              color:s.status==="présent"?C.ok:s.status==="absent"?C.warn:C.accent}}>
+              {s.status}
+            </span>
+          </div>
+        ))}
+      </Modal>
+    );
+  };
 
   const MemberDetail = () => {
     const m=selected;

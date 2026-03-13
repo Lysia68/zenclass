@@ -119,32 +119,30 @@ function Members({ isMobile }) {
     setDbLoading(true);
 
     async function load() {
-      // Essai via /api/members (service role, contourne RLS)
+      console.log("[Members] load — studioId:", studioId);
       try {
         const r = await fetch(`/api/members?studioId=${studioId}`);
-        if (r.ok) {
-          const { members, error } = await r.json();
-          if (!error && members) {
-            if (members.length === 0) { setMembers([]); }
-            else setMembers(members.map(mapRow));
-            setDbLoading(false);
-            return;
-          }
+        const json = await r.json();
+        console.log("[Members] /api/members →", r.status, json);
+        if (r.ok && !json.error) {
+          setMembers(json.members?.length ? json.members.map(mapRow) : []);
+          setDbLoading(false);
+          return;
         }
-      } catch(_) {}
+        console.warn("[Members] API error:", json.error);
+      } catch(e) {
+        console.error("[Members] fetch failed:", e);
+      }
 
-      // Fallback : client Supabase direct (fonctionne si RLS ok pour cet utilisateur)
+      // Fallback Supabase direct
+      console.log("[Members] trying Supabase client fallback...");
       const { data, error } = await createClient()
         .from("members")
         .select("id,first_name,last_name,email,phone,address,postal_code,city,birth_date,status,credits,credits_total,joined_at,next_payment,notes,subscription_id,profile_complete,subscriptions(name)")
         .eq("studio_id", studioId).order("last_name");
+      console.log("[Members] fallback →", { count: data?.length, error: error?.message });
 
-      if (error || !data || data.length === 0) {
-        console.warn("load members fallback:", error?.message || "empty");
-        setMembers([]);
-      } else {
-        setMembers(data.map(mapRow));
-      }
+      setMembers(data?.length ? data.map(mapRow) : []);
       setDbLoading(false);
     }
 

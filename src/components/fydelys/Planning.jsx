@@ -58,7 +58,7 @@ function DiscSelect({ label, value, onChange, options, C }) {
 }
 
 
-function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onChangeStatus, onDelete, onCancel }) {
+function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onChangeStatus, onDelete, onCancel, onAddBooking, onSendReminder }) {
   const allDiscs = discs?.length ? discs : DISCIPLINES;
   const disc = allDiscs.find(d=>String(d.id)===String(sess.disciplineId)) || allDiscs[0] || { name:"Cours", color:C.accent, icon:"🧘" };
   const bl     = bookings[sess.id]||[];
@@ -108,7 +108,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
       {sess.status === "cancelled" && (
         <div style={{ background:"#FFF5F5", padding:"4px 14px", fontSize:12, color:C.warn, fontWeight:600 }}>⚠ Séance annulée</div>
       )}
-      {isExp && <PlanningAccordion sess={sess} sessId={sess.id} bookings={bookings} onChangeStatus={onChangeStatus}/>}
+      {isExp && <PlanningAccordion sess={sess} sessId={sess.id} bookings={bookings} onChangeStatus={onChangeStatus} onAddBooking={onAddBooking} onSendReminder={onSendReminder}/>}
     </div>
   );
 }
@@ -142,19 +142,37 @@ function Planning({ isMobile }) {
   // Utilitaire : convertir "Lun/Mar/…" → numéro JS getDay()
   const DAY_NUM = { Lun:1, Mar:2, Mer:3, Jeu:4, Ven:5, Sam:6, Dim:0 };
 
-  // Charger la liste des coachs (utilise studioId du context)
+  // Charger la liste des coachs — directement depuis profiles
   useEffect(() => {
     if (!studioId) return;
     createClient().from("profiles")
-      .select("id, first_name, last_name")
+      .select("id, first_name, last_name, role")
       .eq("studio_id", studioId)
       .in("role", ["coach", "admin"])
-      .then(({ data: coaches }) => {
-        if (coaches) setCoachesList(coaches.map(c => ({ id: c.id, name: `${c.first_name || ""} ${c.last_name || ""}`.trim() })));
+      .then(({ data: profs }) => {
+        if (!profs?.length) return;
+        setCoachesList(
+          profs
+            .map(p => ({ id: p.id, name: `${p.first_name||""} ${p.last_name||""}`.trim() }))
+            .filter(c => c.name)
+        );
       });
   }, [studioId]);
 
   // Charger les sessions dès que studioId est disponible dans le context
+  // Forcer le rechargement des disciplines si le contexte est encore vide
+  const [localDiscs, setLocalDiscs] = useState([]);
+  const effectiveDiscs = discs?.length ? discs : localDiscs;
+  useEffect(() => {
+    if (!studioId || discs?.length) return;
+    createClient().from("disciplines")
+      .select("id,name,icon,color,slots")
+      .eq("studio_id", studioId).order("created_at")
+      .then(({ data }) => {
+        if (data?.length) setLocalDiscs(data.map(d => ({ ...d, slots: d.slots||[] })));
+      });
+  }, [studioId, discs?.length]);
+
   useEffect(() => {
     if (!studioId) return;
     setDbLoading(true);
@@ -199,7 +217,9 @@ function Planning({ isMobile }) {
   useEffect(() => {
     if (!recMode || !recFrom || !recTo || recSlots.length === 0) { setRecPreview([]); return; }
     const from = new Date(recFrom); from.setHours(0,0,0,0);
-    const to   = new Date(recTo);   to.setHours(23,59,59,0);
+    const toRaw = new Date(recTo); toRaw.setHours(23,59,59,0);
+    const maxTo = new Date(from); maxTo.setMonth(maxTo.getMonth() + 3);
+    const to = toRaw > maxTo ? maxTo : toRaw;
     if (from > to) { setRecPreview([]); return; }
     const generated = [];
     recSlots.forEach(slot => {
@@ -473,7 +493,7 @@ function Planning({ isMobile }) {
           {/* ── MODE RÉCURRENCE ── */}
           {recMode && (() => {
             // Utiliser les discs du context (modifiés dans DisciplinesPage)
-            const allSlotsRaw = (discs||[]).flatMap(d =>
+            const allSlotsRaw = (effectiveDiscs||[]).flatMap(d =>
               (d.slots||[]).map((s,i) => ({ key:`${d.id}-${i}`, disciplineId:d.id, discName:d.name, discColor:d.color||C.accent, discIcon:d.icon||"🏃", day:s.day, time:s.time, duration:s.duration||60, teacher:"" }))
             );
             // Filtre par discipline
@@ -537,7 +557,7 @@ function Planning({ isMobile }) {
                           style={{ padding:"4px 10px", borderRadius:20, border:`1.5px solid ${!recFilterDisc?C.accent:C.border}`, background:!recFilterDisc?C.accentLight:"transparent", color:!recFilterDisc?C.accentDark:C.textMid, fontSize:12, fontWeight:600, cursor:"pointer" }}>
                           Toutes
                         </button>
-                        {(discs||[]).filter(d=>(d.slots||[]).length>0).map(d=>{
+                        {(effectiveDiscs||[]).filter(d=>(d.slots||[]).length>0).map(d=>{
                           const active = recFilterDisc===d.id;
                           return (
                             <button key={d.id} onClick={()=>setRecFilterDisc(active?null:d.id)}
@@ -620,7 +640,15 @@ function Planning({ isMobile }) {
                 <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:8 }}>3 · Période</div>
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:12, marginBottom:20 }}>
                   <DatePicker label="Du" value={recFrom} onChange={v=>setRecFrom(v)}/>
-                  <DatePicker label="Au" value={recTo} onChange={v=>setRecTo(v)} minDate={recFrom}/>
+                  <DatePicker label="Au" value={recTo} onChange={v=>{
+                    if (recFrom) {
+                      const max = new Date(recFrom);
+                      max.setMonth(max.getMonth() + 3);
+                      const chosen = new Date(v);
+                      setRecTo(chosen > max ? max.toISOString().slice(0,10) : v);
+                    } else setRecTo(v);
+                  }} minDate={recFrom} maxDate={recFrom ? (() => { const d=new Date(recFrom); d.setMonth(d.getMonth()+3); return d.toISOString().slice(0,10); })() : undefined}/>
+                  <div style={{ fontSize:11, color:C.textMuted, marginTop:4 }}>⚠ Période max 3 mois</div>
                 </div>
 
                 {/* ── PRÉVISUALISATION éditable ── */}

@@ -123,6 +123,7 @@ function Dashboard({ isMobile }) {
               attended: b.attended,
               fn: b.members?.first_name || "",
               ln: b.members?.last_name  || "",
+              name: `${b.members?.first_name||""} ${b.members?.last_name||""}`.trim() || "—",
               email: b.members?.email   || "",
               phone: b.members?.phone   || "",
             });

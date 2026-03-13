@@ -495,6 +495,17 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
   }
 
   // ── Render principal ────────────────────────────────────────────────────────
+  // Écran de chargement global — évite le flash de contenu vide
+  if (loading || !studioId) return (
+    <div style={{ display:"flex", minHeight:"100vh", background:C.bg, alignItems:"center", justifyContent:"center" }}>
+      <div style={{ display:"flex", flexDirection:"column", alignItems:"center", gap:16 }}>
+        <div style={{ width:40, height:40, borderRadius:"50%", border:`3px solid ${C.accentBg}`, borderTopColor:C.accent, animation:"spin 0.8s linear infinite" }}/>
+        <div style={{ fontSize:13, color:C.textMuted, fontWeight:500 }}>Chargement…</div>
+      </div>
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
+
   return (
     <div style={{ display:"flex", minHeight:"100vh", background:C.bg }}>
       <style>{`

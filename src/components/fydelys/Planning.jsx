@@ -68,38 +68,37 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
   const isExp  = expandedId===sess.id;
 
   return (
-    <div style={{ border:`1px solid ${isExp?C.accent:C.border}`, borderRadius:12, overflow:"hidden", marginBottom:8, boxShadow:isExp?`0 0 0 3px rgba(176,120,72,.1)`:"none", transition:"all .2s" }}>
+    <div style={{ border:`1.5px solid ${isExp?C.accent:C.borderSoft}`, borderRadius:14, overflow:"hidden", marginBottom:10, boxShadow:isExp?`0 2px 12px rgba(176,120,72,.13)`:"0 1px 3px rgba(0,0,0,.05)", transition:"all .2s" }}>
       <div
         onClick={()=>onToggle(sess.id)}
-        style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 13px", cursor:"pointer", background:isExp?C.accentBg:C.surface, transition:"background .15s" }}
+        style={{ display:"flex", alignItems:"center", gap:12, padding:"13px 16px", cursor:"pointer", background:isExp?C.accentBg:C.surface, transition:"background .15s" }}
         onMouseEnter={e=>{ if(!isExp) e.currentTarget.style.background=C.surfaceWarm; }}
         onMouseLeave={e=>{ if(!isExp) e.currentTarget.style.background=C.surface; }}>
-        <div style={{ width:3, height:32, borderRadius:2, background:disc.color, flexShrink:0 }}/>
-        <div style={{ fontSize:13, fontWeight:700, color:C.accent, width:36, flexShrink:0 }}>{sess.time}</div>
+        <div style={{ width:4, height:40, borderRadius:3, background:disc.color, flexShrink:0 }}/>
+        <div style={{ fontSize:14, fontWeight:800, color:C.accent, width:42, flexShrink:0 }}>{sess.time}</div>
         <div style={{ flex:1, minWidth:0 }}>
-          <div style={{ fontSize:15, fontWeight:700, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{disc.name}</div>
-          <div style={{ fontSize:13, color:C.textSoft, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sess.teacher} · {sess.room} · {sess.duration}min</div>
+          <div style={{ fontSize:16, fontWeight:800, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{disc.name}</div>
+          <div style={{ fontSize:13, color:C.textSoft, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", marginTop:2 }}>{sess.teacher} · {sess.room} · {sess.duration}min</div>
         </div>
-        <div style={{ flexShrink:0, textAlign:"right", marginRight:4 }}>
-          <div style={{ fontSize:14, fontWeight:700, color:pct>=1?C.warn:C.text }}>{booked}/{sess.spots}</div>
-          <div style={{ width:44, height:3, background:C.bgDeep, borderRadius:2, marginTop:3 }}>
-            <div style={{ height:"100%", width:`${Math.min(pct*100,100)}%`, background:pct>=1?C.warn:pct>.75?C.accent:C.ok, borderRadius:2 }}/>
+        <div style={{ flexShrink:0, textAlign:"right", marginRight:6 }}>
+          <div style={{ fontSize:15, fontWeight:800, color:pct>=1?C.warn:C.text }}>{booked}/{sess.spots}</div>
+          <div style={{ width:52, height:4, background:C.bgDeep, borderRadius:3, marginTop:4 }}>
+            <div style={{ height:"100%", width:`${Math.min(pct*100,100)}%`, background:pct>=1?C.warn:pct>.75?C.accent:C.ok, borderRadius:3 }}/>
           </div>
-          {wait>0 && <div style={{ fontSize:11, color:C.accent, fontWeight:700, marginTop:1 }}>+{wait} att.</div>}
+          {wait>0 && <div style={{ fontSize:11, color:C.accent, fontWeight:700, marginTop:2 }}>+{wait} att.</div>}
         </div>
-        <span style={{ flexShrink:0, display:"inline-flex", transition:"transform .2s", transform:isExp?"rotate(180deg)":"none" }}><IcoChevron s={16} c={C.textMuted}/></span>
-        {/* Actions rapides — visibles au hover ou si expanded */}
+        <span style={{ flexShrink:0, display:"inline-flex", transition:"transform .2s", transform:isExp?"rotate(180deg)":"none" }}><IcoChevron s={18} c={C.textMuted}/></span>
         {isExp && (
-          <div onClick={e=>e.stopPropagation()} style={{ display:"flex", gap:4, flexShrink:0 }}>
+          <div onClick={e=>e.stopPropagation()} style={{ display:"flex", gap:5, flexShrink:0 }}>
             {sess.status !== "cancelled" && onCancel && (
               <button onClick={()=>onCancel(sess.id)}
-                style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:`1px solid ${C.border}`, background:C.surface, color:C.textMuted, cursor:"pointer", fontWeight:600 }}>
+                style={{ fontSize:12, padding:"4px 10px", borderRadius:7, border:`1px solid ${C.border}`, background:C.surface, color:C.textMuted, cursor:"pointer", fontWeight:600 }}>
                 Annuler
               </button>
             )}
             {onDelete && (
               <button onClick={()=>{ if(window.confirm("Supprimer cette séance définitivement ?")) onDelete(sess.id); }}
-                style={{ fontSize:11, padding:"3px 8px", borderRadius:6, border:`1px solid #EFC8BC`, background:"#FFF5F5", color:C.warn, cursor:"pointer", fontWeight:600 }}>
+                style={{ fontSize:12, padding:"4px 10px", borderRadius:7, border:`1px solid #EFC8BC`, background:"#FFF5F5", color:C.warn, cursor:"pointer", fontWeight:600 }}>
                 ✕
               </button>
             )}
@@ -134,6 +133,10 @@ function Planning({ isMobile }) {
   const [recPreview, setRecPreview] = useState([]); // dates générées prévisualisées
   const [recFilterDisc, setRecFilterDisc] = useState(null); // filtre discipline étape 1
   const [isDemoData, setIsDemoData] = useState(false);
+  const [addBookingModal, setAddBookingModal] = useState(null); // sessId ou null
+  const [memberSearch, setMemberSearch] = useState("");
+  const [memberResults, setMemberResults] = useState([]);
+  const [searchLoading, setSearchLoading] = useState(false);
   const p = isMobile?12:28;
 
   // Utilitaire : convertir "Lun/Mar/…" → numéro JS getDay()
@@ -155,56 +158,42 @@ function Planning({ isMobile }) {
   useEffect(() => {
     if (!studioId) return;
     setDbLoading(true);
-    createClient().from("sessions")
+    const sb = createClient();
+    sb.from("sessions")
       .select("id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots, status")
       .eq("studio_id", studioId).order("session_date").order("session_time")
-      .then(({ data, error }) => {
-        if (error) console.error("load sessions", error);
-        else if (data && data.length > 0) setSessions(data.map(s => ({
+      .then(async ({ data, error }) => {
+        if (error) { console.error("load sessions", error); setDbLoading(false); return; }
+        if (!data || data.length === 0) { setSessions(SESSIONS_DEMO); setIsDemoData(true); setDbLoading(false); return; }
+        const mapped = data.map(s => ({
           id: s.id, disciplineId: s.discipline_id,
           teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
           date: s.session_date, time: s.session_time?.slice(0,5) || "09:00",
           duration: s.duration_min || 60, spots: s.spots || 12,
           status: s.status || "scheduled", booked: 0, waitlist: 0,
-        })));
-        // Données démo si base vide
-        else if (!error && (!data || data.length === 0)) { setSessions(SESSIONS_DEMO); setIsDemoData(true); }
-        setDbLoading(false);
-      });
-  }, [studioId]);
-
-  // Charger les bookings de toutes les sessions du studio
-  useEffect(() => {
-    if (!studioId || sessions.length === 0) return;
-    const sessionIds = sessions.map(s => s.id);
-    createClient().from("bookings")
-      .select("id, session_id, member_id, status, attended, members(first_name, last_name, email, phone)")
-      .in("session_id", sessionIds)
-      .then(({ data, error }) => {
-        if (error) { console.error("load bookings", error); return; }
-        if (!data) return;
+        }));
+        const sessionIds = mapped.map(s => s.id);
+        const { data: bkData } = await sb.from("bookings")
+          .select("id, session_id, member_id, status, attended, members(first_name, last_name, email, phone)")
+          .in("session_id", sessionIds);
         const map = {};
-        data.forEach(b => {
+        (bkData || []).forEach(b => {
           if (!map[b.session_id]) map[b.session_id] = [];
           map[b.session_id].push({
-            id: b.id,
-            memberId: b.member_id,
-            st: b.status,
-            attended: b.attended ?? null,
+            id: b.id, memberId: b.member_id, st: b.status, attended: b.attended ?? null,
             name: b.members ? `${b.members.first_name || ""} ${b.members.last_name || ""}`.trim() : "—",
-            email: b.members?.email || "",
-            phone: b.members?.phone || "",
+            email: b.members?.email || "", phone: b.members?.phone || "",
           });
         });
         setBookings(map);
-        // Mettre à jour le count booked/waitlist sur les sessions
-        setSessions(prev => prev.map(s => ({
+        setSessions(mapped.map(s => ({
           ...s,
-          booked: (map[s.id] || []).filter(b => b.st === "confirmed").length,
+          booked:   (map[s.id] || []).filter(b => b.st === "confirmed").length,
           waitlist: (map[s.id] || []).filter(b => b.st === "waitlist").length,
         })));
+        setDbLoading(false);
       });
-  }, [studioId, sessions.length]);
+  }, [studioId]);
 
   // Recalcule le preview quand les paramètres récurrence changent
   useEffect(() => {
@@ -322,26 +311,99 @@ function Planning({ isMobile }) {
   };
 
   const handleAddBooking = (sessId) => {
-    const name = prompt("Nom de l'adhérent à inscrire :");
-    if (!name) return;
-    const [fn, ...rest] = name.trim().split(" ");
-    const ln = rest.join(" ") || "—";
-    setBookings(prev => {
-      const nb = { ...prev };
-      nb[sessId] = [...(nb[sessId]||[]), { id:Date.now(), fn, ln, st:"confirmed", phone:"", credits:0, total:10, sub:"Mensuel illimité" }];
-      return nb;
-    });
+    setAddBookingModal(sessId);
+    setMemberSearch(""); setMemberResults([]);
   };
 
-  const handleSendReminder = (sessId) => {
+  const searchMembers = async (q) => {
+    setMemberSearch(q);
+    if (!q || q.length < 2) { setMemberResults([]); return; }
+    setSearchLoading(true);
+    const { data } = await createClient().from("members")
+      .select("id, first_name, last_name, email, phone")
+      .eq("studio_id", studioId)
+      .or(`first_name.ilike.%${q}%,last_name.ilike.%${q}%,email.ilike.%${q}%`)
+      .limit(8);
+    setMemberResults(data || []);
+    setSearchLoading(false);
+  };
+
+  const confirmAddBooking = async (member) => {
+    const sessId = addBookingModal;
+    const sess = sessions.find(s => s.id === sessId);
+    if (!sess || !member) return;
+    const isFull = sess.booked >= sess.spots;
+    const { data, error } = await createClient().from("bookings").insert({
+      session_id: sessId,
+      member_id: member.id,
+      status: isFull ? "waitlist" : "confirmed",
+    }).select().single();
+    if (!error && data) {
+      const newB = { id: data.id, memberId: member.id, st: data.status, attended: null,
+        name: `${member.first_name || ""} ${member.last_name || ""}`.trim(),
+        email: member.email || "", phone: member.phone || "" };
+      setBookings(prev => ({ ...prev, [sessId]: [...(prev[sessId]||[]), newB] }));
+      setSessions(prev => prev.map(s => s.id===sessId ? { ...s, booked: s.booked + (data.status==="confirmed"?1:0) } : s));
+    }
+    setAddBookingModal(null);
+  };
+
+  const handleSendReminder = async (sessId) => {
     const sess = sessions.find(s=>s.id===sessId);
-    const count = (bookings[sessId]||[]).filter(b=>b.st==="confirmed").length;
-    alert(`✉ Rappel envoyé à ${count} adhérent${count>1?"s":""} pour la séance ${sess?.time||""}`);
+    const bl = (bookings[sessId]||[]).filter(b=>b.st==="confirmed");
+    if (!bl.length) return;
+    try {
+      await fetch("/api/send-reminder", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessId, studioId, members: bl.map(b=>({ email:b.email, name:b.name })), sess }),
+      });
+    } catch(e) { console.error("reminder", e); }
   };
 
   return (
     <div>
       {isDemoData && <DemoBanner/>}
+
+      {/* ── Modale inscrire un adhérent ── */}
+      {addBookingModal && (
+        <div style={{ position:"fixed", inset:0, background:"rgba(0,0,0,.45)", zIndex:1000, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+          onClick={()=>setAddBookingModal(null)}>
+          <div style={{ background:C.surface, borderRadius:16, padding:24, width:"100%", maxWidth:420, boxShadow:"0 8px 40px rgba(0,0,0,.18)" }}
+            onClick={e=>e.stopPropagation()}>
+            <div style={{ fontSize:17, fontWeight:800, color:C.text, marginBottom:16 }}>Inscrire un adhérent</div>
+            <input
+              autoFocus
+              placeholder="Rechercher par nom ou email…"
+              value={memberSearch}
+              onChange={e=>searchMembers(e.target.value)}
+              style={{ width:"100%", padding:"10px 14px", borderRadius:9, border:`1.5px solid ${C.border}`, fontSize:14, outline:"none", boxSizing:"border-box", marginBottom:10 }}
+            />
+            {searchLoading && <div style={{ fontSize:13, color:C.textMuted, padding:"4px 0" }}>Recherche…</div>}
+            {memberResults.length > 0 && (
+              <div style={{ borderRadius:9, border:`1px solid ${C.borderSoft}`, overflow:"hidden" }}>
+                {memberResults.map(m => (
+                  <div key={m.id}
+                    onClick={()=>confirmAddBooking(m)}
+                    style={{ padding:"10px 14px", cursor:"pointer", borderBottom:`1px solid ${C.borderSoft}`, transition:"background .1s" }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.accentBg}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{m.first_name} {m.last_name}</div>
+                    <div style={{ fontSize:12, color:C.textMuted }}>{m.email} {m.phone ? "· "+m.phone : ""}</div>
+                  </div>
+                ))}
+              </div>
+            )}
+            {memberSearch.length >= 2 && !searchLoading && memberResults.length === 0 && (
+              <div style={{ fontSize:13, color:C.textMuted, textAlign:"center", padding:"12px 0" }}>Aucun adhérent trouvé</div>
+            )}
+            <button onClick={()=>setAddBookingModal(null)}
+              style={{ marginTop:14, width:"100%", padding:"9px", borderRadius:9, border:`1px solid ${C.border}`, background:"transparent", color:C.textSoft, fontSize:14, cursor:"pointer" }}>
+              Annuler
+            </button>
+          </div>
+        </div>
+      )}
       <div style={{ padding:p }}>
       <div style={{ display:"flex", gap:8, overflowX:"auto", paddingBottom:4, marginBottom:18, alignItems:"center", WebkitOverflowScrolling:"touch" }}>
         <Button sm variant={fd===null?"primary":"ghost"} onClick={()=>setFd(null)}>Toutes</Button>

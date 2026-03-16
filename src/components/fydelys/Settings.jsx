@@ -1349,6 +1349,9 @@ function Settings({ isMobile, onImpersonate }) {
       }
     }, [studioId]);
 
+    const [disconnecting, setDisconnecting] = React.useState(false);
+    const [confirmDisconnect, setConfirmDisconnect] = React.useState(false);
+
     const handleConnect = async () => {
       setConnecting(true);
       try {
@@ -1361,6 +1364,23 @@ function Settings({ isMobile, onImpersonate }) {
         if (url) window.location.href = url;
       } catch(e) { showToast("Erreur de connexion Stripe", false); }
       setConnecting(false);
+    };
+
+    const handleDisconnect = async () => {
+      setDisconnecting(true);
+      try {
+        const res = await fetch("/api/connect/disconnect", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studioId }),
+        });
+        if (res.ok) {
+          setConnectStatus({ status: "not_connected" });
+          setConfirmDisconnect(false);
+          showToast("Compte Stripe déconnecté");
+        }
+      } catch(e) { showToast("Erreur lors de la déconnexion", false); }
+      setDisconnecting(false);
     };
 
     const statusBadge = {
@@ -1424,10 +1444,29 @@ function Settings({ isMobile, onImpersonate }) {
                   </div>
                 ))}
               </div>
-              <button onClick={handleConnect}
-                style={{ fontSize:12, padding:"7px 14px", borderRadius:8, border:`1.5px solid ${C.border}`, background:C.bg, color:C.textMid, cursor:"pointer", fontWeight:600 }}>
-                🔗 Tableau de bord Stripe →
-              </button>
+              <div style={{ display:"flex", alignItems:"center", gap:8, flexWrap:"wrap" }}>
+                <button onClick={handleConnect}
+                  style={{ fontSize:12, padding:"7px 14px", borderRadius:8, border:`1.5px solid ${C.border}`, background:C.bg, color:C.textMid, cursor:"pointer", fontWeight:600 }}>
+                  🔗 Tableau de bord Stripe →
+                </button>
+                {!confirmDisconnect
+                  ? <button onClick={()=>setConfirmDisconnect(true)}
+                      style={{ fontSize:12, padding:"7px 14px", borderRadius:8, border:`1px solid #EFC8BC`, background:C.warnBg, color:C.warn, cursor:"pointer", fontWeight:600 }}>
+                      Déconnecter
+                    </button>
+                  : <div style={{ display:"flex", alignItems:"center", gap:6 }}>
+                      <span style={{ fontSize:12, color:C.warn, fontWeight:600 }}>Confirmer ?</span>
+                      <button onClick={handleDisconnect} disabled={disconnecting}
+                        style={{ fontSize:12, padding:"5px 12px", borderRadius:7, border:"none", background:C.warn, color:"white", cursor:"pointer", fontWeight:700 }}>
+                        {disconnecting ? "…" : "Oui, déconnecter"}
+                      </button>
+                      <button onClick={()=>setConfirmDisconnect(false)}
+                        style={{ fontSize:12, padding:"5px 10px", borderRadius:7, border:`1px solid ${C.border}`, background:C.bg, color:C.textMid, cursor:"pointer" }}>
+                        Annuler
+                      </button>
+                    </div>
+                }
+              </div>
             </div>
           )}
         </Card>

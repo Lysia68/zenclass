@@ -610,7 +610,7 @@ function Settings({ isMobile, onImpersonate }) {
               {studioForm.cover_photo_url && (
                 <div style={{ marginTop:8, borderRadius:8, overflow:"hidden", maxHeight:120, border:`1px solid ${C.border}` }}>
                   <img src={studioForm.cover_photo_url} alt="Aperçu" style={{ width:"100%", objectFit:"cover", height:120 }}
-                    onError={e=>{ (e.target as HTMLImageElement).style.display="none"; }}/>
+                    onError={e=>{ e.target.style.display="none"; }}/>
                 </div>
               )}
             </div>

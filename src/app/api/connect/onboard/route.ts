@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
 
     const { data: studio, error: studioErr } = await db
       .from("studios")
-      .select("id, name, email, slug, stripe_connect_id, stripe_connect_status")
+      .select("id, name, email, slug, address, city, phone, stripe_connect_id, stripe_connect_status")
       .eq("id", studioId).single()
 
     if (studioErr || !studio) {
@@ -34,7 +34,8 @@ export async function POST(req: NextRequest) {
     // Créer ou réutiliser un compte Express
     let accountId = studio.stripe_connect_id
     if (!accountId) {
-      const account = await stripe.accounts.create({
+      // Pré-remplir avec les infos du studio pour réduire les étapes d'onboarding
+      const accountData: any = {
         type: "express",
         country: "FR",
         email: studio.email || undefined,
@@ -44,9 +45,24 @@ export async function POST(req: NextRequest) {
         },
         business_profile: {
           name: studio.name,
+          ...(studio.phone ? { support_phone: studio.phone.replace(/\s/g, "") } : {}),
+          url: studio.slug ? `https://${studio.slug}.fydelys.fr` : undefined,
         },
         metadata: { studioId, platform: "fydelys" },
-      })
+      }
+
+      // Pré-remplir l'adresse si disponible
+      if (studio.address && studio.city) {
+        accountData.individual = {
+          address: {
+            line1: studio.address,
+            city: studio.city,
+            country: "FR",
+          }
+        }
+      }
+
+      const account = await stripe.accounts.create(accountData)
       accountId = account.id
 
       await db.from("studios").update({

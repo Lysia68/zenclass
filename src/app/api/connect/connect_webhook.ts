@@ -50,16 +50,15 @@ export async function POST(req: NextRequest) {
             }).eq("id", memberId)
           }
           // Enregistrer le paiement
-          await db.from("member_payments").insert({
-            studio_id:         studioId,
-            member_id:         memberId,
-            amount:            (session.amount_total || 0) / 100,
-            status:            "payé",
-            payment_date:      new Date().toISOString().slice(0, 10),
-            payment_type:      "Carte",
-            source:            "card_credits",
+          await db.from("payments").insert({
+            studio_id:    studioId,
+            member_id:    memberId,
+            amount:       (session.amount_total || 0) / 100,
+            status:       "payé",
+            payment_date: new Date().toISOString().slice(0, 10),
+            payment_type: "Carte",
             stripe_payment_id: session.payment_intent as string,
-            notes:             `Pack crédits — ${creditsAmount} crédits`,
+            notes: `Pack crédits — ${creditsAmount} crédits`,
           })
         }
 
@@ -76,16 +75,15 @@ export async function POST(req: NextRequest) {
               attended:   false,
             })
             // Enregistrer le paiement
-            await db.from("member_payments").insert({
-              studio_id:         studioId,
-              member_id:         memberId,
-              amount:            (session.amount_total || 0) / 100,
-              status:            "payé",
-              payment_date:      new Date().toISOString().slice(0, 10),
-              payment_type:      "Carte",
-              source:            "card_session",
+            await db.from("payments").insert({
+              studio_id:    studioId,
+              member_id:    memberId,
+              amount:       (session.amount_total || 0) / 100,
+              status:       "payé",
+              payment_date: new Date().toISOString().slice(0, 10),
+              payment_type: "Carte",
               stripe_payment_id: session.payment_intent as string,
-              notes:             `Séance à l'unité`,
+              notes: `Séance à l'unité`,
             })
           }
         }
@@ -118,16 +116,15 @@ export async function POST(req: NextRequest) {
         }).eq("id", memberId)
 
         // Enregistrer le paiement
-        await db.from("member_payments").insert({
-          studio_id:         studioId,
-          member_id:         memberId,
-          amount:            (invoice.amount_paid || 0) / 100,
-          status:            "payé",
-          payment_date:      new Date().toISOString().slice(0, 10),
-          payment_type:      "Carte",
-          source:            "card_subscription",
+        await db.from("payments").insert({
+          studio_id:    studioId,
+          member_id:    memberId,
+          amount:       (invoice.amount_paid || 0) / 100,
+          status:       "payé",
+          payment_date: new Date().toISOString().slice(0, 10),
+          payment_type: "Carte",
           stripe_payment_id: invoice.payment_intent as string,
-          notes:             `Abonnement mensuel`,
+          notes:        `Abonnement mensuel`,
         })
         break
       }

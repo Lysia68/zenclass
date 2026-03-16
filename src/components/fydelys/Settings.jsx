@@ -388,8 +388,9 @@ function Settings({ isMobile, onImpersonate }) {
     { key:"team",    label:"Équipe",        icon:<IcoUsers2 s={14} c="currentColor"/> },
     { key:"users",   label:"Utilisateurs", icon:<IcoTag2 s={14} c="currentColor"/> },
     { key:"roles",  label:"Rôles",        icon:<IcoTag2 s={14} c="currentColor"/> },
-    { key:"rooms",   label:"Salles",        icon:<IcoDoor s={14} c="currentColor"/> },
-    { key:"account", label:"Mon compte",   icon:<IcoHome2 s={14} c="currentColor"/> },
+    { key:"rooms",    label:"Salles",       icon:<IcoDoor s={14} c="currentColor"/> },
+    ...(isAdmin ? [{ key:"payments", label:"Paiements", icon:<IcoEuro2 s={14} c="currentColor"/> }] : []),
+    { key:"account",  label:"Mon compte",  icon:<IcoHome2 s={14} c="currentColor"/> },
   ].filter(Boolean);
 
   // ── Preview role switcher (superadmin seulement) ────────────────────────
@@ -1070,6 +1071,134 @@ function Settings({ isMobile, onImpersonate }) {
   };
 
   // ── Tab Salles ────────────────────────────────────────────────────────────
+
+  // ── Tab: Paiements (Stripe Connect) ──────────────────────────────────────
+  const TabPayments = () => {
+    const [connectStatus, setConnectStatus] = React.useState(null); // null=loading
+    const [loading, setLoading] = React.useState(true);
+    const [connecting, setConnecting] = React.useState(false);
+    const [commission] = React.useState(2); // % commission Fydelys
+
+    React.useEffect(() => {
+      if (!studioId) return;
+      fetch(`/api/connect/status?studioId=${studioId}`)
+        .then(r => r.json())
+        .then(d => { setConnectStatus(d); setLoading(false); })
+        .catch(() => setLoading(false));
+
+      // Si retour depuis onboarding Stripe
+      const params = new URLSearchParams(window.location.search);
+      if (params.get("connect") === "success") {
+        // Re-fetch status après quelques secondes
+        setTimeout(() => {
+          fetch(`/api/connect/status?studioId=${studioId}`)
+            .then(r => r.json()).then(setConnectStatus);
+        }, 2000);
+      }
+    }, [studioId]);
+
+    const handleConnect = async () => {
+      setConnecting(true);
+      try {
+        const res = await fetch("/api/connect/onboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studioId }),
+        });
+        const { url } = await res.json();
+        if (url) window.location.href = url;
+      } catch(e) { showToast("Erreur de connexion Stripe", false); }
+      setConnecting(false);
+    };
+
+    const statusBadge = {
+      not_connected: { label:"Non connecté",  color:"#8C7B6C",  bg:"#F0E8DF" },
+      pending:       { label:"En attente",     color:"#92400E",  bg:"#FEF3C7" },
+      active:        { label:"Actif ✓",        color:C.ok,       bg:C.okBg    },
+      restricted:    { label:"Restreint ⚠",   color:C.warn,     bg:C.warnBg  },
+    };
+
+    const st = connectStatus?.status || "not_connected";
+    const badge = statusBadge[st] || statusBadge.not_connected;
+    const isActive = st === "active";
+
+    return (
+      <div style={{ display:"flex", flexDirection:"column", gap:16 }}>
+
+        {/* Bloc Connect Stripe */}
+        <Card style={{ borderLeft:`3px solid ${isActive ? C.ok : C.accent}` }}>
+          <div style={{ display:"flex", alignItems:"flex-start", justifyContent:"space-between", gap:12, marginBottom:16 }}>
+            <div>
+              <div style={{ fontSize:15, fontWeight:700, color:C.text }}>Stripe Connect</div>
+              <div style={{ fontSize:12, color:C.textSoft, marginTop:2 }}>
+                Encaissez directement vos adhérents — abonnements, crédits, séances à l'unité.
+              </div>
+            </div>
+            {!loading && (
+              <span style={{ fontSize:12, fontWeight:700, padding:"3px 10px", borderRadius:10, flexShrink:0, color:badge.color, background:badge.bg }}>
+                {badge.label}
+              </span>
+            )}
+          </div>
+
+          {loading && <div style={{ color:C.textMuted, fontSize:13 }}>Vérification…</div>}
+
+          {!loading && !isActive && (
+            <div>
+              <div style={{ fontSize:13, color:C.textSoft, lineHeight:1.7, marginBottom:16, padding:"12px 14px", background:C.accentBg, borderRadius:10 }}>
+                <strong>Comment ça marche :</strong><br/>
+                1. Cliquez "Connecter Stripe" → formulaire Stripe Express (5 min)<br/>
+                2. Une fois validé, vos adhérents paient directement sur votre compte<br/>
+                3. Fydelys prélève une commission de <strong>{commission}%</strong> par transaction
+              </div>
+              <button onClick={handleConnect} disabled={connecting}
+                style={{ display:"flex", alignItems:"center", gap:8, padding:"10px 20px", borderRadius:10, border:"none", background:connecting?"#ccc":C.accent, color:"white", fontSize:14, fontWeight:700, cursor:connecting?"not-allowed":"pointer" }}>
+                {connecting ? "Redirection…" : st === "pending" ? "↩ Reprendre l'onboarding" : "⚡ Connecter Stripe"}
+              </button>
+            </div>
+          )}
+
+          {!loading && isActive && (
+            <div>
+              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr 1fr", gap:10, marginBottom:16 }}>
+                {[
+                  ["Paiements carte", connectStatus?.charges_enabled ? "✓ Activé" : "✗ Inactif", connectStatus?.charges_enabled ? C.ok : C.warn],
+                  ["Virements", connectStatus?.payouts_enabled ? "✓ Activé" : "✗ Inactif", connectStatus?.payouts_enabled ? C.ok : C.warn],
+                  ["Commission Fydelys", `${commission}% / transaction`, C.accent],
+                ].map(([l,v,c]) => (
+                  <div key={l} style={{ background:C.bg, borderRadius:8, padding:"10px 12px", border:`1px solid ${C.border}` }}>
+                    <div style={{ fontSize:11, color:C.textMuted, fontWeight:600, marginBottom:3, textTransform:"uppercase" }}>{l}</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:c }}>{v}</div>
+                  </div>
+                ))}
+              </div>
+              <button onClick={handleConnect}
+                style={{ fontSize:12, padding:"7px 14px", borderRadius:8, border:`1.5px solid ${C.border}`, background:C.bg, color:C.textMid, cursor:"pointer", fontWeight:600 }}>
+                🔗 Tableau de bord Stripe →
+              </button>
+            </div>
+          )}
+        </Card>
+
+        {/* Abonnements vendables */}
+        <Card>
+          <div style={{ fontSize:14, fontWeight:700, color:C.text, marginBottom:4 }}>Abonnements</div>
+          <div style={{ fontSize:12, color:C.textSoft, marginBottom:12 }}>Configurez le prix de vos abonnements dans l'onglet Studio → Abonnements.</div>
+          <div style={{ fontSize:12, color:C.textMuted, fontStyle:"italic" }}>
+            Les abonnements avec un prix &gt; 0 € seront proposés au paiement par carte aux adhérents.
+          </div>
+        </Card>
+
+        {/* Env vars reminder */}
+        {!isActive && (
+          <div style={{ padding:"12px 14px", background:"#FFF8F0", borderRadius:10, border:`1px solid #DDD5C8`, fontSize:12, color:C.textMuted }}>
+            💡 Variables d'environnement nécessaires : <code style={{ background:C.bg, padding:"1px 5px", borderRadius:4 }}>STRIPE_SECRET_KEY</code>, <code style={{ background:C.bg, padding:"1px 5px", borderRadius:4 }}>STRIPE_CONNECT_WEBHOOK_SECRET</code>, <code style={{ background:C.bg, padding:"1px 5px", borderRadius:4 }}>FYDELYS_COMMISSION_PCT</code>
+          </div>
+        )}
+      </div>
+    );
+  };
+
   const TabRooms = () => {
     const sb = createClient();
     const COLORS = ["#C8906A","#7C9E8A","#8A7CC8","#C87C7C","#7CB8C8","#C8C07C","#B07CA0","#7C9EC8"];
@@ -1266,7 +1395,7 @@ function Settings({ isMobile, onImpersonate }) {
     );
   };
 
-  const TAB_CONTENT = { superadmin:<TabSuperAdmin/>, studio:<TabStudio/>, team:<TabTeam/>, users:<TabUsers/>, roles:<TabRoles/>, rooms:<TabRooms/>, account:<TabAccount/> };
+  const TAB_CONTENT = { superadmin:<TabSuperAdmin/>, studio:<TabStudio/>, team:<TabTeam/>, users:<TabUsers/>, roles:<TabRoles/>, rooms:<TabRooms/>, payments:<TabPayments/>, account:<TabAccount/> };
 
   return (
     <div style={{ padding:p, maxWidth:isSA?"none":720 }}>

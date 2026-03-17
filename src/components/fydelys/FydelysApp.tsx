@@ -140,8 +140,10 @@ const PAGE_TITLES = {
     createClient().from("members")
       .select("id", { count: "exact", head: true })
       .eq("studio_id", id)
-      .eq("status", "Actif")
-      .then(({ count }) => { if (count !== null) setDynamicMembersCount(count); });
+      .then(({ count, error }) => {
+        console.log("[SA membersCount]", count, error?.message);
+        if (count !== null) setDynamicMembersCount(count);
+      });
   }, [sharedStudioId]);
 
   // Charger disciplines dès que studioId est connu (propStudioId OU sharedStudioId)

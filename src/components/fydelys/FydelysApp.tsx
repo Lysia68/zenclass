@@ -103,6 +103,8 @@ const PAGE_TITLES = {
       if (target) {
         setSharedStudioId(target.id);
         setImpersonatedStudioName(target.name || studioSlugTarget);
+        const count = (memberCounts || {})[target.id] ?? null;
+        setDynamicMembersCount(count);
       }
     } catch(e) { console.error("impersonate studioId load error", e); }
   }, []);
@@ -133,18 +135,7 @@ const PAGE_TITLES = {
 
   const [discs, setDiscs] = useState([]);
 
-  // Charger membersCount dynamiquement (utile lors de l'impersonation SA)
-  useEffect(() => {
-    const id = sharedStudioId;
-    if (!id) return;
-    createClient().from("members")
-      .select("id", { count: "exact", head: true })
-      .eq("studio_id", id)
-      .then(({ count, error }) => {
-        console.log("[SA membersCount]", count, error?.message);
-        if (count !== null) setDynamicMembersCount(count);
-      });
-  }, [sharedStudioId]);
+  // membersCount chargé depuis /api/sa/studios lors de l'impersonation (service role)
 
   // Charger disciplines dès que studioId est connu (propStudioId OU sharedStudioId)
   useEffect(() => {

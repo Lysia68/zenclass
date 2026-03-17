@@ -59,25 +59,35 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
     const supabase = createClient();
     supabase
       .from("studios")
-      .select("id, name, slug, city, email, status, billing_status, trial_ends_at, plan_slug, created_at")
+      .select("id, name, slug, city, address, email, phone, status, billing_status, trial_ends_at, plan_slug, created_at, notes, profiles!profiles_studio_id_fkey(first_name, last_name, phone, is_coach, role)")
       .order("created_at", { ascending: false })
       .then(({ data, error }) => {
         if (error) { console.error("Studios load error:", error); setLoading(false); return; }
         if (data && data.length > 0) {
           const mois = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
-          const mapped = data.map(s => ({
-            id:      s.id,
-            name:    s.name || "Sans nom",
-            slug:    s.slug || "",
-            city:    s.city || "",
-            email:   s.email || "",
-            status:  s.status === "actif" ? "actif" : s.billing_status === "canceled" ? "suspendu" : "actif",
-            plan:    s.plan_slug || "Essentiel",
-            since:   (() => { const d = new Date(s.created_at); return `${mois[d.getMonth()]} ${d.getFullYear()}`; })(),
-            members: 0,
-            revenue: 0,
-            growth:  0,
-          }));
+          const mapped = data.map(s => {
+            const admin = (s.profiles || []).find((p:any) => p.role === "admin") || (s.profiles || [])[0];
+            return {
+              id:        s.id,
+              name:      s.name || "Sans nom",
+              slug:      s.slug || "",
+              city:      s.city || "",
+              address:   s.address || "",
+              email:     s.email || "",
+              phone:     s.phone || admin?.phone || "",
+              status:    s.status === "actif" ? "actif" : s.billing_status === "canceled" ? "suspendu" : "actif",
+              plan:      s.plan_slug || "Essentiel",
+              since:     (() => { const d = new Date(s.created_at); return `${mois[d.getMonth()]} ${d.getFullYear()}`; })(),
+              firstName: admin?.first_name || "",
+              lastName:  admin?.last_name  || "",
+              isCoach:   admin?.is_coach   || false,
+              contact:   admin ? `${admin.first_name||""} ${admin.last_name||""}`.trim() : "",
+              notes:     s.notes || "",
+              members:   0,
+              revenue:   0,
+              growth:    0,
+            };
+          });
           setTenants(mapped);
         } else {
           setTenants([]);
@@ -146,31 +156,57 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
       setStep(s=>s+1);
     };
 
-    const save = () => {
+    const save = async () => {
+      const supabase = createClient();
       const now = new Date();
       const mois = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
       const since = `${mois[now.getMonth()]} ${now.getFullYear()}`;
+
       if(editing) {
+        // Mettre à jour le studio en base
+        const { error } = await supabase.from("studios").update({
+          name: f.name, slug: f.slug, city: f.city, address: f.address || null,
+          phone: f.phone || null, email: f.email, notes: f.notes || null,
+        }).eq("id", editing.id);
+        if(error) { showToast(`Erreur : ${error.message}`, false); return; }
+
+        // Mettre à jour le profil admin si existe
+        await supabase.from("profiles").update({
+          first_name: f.firstName, last_name: f.lastName,
+          is_coach: f.isCoach || false,
+        }).eq("studio_id", editing.id).eq("role", "admin");
+
         setTenants(prev=>prev.map(t=>t.id===editing.id ? {
-          ...t, name:f.name, slug:f.slug, city:f.city, zip:f.zip, address:f.address,
-          plan:f.plan, type:f.type, email:f.email,
-          contact:`${f.firstName} ${f.lastName}`,
-          firstName:f.firstName, lastName:f.lastName, phone:f.phone, notes:f.notes,
-          isCoach:f.isCoach
+          ...t, name:f.name, slug:f.slug, city:f.city, address:f.address,
+          email:f.email, phone:f.phone, notes:f.notes,
+          contact:`${f.firstName} ${f.lastName}`.trim(),
+          firstName:f.firstName, lastName:f.lastName, isCoach:f.isCoach,
         } : t));
         showToast(`✅ "${f.name}" mis à jour`);
       } else {
+        // Créer le studio en base via service role (seed)
+        const res = await fetch("/api/sa/create-tenant", {
+          method: "POST",
+          headers: {"Content-Type":"application/json"},
+          body: JSON.stringify({
+            studioName: f.name, slug: f.slug, city: f.city, zip: f.zip||null,
+            address: f.address||null, type: f.type, email: f.email, phone: f.phone||null,
+            firstName: f.firstName, lastName: f.lastName, isCoach: f.isCoach||false,
+            plan: f.plan,
+          }),
+        });
+        const result = await res.json();
+        if(!res.ok || result.error) { showToast(`Erreur : ${result.error || "création échouée"}`, false); return; }
+
         const newT = {
-          id:`t${Date.now()}`, name:f.name, slug:f.slug, city:f.city, zip:f.zip, address:f.address,
-          plan:f.plan, type:f.type, email:f.email,
+          id: result.studioId || `t${Date.now()}`,
+          name:f.name, slug:f.slug, city:f.city, email:f.email,
           contact:`${f.firstName} ${f.lastName}`,
           firstName:f.firstName, lastName:f.lastName, phone:f.phone, notes:f.notes,
-          isCoach:f.isCoach,
-          members:0, revenue:FYDELYS_PLANS.find(p=>p.name===f.plan)?.price||9,
-          status:"actif", since, growth:0
+          plan:f.plan, members:0, revenue:0, status:"actif", since, growth:0,
         };
         setTenants(prev=>[newT, ...prev]);
-        showToast(`🚀 "${f.name}" créé — seed injecté !`);
+        showToast(`🚀 "${f.name}" créé !`);
       }
       setModal(null);
     };
@@ -281,7 +317,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
               </div>
               {!editing&&(
                 <div style={{padding:"12px 16px",background:"#FBF6EE",borderRadius:10,border:"1px solid rgba(160,104,56,.2)",fontSize:12,color:"#8C7B6C",lineHeight:1.6}}>
-                  🌱 <strong>Seed automatique :</strong> disciplines, abonnements et 1 séance de démo seront créés dans Supabase pour ce studio.
+                  🌱 <strong>Seed automatique :</strong> disciplines, créneaux du soir, abonnements et salle principale seront créés automatiquement.
                 </div>
               )}
             </div>
@@ -448,9 +484,19 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
                 <button onClick={()=>setModal({type:"edit",tenant:t})}
                   style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(167,139,250,.3)",background:"rgba(167,139,250,.1)",color:"#8C5E38",cursor:"pointer",fontWeight:600}}>✏ Modifier</button>
                 {t.status==="actif"
-                  ? <button onClick={()=>{ setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"suspendu"}:x)); showToast(`"${t.name}" suspendu`,false); }}
+                  ? <button onClick={async()=>{
+                      const sb=createClient();
+                      await sb.from("studios").update({status:"suspendu",suspended_at:new Date().toISOString()}).eq("id",t.id);
+                      setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"suspendu"}:x));
+                      showToast(`"${t.name}" suspendu`,false);
+                    }}
                       style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.1)",color:"#F87171",cursor:"pointer",fontWeight:600}}>Suspendre</button>
-                  : <button onClick={()=>{ setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"actif"}:x)); showToast(`"${t.name}" réactivé`); }}
+                  : <button onClick={async()=>{
+                      const sb=createClient();
+                      await sb.from("studios").update({status:"actif",suspended_at:null}).eq("id",t.id);
+                      setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"actif"}:x));
+                      showToast(`"${t.name}" réactivé`);
+                    }}
                       style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(52,211,153,.3)",background:"rgba(52,211,153,.1)",color:"#34D399",cursor:"pointer",fontWeight:600}}>Réactiver</button>
                 }
                 <button onClick={()=>setModal({type:"delete",tenant:t})}

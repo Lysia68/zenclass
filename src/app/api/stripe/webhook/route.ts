@@ -24,7 +24,7 @@ async function getStudioBySubscription(subId: string) {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
   )
   const { data } = await supabaseAdmin
-    .from("studios").select("id, billing_status").eq("stripe_subscription_id", subId).single()
+    .from("studios").select("id, billing_status, plan_slug").eq("stripe_subscription_id", subId).single()
   return data
 }
 
@@ -126,16 +126,18 @@ export async function POST(req: NextRequest) {
       // ── Achat crédits SMS ────────────────────────────────────────────────
       case "payment_intent.succeeded": {
         const pi = event.data.object as Stripe.PaymentIntent
-        const { studioId, packId, credits } = pi.metadata || {}
+        const { studioId, credits } = pi.metadata || {}
         if (studioId && credits) {
+          const supabaseAdmin = createClient(
+            process.env.NEXT_PUBLIC_SUPABASE_URL!,
+            process.env.SUPABASE_SERVICE_ROLE_KEY!,
+          )
           const creditsToAdd = parseInt(credits)
-          // Récupérer le solde actuel et l'incrémenter
-          const { data: st } = await db.from("studios")
+          const { data: st } = await supabaseAdmin.from("studios")
             .select("sms_credits_balance").eq("id", studioId).single()
           const newBalance = (st?.sms_credits_balance || 0) + creditsToAdd
-          await db.from("studios").update({ sms_credits_balance: newBalance }).eq("id", studioId)
-          // Logger l'achat
-          await db.from("sms_credit_purchases").insert({
+          await supabaseAdmin.from("studios").update({ sms_credits_balance: newBalance }).eq("id", studioId)
+          await supabaseAdmin.from("sms_credit_purchases").insert({
             studio_id: studioId, credits: creditsToAdd,
             amount_cents: pi.amount, stripe_payment_id: pi.id,
           })
@@ -152,18 +154,21 @@ export async function POST(req: NextRequest) {
           if (studio && studio.billing_status === "past_due") {
             await updateStudioBilling(studio.id, { billing_status: "active" })
           }
-          // Remettre les crédits inclus du plan + reset date
+          // Rollover : ajouter les crédits inclus au solde existant
           if (studio) {
             const SMS_BY_PLAN: Record<string, number> = { essentiel:0, standard:50, pro:100 }
-            const included = SMS_BY_PLAN[studio.plan_slug] || 0
+            const included = SMS_BY_PLAN[(studio as any).plan_slug] || 0
             if (included > 0) {
+              const supabaseAdmin2 = createClient(
+                process.env.NEXT_PUBLIC_SUPABASE_URL!,
+                process.env.SUPABASE_SERVICE_ROLE_KEY!,
+              )
               const nextReset = new Date()
               nextReset.setMonth(nextReset.getMonth() + 1)
-              // Rollover : ajouter les crédits inclus au solde existant (pas de remise à zéro)
-              const { data: currentSt } = await db.from("studios")
+              const { data: currentSt } = await supabaseAdmin2.from("studios")
                 .select("sms_credits_balance").eq("id", studio.id).single()
               const newBalance = (currentSt?.sms_credits_balance || 0) + included
-              await db.from("studios").update({
+              await supabaseAdmin2.from("studios").update({
                 sms_credits_included: included,
                 sms_credits_balance:  newBalance,
                 sms_credits_reset_at: nextReset.toISOString().slice(0, 10),

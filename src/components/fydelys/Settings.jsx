@@ -145,7 +145,7 @@ function Settings({ isMobile, onImpersonate }) {
   const realRole = userRole || "admin";
   const [currentRole, setCurrentRole] = useState(realRole);
   // ── Données studio depuis Supabase
-  const [studioForm, setStudioForm] = useState({ name:"", address:"", city:"", phone:"", email:"", website:"", cancel_delay_hours:12, booking_days_ahead:7, waitlist_max:10, timezone:"Europe/Paris", reminder_hours_default:24, description:"", cover_photo_url:"", accent_color:"#B07848", public_page_enabled:false });
+  const [studioForm, setStudioForm] = useState({ name:"", address:"", city:"", phone:"", email:"", website:"", cancel_delay_hours:12, booking_days_ahead:7, waitlist_max:10, timezone:"Europe/Paris", reminder_hours_default:24, description:"", cover_photo_url:"", accent_color:"#B07848", public_page_enabled:false, sms_enabled:false });
   const [studioSaving, setStudioSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [studioToast, setStudioToast] = useState(null);
@@ -154,7 +154,7 @@ function Settings({ isMobile, onImpersonate }) {
   React.useEffect(() => {
     if (!studioId) return;
     createClient().from("studios")
-      .select("name, address, city, phone, email, website, cancel_delay_hours, booking_days_ahead, waitlist_max, timezone, reminder_hours_default, description, cover_photo_url, accent_color, slug, public_page_enabled")
+      .select("name, address, city, phone, email, website, cancel_delay_hours, booking_days_ahead, waitlist_max, timezone, reminder_hours_default, description, cover_photo_url, accent_color, slug, public_page_enabled, sms_enabled")
       .eq("id", studioId).single()
       .then(({ data }) => {
         if (data) setStudioForm({
@@ -174,6 +174,7 @@ function Settings({ isMobile, onImpersonate }) {
           accent_color: data.accent_color || "#B07848",
           slug: data.slug || "",
           public_page_enabled: data.public_page_enabled ?? false,
+          sms_enabled: data.sms_enabled ?? false,
         });
       });
   }, [studioId]);
@@ -192,6 +193,7 @@ function Settings({ isMobile, onImpersonate }) {
       cancel_delay_hours: parseInt(studioForm.cancel_delay_hours) || 12,
       booking_days_ahead: parseInt(studioForm.booking_days_ahead) || 7,
       waitlist_max: parseInt(studioForm.waitlist_max) || 10,
+      sms_enabled: studioForm.sms_enabled || false,
       description: studioForm.description || null,
       cover_photo_url: studioForm.cover_photo_url || null,
       accent_color: studioForm.accent_color || "#B07848",
@@ -577,6 +579,21 @@ function Settings({ isMobile, onImpersonate }) {
             <SI label="Annulation (h avant)" fkey="cancel_delay_hours" type="number"/>
             <SI label="Résa ouverte (j avant)" fkey="booking_days_ahead" type="number"/>
             <SI label="Attente max" fkey="waitlist_max" type="number"/>
+          </div>
+          <div style={{ padding:"0 18px 16px" }}>
+            <div onClick={()=>setStudioForm(f=>({...f,sms_enabled:!f.sms_enabled}))}
+              style={{ display:"flex", alignItems:"center", justifyContent:"space-between", padding:"12px 14px",
+                background:studioForm.sms_enabled?"#F0FFF4":"#FAFAF8",
+                border:`1px solid ${studioForm.sms_enabled?"rgba(52,211,153,.3)":C.border}`,
+                borderRadius:10, cursor:"pointer", userSelect:"none" }}>
+              <div>
+                <div style={{ fontSize:13, fontWeight:700, color:studioForm.sms_enabled?"#065F46":C.textMid }}>📱 SMS de confirmation &amp; rappels</div>
+                <div style={{ fontSize:11, color:C.textMuted, marginTop:2 }}>Envoie un SMS aux adhérents à chaque réservation et avant chaque séance (via Twilio — coût par SMS)</div>
+              </div>
+              <div style={{ width:40, height:22, borderRadius:11, background:studioForm.sms_enabled?"#34D399":"rgba(52,211,153,.15)", position:"relative", flexShrink:0, transition:"background .2s" }}>
+                <div style={{ position:"absolute", top:3, left:studioForm.sms_enabled?20:3, width:16, height:16, borderRadius:"50%", background:"#fff", transition:"left .2s" }}/>
+              </div>
+            </div>
           </div>
           <div style={{ padding:"0 18px 16px", borderTop:`1px solid ${C.borderSoft}`, paddingTop:16 }}>
             <div style={{ fontSize:11, fontWeight:800, color:C.accent, textTransform:"uppercase", letterSpacing:.6, marginBottom:12 }}>🔔 Notifications</div>

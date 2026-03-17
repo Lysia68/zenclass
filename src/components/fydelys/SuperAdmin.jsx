@@ -335,7 +335,9 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
     { slug:"pro",       name:"Pro",       price:69, stripe_price_id:"" },
   ]);
   const [savingPlans, setSavingPlans] = useState(false);
-  const [showPlans, setShowPlans]     = useState(false); // null | {type:"new"} | {type:"edit",tenant} | {type:"delete",tenant}
+  const [showPlans, setShowPlans]     = useState(false);
+  const [envStatus, setEnvStatus]     = useState(null);
+  const [showConfig, setShowConfig]   = useState(false); // null | {type:"new"} | {type:"edit",tenant} | {type:"delete",tenant}
   const [toast, setToast]     = useState(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -459,6 +461,42 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
               <div style={{fontSize:10,color:"#B0A090"}}>{k.sub}</div>
             </div>
           ))}
+        </div>
+
+        {/* Configuration plateforme Fydelys */}
+        <div style={{background:"#FAFAF8",borderRadius:14,border:"1px solid #DDD5C8",marginBottom:16,overflow:"hidden"}}>
+          <div onClick={()=>{
+            setShowConfig(v=>!v);
+            if(!envStatus) fetch("/api/sa/config").then(r=>r.json()).then(d=>setEnvStatus(d.status||[]));
+          }} style={{padding:"14px 18px",display:"flex",alignItems:"center",justifyContent:"space-between",cursor:"pointer",userSelect:"none"}}>
+            <div style={{fontSize:14,fontWeight:700,color:"#2A1F14"}}>🔐 Variables d'environnement Vercel</div>
+            <div style={{display:"flex",alignItems:"center",gap:8}}>
+              {envStatus && <span style={{fontSize:11,fontWeight:700,color:envStatus.some(e=>!e.present)?"#F87171":"#34D399"}}>{envStatus.filter(e=>!e.present).length===0?"✓ Tout configuré":`⚠ ${envStatus.filter(e=>!e.present).length} manquante(s)`}</span>}
+              <span style={{fontSize:12,color:"#8C7B6C"}}>{showConfig?"▲":"▼"}</span>
+            </div>
+          </div>
+          {showConfig && (
+            <div style={{borderTop:"1px solid #EAE4DA",padding:"14px 18px"}}>
+              {!envStatus && <div style={{fontSize:12,color:"#8C7B6C"}}>Chargement…</div>}
+              {envStatus && (
+                <div style={{display:"flex",flexDirection:"column",gap:7}}>
+                  {envStatus.map(e=>(
+                    <div key={e.key} style={{display:"grid",gridTemplateColumns:"1fr auto auto",gap:10,alignItems:"center",padding:"7px 10px",borderRadius:7,background:e.present?"#F0FDF4":"#FEF2F2",border:`1px solid ${e.present?"rgba(52,211,153,.2)":"rgba(248,113,113,.2)"}`}}>
+                      <div>
+                        <div style={{fontSize:12,fontWeight:700,color:e.present?"#065F46":"#991B1B"}}>{e.label}</div>
+                        <div style={{fontSize:10,color:"#8C7B6C",fontFamily:"monospace"}}>{e.key}</div>
+                      </div>
+                      <div style={{fontSize:11,color:"#8C7B6C",fontFamily:"monospace"}}>{e.present?e.preview:e.hint}</div>
+                      <div style={{fontSize:11,fontWeight:700,color:e.present?"#34D399":"#F87171"}}>{e.present?"✓":"✗"}</div>
+                    </div>
+                  ))}
+                  <div style={{fontSize:11,color:"#8C7B6C",marginTop:6,padding:"8px 10px",background:"#F8F5F0",borderRadius:7}}>
+                    ⚠ Pour modifier ces variables, rendez-vous sur <strong>Vercel → Settings → Environment Variables</strong> puis redéployez.
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
 
         {/* Configuration plans Fydelys */}

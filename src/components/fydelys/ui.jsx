@@ -1,6 +1,10 @@
 "use client";
 
-import React, { useState } from "react";
+import React
+
+// Helper pour éviter les erreurs TypeScript sur les styles CSS
+const css = (/** @type {any} */ s) => /** @type {import("react").CSSProperties} */ (s);
+, { useState } from "react";
 import { C, statusMap } from "./theme";
 import { DISCIPLINES } from "./demoData";
 import { IcoLogOut } from "./icons";
@@ -54,13 +58,15 @@ function FieldLabel({ children }) {
 }
 
 function Field({ label, value, onChange, type="text", placeholder, opts, error }) {
-  const s = Object.assign({}, { width:"100%", padding:"10px 14px", border:`1.5px solid ${error ? "#C43A3A" : C.border}`, borderRadius:8, fontSize:16, outline:"none", boxSizing:"border-box", color:C.text, background: error ? "#FFF5F5" : C.surfaceWarm, transition:"border-color .15s" });
+  const border = `1.5px solid ${error ? "#C43A3A" : C.border}`
+  const bg = error ? "#FFF5F5" : C.surfaceWarm
+  const baseStyle = css({ width:"100%", padding:"10px 14px", border, borderRadius:8, fontSize:16, outline:"none", boxSizing:"border-box", color:C.text, background:bg, transition:"border-color .15s" })
   return (
     <div>
       {label && <FieldLabel>{label}</FieldLabel>}
       {opts
-        ? <select value={value} onChange={e=>onChange(e.target.value)} style={{...s,height:42}}>{opts.map(o=><option key={o.v??o} value={o.v??o}>{o.l??o}</option>)}</select>
-        : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={s}
+        ? <select value={value} onChange={e=>onChange(e.target.value)} style={{...baseStyle,height:42}}>{opts.map(o=><option key={o.v??o} value={o.v??o}>{o.l??o}</option>)}</select>
+        : <input type={type} value={value} onChange={e=>onChange(e.target.value)} placeholder={placeholder} style={baseStyle}
             onFocus={e=>e.target.style.borderColor=error?"#C43A3A":C.accent}
             onBlur={e=>e.target.style.borderColor=error?"#C43A3A":C.border}/>
       }

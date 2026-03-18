@@ -1883,4 +1883,6 @@ const saInp = (f=false,err=false) => ({
   boxShadow: f?"0 0 0 3px rgba(160,104,56,.07)":"none"
 });
 
+// FieldSA / SelectSA définis HORS de SuperAdminView
+
 export { Settings, InviteCoachModal, RoleBadge };

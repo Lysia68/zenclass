@@ -1167,5 +1167,5 @@ function Planning({ isMobile }) {
     </div>
   );
 }
-//test
+
 export { Planning, PlanningSessionCard };

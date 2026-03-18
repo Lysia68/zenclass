@@ -557,17 +557,22 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
                     <input
                       value={plan.stripe_price_id}
                       onChange={e=>setPlans(p=>p.map((pl,j)=>j===i?{...pl,stripe_price_id:e.target.value}:pl))}
-                      placeholder="price_live_…"
-                      style={{padding:"7px 10px",border:"1.5px solid #DDD5C8",borderRadius:7,fontSize:12,outline:"none",color:"#2A1F14",background:"#FDFAF7",fontFamily:"monospace",boxSizing:"border-box"}}/>
+                      placeholder="price_live_… (pas prod_…)"
+                      style={{padding:"7px 10px",border:`1.5px solid ${plan.stripe_price_id&&!plan.stripe_price_id.startsWith("price_")?"#F87171":"#DDD5C8"}`,borderRadius:7,fontSize:12,outline:"none",color:"#2A1F14",background:"#FDFAF7",fontFamily:"monospace",boxSizing:"border-box"}}/>
                   </div>
                 ))}
+              </div>
+              <div style={{fontSize:11,color:"#8C7B6C",marginBottom:10,padding:"7px 10px",background:"#FEF3C7",borderRadius:6,border:"1px solid rgba(196,146,42,.3)"}}>
+                ⚠ Stripe Dashboard → Produits → [Plan] → <strong>Ajouter un prix</strong> → copier l'ID <code>price_live_…</code><br/>
+                Ne pas confondre avec le Product ID (<code>prod_…</code>) affiché en haut de la page produit.
               </div>
               <button onClick={async()=>{
                 setSavingPlans(true);
                 try {
                   const res = await fetch("/api/sa/plans",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({plans})});
+                  const data = await res.json();
                   if(res.ok) showToast("Plans enregistrés ✓");
-                  else showToast("Erreur lors de la sauvegarde",false);
+                  else showToast(data.errors?.[0]||"Erreur lors de la sauvegarde",false);
                 } catch { showToast("Erreur réseau",false); }
                 setSavingPlans(false);
               }} disabled={savingPlans}

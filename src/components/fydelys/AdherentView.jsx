@@ -16,7 +16,15 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
   const [toast, setToast] = useState(null);
   const showToast = (msg, ok=true) => { setToast({msg,ok}); setTimeout(()=>setToast(null),4000); };
 
-  // Gérer le retour depuis Stripe Checkout
+  const p = isMobile ? 16 : 28;
+
+  const { studioId, discs } = useContext(AppCtx);
+  const allDiscs = discs?.length ? discs : DISCIPLINES;
+
+  // ── Données membre chargées depuis Supabase ─────────────────────────────────
+  const [me, setMe] = useState(null);           // fiche membre
+
+  // Gérer le retour depuis Stripe Checkout — après déclaration de studioId et setMe
   useEffect(() => {
     const params = new URLSearchParams(window.location.search);
     const payment = params.get("payment");
@@ -24,7 +32,6 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       setPage("payment");
       showToast("✅ Paiement confirmé ! Votre compte a été mis à jour.");
       window.history.replaceState({}, "", window.location.pathname);
-      // Recharger les données du membre pour afficher les crédits/abonnement mis à jour
       if (studioId) {
         setTimeout(async () => {
           const sb = createClient();
@@ -34,7 +41,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
             .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete")
             .eq("studio_id", studioId).eq("auth_user_id", user.id).maybeSingle();
           if (member) setMe(member);
-        }, 2000); // délai pour laisser le webhook Stripe traiter
+        }, 2000);
       }
     } else if (payment === "canceled") {
       setPage("payment");
@@ -42,13 +49,6 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       window.history.replaceState({}, "", window.location.pathname);
     }
   }, [studioId]);
-  const p = isMobile ? 16 : 28;
-
-  const { studioId, discs } = useContext(AppCtx);
-  const allDiscs = discs?.length ? discs : DISCIPLINES;
-
-  // ── Données membre chargées depuis Supabase ─────────────────────────────────
-  const [me, setMe] = useState(null);           // fiche membre
   const [myBookings, setMyBookings] = useState([]); // ids de sessions réservées
   const [history, setHistory] = useState([]);   // bookings passés
   const [loading, setLoading] = useState(true);

@@ -124,9 +124,13 @@ function PaymentModal({ plan, clientSecret, intentType, trialDaysLeft, studioId,
                 : "Abonnement mensuel · Sans engagement"}
             </div>
           </div>
-          <div style={{fontSize:20,fontWeight:800,color:C.accent}}>
-            {intentType==="setup"&&trialDaysLeft>0?"0€":`${plan.price}€`}
-            <span style={{fontSize:12,color:C.textSoft}}>/mois</span>
+          <div style={{textAlign:"right"}}>
+            <div style={{fontSize:20,fontWeight:800,color:C.accent}}>
+              {plan.price}€<span style={{fontSize:12,color:C.textSoft}}>/mois</span>
+            </div>
+            {intentType==="setup"&&trialDaysLeft>0&&(
+              <div style={{fontSize:11,color:C.ok,fontWeight:600}}>0€ aujourd'hui</div>
+            )}
           </div>
         </div>
 

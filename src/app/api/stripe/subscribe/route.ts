@@ -95,7 +95,7 @@ export async function POST(req: NextRequest) {
       const setup = await stripe.setupIntents.create({
         customer: customerId,
         payment_method_types: ["card"],
-        usage: "off_session",
+        usage: "on_session",
         metadata: { studioId, planSlug, subscriptionId: subscription.id },
       })
       clientSecret = setup.client_secret

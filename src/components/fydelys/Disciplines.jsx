@@ -105,8 +105,16 @@ function DisciplinesPage({ isMobile }) {
   };
 
   const dbDeleteDisc = async (discId) => {
-    try { await createClient().from("disciplines").delete().eq("id", discId); }
-    catch(e) { console.error("delete disc", e); }
+    try {
+      const sb = createClient();
+      const { count } = await sb.from("sessions").select("id", { count:"exact", head:true })
+        .eq("discipline_id", discId).eq("studio_id", studioId).neq("status", "cancelled");
+      if (count && count > 0) {
+        alert(`Impossible de supprimer — ${count} séance${count>1?"s utilisent":"  utilise"} cette discipline.`);
+        return;
+      }
+      await sb.from("disciplines").delete().eq("id", discId);
+    } catch(e) { console.error("delete disc", e); }
   };
 
   // Slots helpers (state local + sync DB)

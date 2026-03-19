@@ -621,8 +621,15 @@ function Planning({ isMobile }) {
   };
 
   const deleteSession = async id => {
+    const sb = createClient();
+    const { count } = await sb.from("bookings").select("id", { count:"exact", head:true })
+      .eq("session_id", id).eq("status", "confirmed");
+    if (count && count > 0) {
+      alert(`Impossible de supprimer — ${count} réservation${count>1?"s confirmées":"  confirmée"}. Annulez-les d'abord.`);
+      return;
+    }
     setSessions(prev => prev.filter(s => s.id !== id));
-    await createClient().from("sessions").delete().eq("id", id);
+    await sb.from("sessions").delete().eq("id", id);
   };
 
   const cancelSession = id => {

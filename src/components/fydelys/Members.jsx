@@ -193,6 +193,13 @@ function Members({ isMobile }) {
   };
 
   const deleteMember = async (id) => {
+    const sb = createClient();
+    const today = new Date().toISOString().slice(0,10);
+    const { count } = await sb.from("bookings").select("id", { count:"exact", head:true })
+      .eq("member_id", id).eq("status", "confirmed").gte("session_date", today);
+    if (count && count > 0) {
+      if (!window.confirm(`Cet adhérent a ${count} réservation${count>1?"s":""}  future${count>1?"s":""}. Supprimer quand même ?`)) return;
+    }
     setMembers(prev=>prev.filter(m=>m.id!==id)); setSelected(null);
     await fetch(`/api/members?id=${id}`, { method:"DELETE" });
     showToast("Adhérent supprimé");

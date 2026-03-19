@@ -1,4 +1,5 @@
-"use client"; // v2.0
+"use client"; // v2.0 - SMS + Paiements + Vitrine + Salles
+
 
 import React, { useState, useEffect, useContext } from "react";
 import { createClient } from "@/lib/supabase";
@@ -1667,6 +1668,13 @@ function Settings({ isMobile, onImpersonate }) {
     }
 
     async function deleteRoom(id) {
+      const { count } = await sb.from("sessions").select("id", { count:"exact", head:true })
+        .eq("room_id", id).neq("status", "cancelled");
+      if (count && count > 0) {
+        alert(`Impossible de supprimer — ${count} séance${count>1?"s utilisent":"  utilise"} cette salle.`);
+        setConfirmDel(null);
+        return;
+      }
       await sb.from("rooms").delete().eq("id", id);
       setRooms(prev => prev.filter(r => r.id !== id));
       setConfirmDel(null);

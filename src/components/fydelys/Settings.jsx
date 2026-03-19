@@ -232,7 +232,7 @@ function Settings({ isMobile, onImpersonate }) {
   const loadTeam = React.useCallback(async () => {
     if (!studioId) return;
     try {
-      const res = await fetch(`/api/team?studioId=${studioId}`);
+      const res = await fetch(`/api/team?studioId=${studioId}&all=true`);
       const data = await res.json();
       setTeamData({ coaches: data.coaches||[], invites: data.invites||[], loaded:true });
     } catch(e) { console.error("loadTeam error", e); }

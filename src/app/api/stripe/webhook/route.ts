@@ -136,70 +136,38 @@ export async function POST(req: NextRequest) {
         break
       }
 
-      // ── Paiement récupéré après échec ────────────────────────────────────
+      // ── Paiement facture réussi : récupération past_due + rollover SMS ──
       case "invoice.payment_succeeded": {
         const invoice = event.data.object as Stripe.Invoice
         const subId   = invoice.subscription as string
         if (!subId) break
+
         const studio = await getStudioBySubscription(subId)
-        if (studio && studio.billing_status === "past_due") {
+        if (!studio) break
+
+        // 1) Remettre active si le studio était en past_due
+        if (studio.billing_status === "past_due") {
           await updateStudioBilling(studio.id, { billing_status: "active" })
         }
-        break
-      }
 
-      // ── Achat crédits SMS ────────────────────────────────────────────────
-      case "payment_intent.succeeded": {
-        const pi = event.data.object as Stripe.PaymentIntent
-        const { studioId, credits } = pi.metadata || {}
-        if (studioId && credits) {
+        // 2) Rollover SMS — ajouter les crédits inclus dans le plan au renouvellement
+        const SMS_BY_PLAN: Record<string, number> = { essentiel: 0, standard: 50, pro: 100 }
+        const included = SMS_BY_PLAN[(studio as any).plan_slug] || 0
+        if (included > 0) {
           const supabaseAdmin = createClient(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             process.env.SUPABASE_SERVICE_ROLE_KEY!,
           )
-          const creditsToAdd = parseInt(credits)
-          const { data: st } = await supabaseAdmin.from("studios")
-            .select("sms_credits_balance").eq("id", studioId).single()
-          const newBalance = (st?.sms_credits_balance || 0) + creditsToAdd
-          await supabaseAdmin.from("studios").update({ sms_credits_balance: newBalance }).eq("id", studioId)
-          await supabaseAdmin.from("sms_credit_purchases").insert({
-            studio_id: studioId, credits: creditsToAdd,
-            amount_cents: pi.amount, stripe_payment_id: pi.id,
-          })
-        }
-        break
-      }
-
-      // ── Remise à zéro mensuelle crédits SMS lors du renouvellement ──────
-      case "invoice.payment_succeeded": {
-        const invoice = event.data.object as Stripe.Invoice
-        const subId   = invoice.subscription as string
-        if (subId) {
-          const studio = await getStudioBySubscription(subId)
-          if (studio && studio.billing_status === "past_due") {
-            await updateStudioBilling(studio.id, { billing_status: "active" })
-          }
-          // Rollover : ajouter les crédits inclus au solde existant
-          if (studio) {
-            const SMS_BY_PLAN: Record<string, number> = { essentiel:0, standard:50, pro:100 }
-            const included = SMS_BY_PLAN[(studio as any).plan_slug] || 0
-            if (included > 0) {
-              const supabaseAdmin2 = createClient(
-                process.env.NEXT_PUBLIC_SUPABASE_URL!,
-                process.env.SUPABASE_SERVICE_ROLE_KEY!,
-              )
-              const nextReset = new Date()
-              nextReset.setMonth(nextReset.getMonth() + 1)
-              const { data: currentSt } = await supabaseAdmin2.from("studios")
-                .select("sms_credits_balance").eq("id", studio.id).single()
-              const newBalance = (currentSt?.sms_credits_balance || 0) + included
-              await supabaseAdmin2.from("studios").update({
-                sms_credits_included: included,
-                sms_credits_balance:  newBalance,
-                sms_credits_reset_at: nextReset.toISOString().slice(0, 10),
-              }).eq("id", studio.id)
-            }
-          }
+          const nextReset = new Date()
+          nextReset.setMonth(nextReset.getMonth() + 1)
+          const { data: currentSt } = await supabaseAdmin.from("studios")
+            .select("sms_credits_balance").eq("id", studio.id).single()
+          const newBalance = (currentSt?.sms_credits_balance || 0) + included
+          await supabaseAdmin.from("studios").update({
+            sms_credits_included: included,
+            sms_credits_balance:  newBalance,
+            sms_credits_reset_at: nextReset.toISOString().slice(0, 10),
+          }).eq("id", studio.id)
         }
         break
       }

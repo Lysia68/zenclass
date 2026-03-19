@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic"
 import { useState, useEffect, useCallback, useRef } from "react"
 import { createClient } from "@/lib/supabase"
 import { useRouter, useSearchParams } from "next/navigation"
+import { Suspense } from "react"
 import { loadStripe, type Stripe, type StripeElements } from "@stripe/stripe-js"
 
 const C = {
@@ -160,7 +161,7 @@ function PaymentModal({ plan, clientSecret, intentType, trialDaysLeft, studioId,
 }
 
 // ── Page principale ───────────────────────────────────────────────────────────
-export default function BillingPage() {
+function BillingPageContent() {
   const supabase = createClient()
   const router   = useRouter()
   const params   = useSearchParams()
@@ -375,4 +376,8 @@ export default function BillingPage() {
       </div>
     </div>
   )
+}
+
+export default function BillingPage() {
+  return <Suspense fallback={<div/>}><BillingPageContent/></Suspense>
 }

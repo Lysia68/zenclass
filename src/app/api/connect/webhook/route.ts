@@ -57,14 +57,17 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    console.log("[webhook] event received:", event.type, "account:", (event as any).account || "none")
     switch (event.type) {
 
       // ── Paiement one-time réussi (crédits ou séance) ─────────────────────
       case "checkout.session.completed": {
         const session = event.data.object as Stripe.Checkout.Session
+        console.log("[webhook] checkout.session.completed - payment_status:", session.payment_status, "metadata:", JSON.stringify(session.metadata))
         if (session.payment_status !== "paid") break
 
         const { studioId, memberId, type, sessionId, creditsPackId, credits } = session.metadata || {}
+        console.log("[webhook] studioId:", studioId, "memberId:", memberId, "type:", type)
         if (!studioId) break
 
         // Achat à l'unité (period=once) — crédits dans metadata

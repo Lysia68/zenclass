@@ -74,7 +74,7 @@ function PaymentModal({ plan, clientSecret, intentType, trialDaysLeft, studioId,
       })
       elementsRef.current = elements
 
-      const paymentElement = elements.create("payment", { layout: "tabs" })
+      const paymentElement = elements.create("payment", { layout: "tabs", defaultValues: { billingDetails: { address: { country: "FR" } } } })
       paymentElement.mount(mountRef.current)
       paymentElement.on("ready", () => setReady(true))
     }

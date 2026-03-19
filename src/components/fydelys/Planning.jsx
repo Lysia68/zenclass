@@ -483,6 +483,7 @@ function Planning({ isMobile }) {
         if (json?.coaches?.length) {
           setCoachesList(
             json.coaches
+              .filter(c => c.is_coach || c.role === "coach")
               .map(c => ({ id: c.id, name: `${c.fn || ""} ${c.ln || ""}`.trim() }))
               .filter(c => c.name)
           );

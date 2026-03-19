@@ -41,7 +41,7 @@ export async function GET(request: NextRequest) {
     discMap[l.profile_id].push(l.discipline_id)
   })
 
-  const coaches = (profiles || []).map((p: any) => {
+  const coaches = (profiles || []).filter((p: any) => p.is_coach || p.role === "coach").map((p: any) => {
     // Priorité : members > profiles pour les noms
     const member = membersByUid[p.id]
     const fn = member?.first_name || p.first_name || ""

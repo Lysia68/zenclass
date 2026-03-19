@@ -52,6 +52,31 @@ export async function POST(req: NextRequest) {
         const session = event.data.object as Stripe.Checkout.Session
         const studioId = getStudioId(session)
         if (!studioId) break
+
+        // Cas SMS one-shot (mode=payment)
+        if (session.mode === "payment") {
+          const packId  = session.metadata?.packId
+          const credits = session.metadata?.credits
+          if (packId && credits) {
+            const supabaseAdmin = createClient(
+              process.env.NEXT_PUBLIC_SUPABASE_URL!,
+              process.env.SUPABASE_SERVICE_ROLE_KEY!,
+            )
+            const creditsToAdd = parseInt(credits)
+            const { data: st } = await supabaseAdmin.from("studios")
+              .select("sms_credits_balance").eq("id", studioId).single()
+            const newBalance = (st?.sms_credits_balance || 0) + creditsToAdd
+            await supabaseAdmin.from("studios").update({ sms_credits_balance: newBalance }).eq("id", studioId)
+            await supabaseAdmin.from("sms_credit_purchases").insert({
+              studio_id: studioId, credits: creditsToAdd,
+              amount_cents: session.amount_total || 0,
+              stripe_payment_id: session.payment_intent as string,
+            })
+          }
+          break
+        }
+
+        // Cas abonnement (mode=subscription)
         const subId   = session.subscription as string
         const planSlug = session.metadata?.planSlug || "essentiel"
         await updateStudioBilling(studioId, {

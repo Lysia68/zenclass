@@ -101,7 +101,7 @@ function getDiscIcons() { return { 1: IcoYoga, 2: IcoPilates, 3: IcoMeditation, 
 function getNavIcons()  { return { dashboard: IcoHome2, planning: IcoCalendar2, members: IcoUsers2, subscriptions: IcoTag2, payments: IcoCreditCard2, disciplines: IcoLayers2, settings: IcoSettings2, aide: IcoHelpCircle }; }
 // Aliases pour compatibilité
 const DISC_ICONS = { 1: IcoYoga, 2: IcoPilates, 3: IcoMeditation, 4: IcoMoon };
-const NAV_ICONS  = { dashboard: IcoHome2, planning: IcoCalendar2, members: IcoUsers2, subscriptions: IcoTag2, payments: IcoCreditCard2, disciplines: IcoLayers2, settings: IcoSettings2, aide: IcoHelpCircle };
+const NAV_ICONS  = { dashboard: IcoHome2, planning: IcoCalendar2, historique: IcoBarChart2, members: IcoUsers2, subscriptions: IcoTag2, payments: IcoCreditCard2, disciplines: IcoLayers2, settings: IcoSettings2, aide: IcoHelpCircle };
 
 export {
   IC, ICG,

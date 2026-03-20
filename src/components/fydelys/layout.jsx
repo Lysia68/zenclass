@@ -35,6 +35,7 @@ function ConfirmModal({ message, onConfirm, onCancel }) {
 const NAV = [
   {key:"dashboard",     label:"Tableau de bord"},
   {key:"planning",      label:"Planning"},
+  {key:"historique",    label:"Historique"},
   {key:"members",       label:"Adhérents"},
   {key:"subscriptions", label:"Abonnements"},
   {key:"payments",      label:"Paiements"},
@@ -120,11 +121,11 @@ function Sidebar({ active, onNav, studioName = "Mon studio", planName = "Essenti
 }
 
 const MOBILE_NAV = [
-  {key:"dashboard", label:"Accueil"},
-  {key:"planning",  label:"Planning"},
-  {key:"members",   label:"Membres"},
-  {key:"payments",  label:"Paiements"},
-  {key:"settings",  label:"Plus"},
+  {key:"dashboard",  label:"Accueil"},
+  {key:"planning",   label:"Planning"},
+  {key:"historique", label:"Historique"},
+  {key:"members",    label:"Membres"},
+  {key:"settings",   label:"Plus"},
 ];
 
 function BottomNav({ active, onNav }) {

@@ -15,6 +15,7 @@ import { Payments } from "./Payments";
 import { DisciplinesPage } from "./Disciplines";
 import { Settings } from "./Settings";
 import { AidePage } from "./Aide";
+import { Historique } from "./Historique";
 import { SuperAdminView } from "./SuperAdmin";
 import { CoachView } from "./CoachView";
 import { AdherentView } from "./AdherentView";
@@ -28,12 +29,12 @@ export default function App({
   billingStatus = "trialing", trialEndsAt = null, onSignOut = null
 }) {
   const PAGES = {
-    dashboard:Dashboard, planning:Planning, members:Members,
+    dashboard:Dashboard, planning:Planning, historique:Historique, members:Members,
     subscriptions:Subscriptions, payments:Payments, disciplines:DisciplinesPage,
     settings:Settings, aide:AidePage,
   };
 const PAGE_TITLES = {
-  dashboard:"Tableau de bord", planning:"Planning", members:"Adhérents",
+  dashboard:"Tableau de bord", planning:"Planning", historique:"Historique", members:"Adhérents",
   subscriptions:"Abonnements", payments:"Paiements", disciplines:"Disciplines",
   settings:"Paramètres", aide:"Aide"
 };
@@ -110,7 +111,7 @@ const PAGE_TITLES = {
   }, []);
 
   // Lire la page initiale depuis l'URL (ex: /members → "members")
-  const VALID_PAGES = ["dashboard","planning","members","subscriptions","payments","disciplines","settings","aide"];
+  const VALID_PAGES = ["dashboard","planning","historique","members","subscriptions","payments","disciplines","settings","aide"];
   const getPageFromUrl = () => {
     if (typeof window === "undefined") return "planning";
     const path = window.location.pathname.replace(/^\//, "").split("/")[0];

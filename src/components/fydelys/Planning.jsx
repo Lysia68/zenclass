@@ -391,6 +391,8 @@ function Planning({ isMobile }) {
   const { discs, studioId } = useContext(AppCtx);
   const [sessions, setSessions]       = useState([]);
   const [dbLoading, setDbLoading]     = useState(true);
+  const todayRef = useRef(null);
+  const today    = new Date().toISOString().slice(0, 10);
   const [bookings, setBookings]       = useState({});
   const [expandedId, setExpandedId]   = useState(null);
   const [filterDiscs, setFilterDiscs] = useState([]); // multi-select
@@ -459,13 +461,23 @@ function Planning({ isMobile }) {
   }
 
   const DAY_NUM = { Lun: 1, Mar: 2, Mer: 3, Jeu: 4, Ven: 5, Sam: 6, Dim: 0 };
-  const effectiveDiscs = discs?.length ? discs : localDiscs;
+  // Préférer la source qui a les slots — évite le flash vide quand discs arrive sans slots
+  const effectiveDiscs = (() => {
+    const hasSlots = (arr) => arr?.some(d => d.slots?.length > 0);
+    if (hasSlots(discs)) return discs;
+    if (hasSlots(localDiscs)) return localDiscs;
+    return discs?.length ? discs : localDiscs;
+  })();
   const allDiscOptions = (effectiveDiscs.length ? effectiveDiscs : DISCIPLINES).map(d => ({ id: String(d.id), name: d.name, icon: d.icon, color: d.color }));
 
-  // Si le context discs arrive après le mount (cas fréquent), vider localDiscs pour laisser place aux discs du context
+  // Si le context discs arrive avec des slots, l'utiliser directement
+  // Ne PAS vider localDiscs si discs n'a pas de slots — sinon race condition
   useEffect(() => {
-    if (discs?.length) { setLocalDiscs([]); setDiscsLoading(false); }
-  }, [discs?.length]); // eslint-disable-line react-hooks/exhaustive-deps
+    if (discs?.length && discs.some(d => d.slots?.length > 0)) {
+      setLocalDiscs([]);
+      setDiscsLoading(false);
+    }
+  }, [discs]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Charger disciplines + coachs en parallèle dès que studioId est dispo
   // Inclut les discs du context si déjà chargées, sinon fetch direct
@@ -502,8 +514,13 @@ function Planning({ isMobile }) {
     if (!studioId) return;
     setDbLoading(true);
     const sb = createClient();
+    // Fenêtre J-7 → J+60
+    const d7  = new Date(); d7.setDate(d7.getDate() - 7);
+    const d60 = new Date(); d60.setDate(d60.getDate() + 60);
+    const fromDate = d7.toISOString().slice(0,10);
+    const toDate   = d60.toISOString().slice(0,10);
     sb.from("sessions").select("id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots, status")
-      .eq("studio_id", studioId).order("session_date").order("session_time")
+      .eq("studio_id", studioId).gte("session_date", fromDate).lte("session_date", toDate).order("session_date").order("session_time")
       .then(async ({ data, error }) => {
         if (error) { setDbLoading(false); return; }
         if (!data || data.length === 0) { setSessions(SESSIONS_DEMO); setIsDemoData(true); setDbLoading(false); return; }
@@ -537,6 +554,15 @@ function Planning({ isMobile }) {
         setDbLoading(false);
       });
   }, [studioId]);
+
+  // Scroll vers aujourd'hui après chargement
+  useEffect(() => {
+    if (!dbLoading && todayRef.current) {
+      setTimeout(() => {
+        todayRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    }
+  }, [dbLoading]);
 
   // Preview récurrence
   useEffect(() => {
@@ -1158,8 +1184,13 @@ function Planning({ isMobile }) {
               </div>
             </div>
           </div>
-        ) : (
-          <div key={item.date} style={{ marginBottom: 22 }}>
+        ) : (() => {
+          const isPast   = item.date < today;
+          const isToday  = item.date === today;
+          return (
+          <div key={item.date}
+            ref={isToday ? todayRef : null}
+            style={{ marginBottom: 22, opacity: isPast ? 0.45 : 1, transition: "opacity .2s" }}>
             <DateLabel date={item.date} />
             {filtered.filter(s => s.date === item.date).map(s => (
               <PlanningSessionCard key={s.id} sess={s} expandedId={expandedId} bookings={bookings} discs={effectiveDiscs} closures={closures} isMobile={isMobile} onConfirm={openConfirm} roomsList={roomsList}
@@ -1173,7 +1204,8 @@ function Planning({ isMobile }) {
               />
             ))}
           </div>
-        ))}
+          );
+        })()}
       </div>
     </div>
   );

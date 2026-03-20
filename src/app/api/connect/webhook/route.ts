@@ -151,9 +151,13 @@ export async function POST(req: NextRequest) {
         if (!sub) break
 
         // Récupérer les metadata de la subscription
+        // stripeAccount doit être dans options (3ème arg), pas params (2ème arg)
+        const subId2 = typeof sub === "string" ? sub : sub.id
+        const connectAccount = (event as any).account
         const subscription = await stripe.subscriptions.retrieve(
-          typeof sub === "string" ? sub : sub.id,
-          { stripeAccount: (event as any).account }
+          subId2,
+          {},
+          connectAccount ? { stripeAccount: connectAccount } : undefined
         )
         const { studioId, memberId, subscriptionId } = subscription.metadata || {}
         if (!studioId || !memberId) break

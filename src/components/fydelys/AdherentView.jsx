@@ -367,6 +367,30 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
   }
 
   // ── Mon Compte ──────────────────────────────────────────────────────────────
+  // Wrapper qui recharge me + history à chaque fois qu'on arrive sur l'onglet
+  function AdhAccountRefreshed() {
+    useEffect(() => {
+      if (!me?.id) return;
+      const sb = createClient();
+      // Recharger credits + statut
+      sb.from("members")
+        .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete")
+        .eq("id", me.id).maybeSingle()
+        .then(({ data }) => { if (data) setMe(data); });
+      // Recharger historique pour avoir les présences à jour
+      const today = new Date().toISOString().split("T")[0];
+      sb.from("bookings")
+        .select("session_id, status, attended, sessions(session_date, session_time, discipline_id, teacher, disciplines(name,color))")
+        .eq("member_id", me.id)
+        .order("session_id", { ascending: false })
+        .limit(50)
+        .then(({ data: hist }) => {
+          if (hist) setHistory(hist.filter(h => h.sessions && h.sessions.session_date <= today));
+        });
+    }, []); // eslint-disable-line react-hooks/exhaustive-deps
+    return <AdhAccount/>;
+  }
+
   function AdhAccount() {
     const initials = me ? `${me.first_name?.[0]||""}${me.last_name?.[0]||""}`.toUpperCase() : "?";
     if (loading) return <div style={{ padding:p, color:C.textMuted, fontSize:14 }}>Chargement…</div>;
@@ -410,6 +434,14 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
               </div>
             ))}
           </div>
+          <button onClick={()=>{
+            const sb = createClient();
+            const today = new Date().toISOString().split("T")[0];
+            sb.from("members").select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete").eq("id", me.id).maybeSingle().then(({data})=>{ if(data) setMe(data); });
+            sb.from("bookings").select("session_id, status, attended, sessions(session_date, session_time, discipline_id, teacher, disciplines(name,color))").eq("member_id", me.id).order("session_id",{ascending:false}).limit(50).then(({data:hist})=>{ if(hist) setHistory(hist.filter(h=>h.sessions&&h.sessions.session_date<=today)); });
+          }} style={{ fontSize:12, color:C.textMuted, background:"none", border:"none", cursor:"pointer", padding:"2px 0 0", textAlign:"right", width:"100%", display:"flex", alignItems:"center", justifyContent:"flex-end", gap:4 }}>
+            ↻ Actualiser
+          </button>
         </Card>
       </div>
     );
@@ -812,7 +844,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
         )}
         <div style={{ flex:1, overflowY:"auto" }}>
           {page === "planning" && <AdhPlanning/>}
-          {page === "account"  && <AdhAccount/>}
+          {page === "account"  && <AdhAccountRefreshed/>}
           {page === "history"  && <AdhHistory/>}
           {page === "purchases" && <AdhPurchases/>}
           {page === "payment"  && <AdhPayment/>}

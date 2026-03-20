@@ -118,7 +118,7 @@ export async function GET(request: Request) {
         // Envoyer les emails
         await Promise.allSettled(recipients.map(async (member: any) => {
           const firstName = member.name.split(" ")[0] || member.name
-          const subjectLabel = reminderHours <= 3 ? "dans quelques heures" : reminderHours <= 12 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
+          const subjectLabel = reminderHours < 1 ? "maintenant" : reminderHours === 1 ? "dans 1 heure" : reminderHours < 24 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
           const body = {
             personalizations: [{ to: [{ email: member.email }], subject: `Votre cours "${discName}" est ${subjectLabel} chez ${studio.name}` }],
             from: { email: "noreply@synq9.com", name: studio.name },
@@ -184,14 +184,16 @@ function getTzOffsetMinutes(tz: string): number {
 }
 
 function buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }: any) {
-  const urgencyColor = reminderHours <= 3 ? "#C4400C" : reminderHours <= 26 ? "#A06838" : "#4E8A58"
-  const subjectLabel = reminderHours <= 3
-    ? "C'est bientôt l'heure !"
-    : reminderHours <= 12
-      ? `Votre cours est dans ${reminderHours}h`
-      : reminderHours <= 26
-        ? "Votre cours est demain"
-        : `Votre cours est dans ${Math.round(reminderHours/24)} jours`
+  const urgencyColor = reminderHours <= 2 ? "#C4400C" : reminderHours <= 26 ? "#A06838" : "#4E8A58"
+  const subjectLabel = reminderHours < 1
+    ? "C'est l'heure !"
+    : reminderHours === 1
+      ? "dans 1 heure"
+      : reminderHours < 24
+        ? `dans ${reminderHours}h`
+        : reminderHours <= 26
+          ? "demain"
+          : `dans ${Math.round(reminderHours/24)} jours`
 
   return `<!DOCTYPE html>
 <html lang="fr">

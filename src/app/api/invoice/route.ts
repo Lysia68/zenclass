@@ -81,16 +81,16 @@ export async function GET(req: NextRequest) {
 <style>
   * { margin:0; padding:0; box-sizing:border-box; }
   body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; background: #f5f5f5; }
-  .page { max-width: 760px; margin: 0 auto; background: #fff; min-height: 100vh; }
+  .page { max-width: 760px; margin: 0 auto; background: #fff; min-height: 100vh; overflow: hidden; border-radius: 0; display: flex; flex-direction: column; }
   /* ── Header ── */
-  .header { background: linear-gradient(135deg, #2A1F14 0%, #5C3D20 100%); color: white; padding: 24px 36px 18px; display: flex; justify-content: space-between; align-items: flex-start; }
+  .header { background: linear-gradient(135deg, #2A1F14 0%, #5C3D20 100%); color: white; padding: 24px 36px 18px; display: flex; justify-content: space-between; align-items: flex-start; border-radius: 0; margin: -1px; }
   .logo-block .studio-name { font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #F5D5A8; }
   .logo-block .studio-sub { font-size: 12px; color: rgba(255,255,255,0.6); margin-top: 4px; line-height: 1.6; }
   .invoice-meta { text-align: right; }
   .invoice-meta .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,0.5); margin-bottom: 6px; }
   .invoice-meta .invoice-number { font-size: 22px; font-weight: 800; color: #F5D5A8; }
   .invoice-meta .invoice-date { font-size: 13px; color: rgba(255,255,255,0.7); margin-top: 4px; }
-  .status-bar { background: #A06838; padding: 7px 36px; display: flex; justify-content: space-between; align-items: center; }
+  .status-bar { background: #A06838; padding: 7px 36px; display: flex; justify-content: space-between; align-items: center; margin: 0 -1px; }
   .status-bar .status-label { font-size: 12px; font-weight: 700; color: white; text-transform: uppercase; letter-spacing: 1px; }
   .status-bar .status-badge { background: rgba(255,255,255,0.2); color: white; padding: 3px 12px; border-radius: 20px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 0.5px; }
   /* ── Body ── */
@@ -128,7 +128,7 @@ export async function GET(req: NextRequest) {
   .payment-info .pi-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: #A06838; }
   .payment-info .pi-value { font-size: 14px; font-weight: 600; color: #2A1F14; }
   /* ── Footer ── */
-  .footer { margin-top: 16px; padding: 14px 36px; background: #FDFAF7; border-top: 2px solid #F0E8DC; }
+  .footer { margin-top: auto; padding: 14px 36px; background: #FDFAF7; border-top: 2px solid #F0E8DC; position: fixed; bottom: 0; left: 0; right: 0; }
   .footer-legal { font-size: 11px; color: #8C7B6C; line-height: 1.8; }
   .footer-legal strong { color: #5C4A38; }
   .footer-brand { text-align: center; margin-top: 16px; padding-top: 16px; border-top: 1px solid #EDE4D8; font-size: 11px; color: #C4A880; font-weight: 600; letter-spacing: 0.5px; }
@@ -139,16 +139,16 @@ export async function GET(req: NextRequest) {
   .btn-secondary { background: white; color: #2A1F14; border: 1.5px solid #DDD5C8; }
   @media print {
     @page { margin: 0; size: A4; }
-    body { background: white; }
+    body { background: white; padding: 0; }
     .actions { display: none !important; }
-    .page { box-shadow: none; page-break-inside: avoid; }
+    .page { box-shadow: none; }
     .header { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
     .status-bar { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    * { page-break-inside: avoid; }
+    .footer { position: fixed; bottom: 0; left: 0; right: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
   }
 </style>
 </head>
-<body>
+<body style="padding-bottom:70px">
 <div class="page">
   <!-- Header -->
   <div class="header">

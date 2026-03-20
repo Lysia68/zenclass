@@ -117,8 +117,8 @@ export async function GET(request: Request) {
         // Envoyer les emails
         await Promise.allSettled(recipients.map(async (member: any) => {
           const firstName = member.name.split(" ")[0] || member.name
+          const subjectLabel = reminderHours <= 3 ? "dans quelques heures" : reminderHours <= 12 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
           const body = {
-            const subjectLabel = reminderHours <= 3 ? "dans quelques heures" : reminderHours <= 12 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
             personalizations: [{ to: [{ email: member.email }], subject: `⏰ Rappel — ${discName} ${subjectLabel} chez ${studio.name}` }],
             from: { email: "noreply@synq9.com", name: studio.name },
             content: [{ type: "text/html", value: buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }) }]

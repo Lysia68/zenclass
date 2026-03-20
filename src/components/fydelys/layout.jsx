@@ -116,6 +116,13 @@ function Sidebar({ active, onNav, studioName = "Mon studio", planName = "Essenti
           <div style={{ fontSize:12, color:C.textMuted }}>{userRole === "admin" ? "Admin" : userRole === "coach" ? "Coach" : userRole === "adherent" ? "Adhérent" : "Admin"}</div>
         </div>
       </div>
+      {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA && (
+        <div style={{ padding:"6px 20px 8px", textAlign:"center" }}>
+          <span style={{ fontSize:9, color:C.textMuted, fontFamily:"monospace", letterSpacing:0.3 }}>
+            {process.env.NEXT_PUBLIC_VERCEL_GIT_COMMIT_SHA.slice(0,7)}
+          </span>
+        </div>
+      )}
     </aside>
   );
 }

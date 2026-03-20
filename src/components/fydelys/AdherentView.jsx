@@ -84,7 +84,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
         // Historique
         const today = new Date().toISOString().split("T")[0];
         const { data: hist } = await sb.from("bookings")
-          .select("session_id, status, sessions(session_date, session_time, discipline_id, teacher, disciplines(name,color))")
+          .select("session_id, status, attended, sessions(session_date, session_time, discipline_id, teacher, disciplines(name,color))")
           .eq("member_id", member.id)
           .order("session_id", { ascending: false })
           .limit(50);
@@ -101,6 +101,15 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
     const [filterDisc, setFilterDisc] = useState(0);
     const [confirmSess, setConfirmSess] = useState(null);
     const [loadingSess, setLoadingSess] = useState(true);
+    const [cancelDelayH, setCancelDelayH] = useState(2); // délai annulation en heures
+
+    useEffect(() => {
+      if (!studioId) return;
+      // Charger le délai d'annulation du studio
+      createClient().from("studios")
+        .select("cancel_delay_hours").eq("id", studioId).single()
+        .then(({ data }) => { if (data?.cancel_delay_hours != null) setCancelDelayH(data.cancel_delay_hours); });
+    }, [studioId]);
 
     useEffect(() => {
       if (!studioId) return;
@@ -311,7 +320,19 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                       </div>
                       <div style={{ flexShrink:0 }}>
                         {isCancelled ? null : isBooked
-                          ? <Button sm variant="danger" onClick={()=>cancel(s)}>Annuler</Button>
+                          ? (() => {
+                              const [y,mo,d] = (s.date||"").split("-").map(Number);
+                              const [h,mi]   = (s.time||"00:00").split(":").map(Number);
+                              const sessStart = new Date(y, mo-1, d, h, mi);
+                              const diffH = (sessStart - new Date()) / 3600000;
+                              const tooLate = diffH < cancelDelayH;
+                              return tooLate
+                                ? <button disabled title={`Annulation impossible — délai de ${cancelDelayH}h dépassé`}
+                                    style={{ fontSize:12, padding:"5px 12px", borderRadius:8, border:"1px solid #DDD5C8", background:C.bgDeep, color:C.textMuted, cursor:"not-allowed", fontWeight:600, opacity:0.5 }}>
+                                    🔒 Annuler
+                                  </button>
+                                : <Button sm variant="danger" onClick={()=>cancel(s)}>Annuler</Button>;
+                            })()
                           : isFull
                             ? <Button sm variant="secondary" onClick={()=>showToast("Ajouté à la liste d'attente")}>Liste d'attente</Button>
                             : (() => {
@@ -327,6 +348,12 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                     {isBooked && !isCancelled && (
                       <div style={{ marginTop:10, padding:"7px 12px", background:C.okBg, borderRadius:8, fontSize:13, color:C.ok, display:"flex", alignItems:"center", gap:6 }}>
                         <IcoCheck s={14} c={C.ok}/> Vous êtes inscrit(e) à cette séance
+                      </div>
+                    )}
+                    {isCancelled && isBooked && (
+                      <div style={{ marginTop:8, padding:"8px 12px", background:"#FEF3E2", borderRadius:8, fontSize:12, color:"#92400E", display:"flex", alignItems:"center", gap:6, borderLeft:"3px solid #F59E0B" }}>
+                        <span>⚠️</span>
+                        <span>Cette séance a été annulée par le studio. Votre réservation est annulée et il n'est plus possible d'agir sur cette séance. Contactez votre studio si nécessaire.</span>
                       </div>
                     )}
                   </Card>
@@ -371,7 +398,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
             {[
               { l:"Crédits restants",  v:`${me?.credits||0} / ${me?.credits_total||0}`,  icon:<IcoCreditCard2 s={16} c={C.accent}/> },
               { l:"Membre depuis",     v:me?.created_at ? new Date(me.created_at).toLocaleDateString("fr-FR") : "—", icon:<IcoCalendar2 s={16} c={C.accent}/> },
-              { l:"Séances effectuées",v:history.filter(h=>h.status==="confirmed").length, icon:<IcoCheck s={16} c={C.ok}/> },
+              { l:"Séances effectuées",v:history.filter(h=>h.attended===true).length, icon:<IcoCheck s={16} c={C.ok}/> },
               { l:"Statut",            v:me?.status||"actif",                              icon:<IcoUser2 s={16} c={C.accent}/> },
             ].map(k=>(
               <div key={k.l} style={{ background:C.bg, borderRadius:10, padding:"12px 14px", display:"flex", gap:10, alignItems:"center" }}>
@@ -393,9 +420,9 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
 
   // ── Historique ──────────────────────────────────────────────────────────────
   function AdhHistory() {
-    const presents = history.filter(h=>h.status==="confirmed").length;
-    const absents  = history.filter(h=>h.status==="absent").length;
-    const statusHistMap = { confirmed:[C.ok,C.okBg], absent:[C.warn,C.warnBg], waitlist:[C.info,C.infoBg] };
+    const presents = history.filter(h=>h.attended===true).length;
+    const absents  = history.filter(h=>h.sessions?.session_date < new Date().toISOString().slice(0,10) && h.attended!==true).length;
+    // statusHistMap dérivé de attended plutôt que status
 
     if (loading) return <div style={{ padding:p, color:C.textMuted, fontSize:14 }}>Chargement…</div>;
     if (history.length === 0) return (
@@ -417,18 +444,18 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
         <Card noPad>
           <SectionHead>Détail des séances</SectionHead>
           {history.map((h,i)=>{
-            const [color,bg] = statusHistMap[h.status]||[C.textMuted,C.bg];
+            const [color,bg] = h.attended===true ? [C.ok,C.okBg] : (h.sessions?.session_date < new Date().toISOString().slice(0,10) ? [C.warn,C.warnBg] : [C.info,C.infoBg]);
             const sess = h.sessions;
             return (
               <div key={i} style={{ display:"flex", alignItems:"center", gap:12, padding:"11px 16px", borderBottom:`1px solid ${C.borderSoft}` }}>
                 <div style={{ width:32, height:32, borderRadius:8, background:bg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
-                  {h.status==="confirmed" ? <IcoCheck s={16} c={color}/> : <IcoX s={16} c={color}/>}
+                  {h.attended===true ? <IcoCheck s={16} c={color}/> : <IcoX s={16} c={color}/>}
                 </div>
                 <div style={{ flex:1 }}>
                   <div style={{ fontSize:15, fontWeight:700, color:C.text }}>{sess?.disciplines?.name||"Séance"}</div>
                   <div style={{ fontSize:13, color:C.textSoft }}>{sess?.teacher} · {sess?.session_date ? new Date(sess.session_date).toLocaleDateString("fr-FR") : ""}</div>
                 </div>
-                <Tag s={h.status==="confirmed"?"présent":"absent"}/>
+                <Tag s={h.attended===true?"présent":(h.sessions?.session_date < new Date().toISOString().slice(0,10)?"absent":"réservé")}/>
               </div>
             );
           })}
@@ -458,7 +485,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
 
     return (
       <div style={{ padding:p }}>
-        <SectionHead title="Mes achats" sub="Historique de vos paiements"/>
+        <SectionHead>Mes achats</SectionHead>
         {payments.length === 0
           ? <EmptyState icon={<IcoTag2 s={40} c={C.textMuted}/>} title="Aucun achat" sub="Vos achats apparaîtront ici après paiement"/>
           : <div style={{ display:"flex", flexDirection:"column", gap:8 }}>

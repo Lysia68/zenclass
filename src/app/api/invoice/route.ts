@@ -25,6 +25,7 @@ export async function GET(req: NextRequest) {
 
   // ── Tenter de récupérer la facture/reçu Stripe ─────────────────────────────
   const stripePaymentId = (pay as any).stripe_payment_id
+  let stripeReceiptUrl: string | null = null
   if (stripePaymentId) {
     try {
       // Choisir la bonne instance Stripe selon payment_mode
@@ -39,33 +40,24 @@ export async function GET(req: NextRequest) {
 
       const options = connectAccount ? { stripeAccount: connectAccount } : {}
 
-      // Cas 1 : stripe_payment_id commence par "in_" → c'est une Invoice Stripe
-      if (stripePaymentId.startsWith("in_")) {
-        const invoice = await stripeInstance.invoices.retrieve(stripePaymentId, options)
-        if (invoice.invoice_pdf) {
-          return NextResponse.redirect(invoice.invoice_pdf)
-        }
-      }
-
-      // Cas 2 : "pi_" → PaymentIntent → récupérer le charge → receipt_url
+      // Récupérer le receipt_url Stripe pour l'afficher comme lien dans la facture HTML
+      // (on ne redirige PAS — on sert toujours notre template HTML)
       if (stripePaymentId.startsWith("pi_")) {
-        const pi = await stripeInstance.paymentIntents.retrieve(
-          stripePaymentId,
-          { expand: ["latest_charge"] },
-          options
-        )
-        const charge = pi.latest_charge as Stripe.Charge
-        if (charge?.receipt_url) {
-          return NextResponse.redirect(charge.receipt_url)
-        }
+        try {
+          const pi = await stripeInstance.paymentIntents.retrieve(
+            stripePaymentId,
+            { expand: ["latest_charge"] },
+            options
+          )
+          const charge = pi.latest_charge as Stripe.Charge
+          if (charge?.receipt_url) stripeReceiptUrl = charge.receipt_url
+        } catch { /* ignore */ }
       }
-
-      // Cas 3 : "ch_" → charge directe
       if (stripePaymentId.startsWith("ch_")) {
-        const charge = await stripeInstance.charges.retrieve(stripePaymentId, options)
-        if (charge.receipt_url) {
-          return NextResponse.redirect(charge.receipt_url)
-        }
+        try {
+          const charge = await stripeInstance.charges.retrieve(stripePaymentId, options)
+          if (charge?.receipt_url) stripeReceiptUrl = charge.receipt_url
+        } catch { /* ignore */ }
       }
     } catch (err: any) {
       console.warn("[invoice] Stripe lookup failed, fallback to HTML receipt:", err.message)
@@ -278,6 +270,7 @@ export async function GET(req: NextRequest) {
 <!-- Boutons d'action -->
 <div class="actions">
   <button class="btn btn-secondary" onclick="window.close()">✕ Fermer</button>
+  ${stripeReceiptUrl ? `<a href="${stripeReceiptUrl}" target="_blank" class="btn btn-secondary" style="text-decoration:none">🧾 Reçu Stripe</a>` : ""}
   <button class="btn btn-primary" onclick="window.print()">🖨 Imprimer / PDF</button>
 </div>
 

@@ -118,7 +118,8 @@ export async function GET(request: Request) {
         await Promise.allSettled(recipients.map(async (member: any) => {
           const firstName = member.name.split(" ")[0] || member.name
           const body = {
-            personalizations: [{ to: [{ email: member.email }], subject: `⏰ Rappel — ${discName} demain chez ${studio.name}` }],
+            const subjectLabel = reminderHours <= 3 ? "dans quelques heures" : reminderHours <= 12 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
+            personalizations: [{ to: [{ email: member.email }], subject: `⏰ Rappel — ${discName} ${subjectLabel} chez ${studio.name}` }],
             from: { email: "noreply@synq9.com", name: studio.name },
             content: [{ type: "text/html", value: buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }) }]
           }
@@ -182,46 +183,128 @@ function getTzOffsetMinutes(tz: string): number {
 }
 
 function buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }: any) {
+  const urgencyLabel = reminderHours <= 3
+    ? "⚡ C'est bientôt l'heure !"
+    : reminderHours <= 12
+      ? `Dans ${reminderHours}h, votre séance vous attend`
+      : reminderHours <= 26
+        ? "Votre séance est demain"
+        : `Votre séance est dans ${Math.round(reminderHours/24)} jours`
+
+  const urgencyColor = reminderHours <= 3 ? "#C4400C" : reminderHours <= 26 ? "#A06838" : "#4E8A58"
+  const urgencyBg    = reminderHours <= 3 ? "#FEF3E2" : reminderHours <= 26 ? "#F5EBE0" : "#E6F2E8"
+
   return `<!DOCTYPE html>
-<html>
-<head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
-<body style="margin:0;padding:0;background:#F4EFE8;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4EFE8;padding:40px 16px;">
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Rappel — ${discName}</title>
+</head>
+<body style="margin:0;padding:0;background:#F0EBE3;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0EBE3;padding:32px 16px;">
     <tr><td align="center">
-      <table width="100%" style="max-width:520px;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #DDD5C8;box-shadow:0 4px 24px rgba(42,31,20,.08);">
+      <table width="100%" style="max-width:540px;">
+
+        <!-- Header studio -->
         <tr>
-          <td style="background:#2A1F14;padding:28px 32px;text-align:center;">
-            <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">${studio.name}</div>
-            <div style="font-size:11px;color:rgba(255,255,255,.45);margin-top:6px;text-transform:uppercase;letter-spacing:1.5px;">⏰ Rappel de séance</div>
+          <td style="background:linear-gradient(135deg,#2A1F14 0%,#5C3D20 100%);padding:32px 36px 24px;text-align:center;border-radius:16px 16px 0 0;">
+            <div style="width:56px;height:56px;background:rgba(255,255,255,.12);border-radius:14px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:56px;text-align:center;">${discIcon}</div>
+            <div style="font-size:22px;font-weight:800;color:#F5D5A8;letter-spacing:-0.5px;">${studio.name}</div>
+            <div style="margin-top:8px;display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;">
+              <span style="font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">⏰ Rappel de séance</span>
+            </div>
           </td>
         </tr>
+
+        <!-- Bandeau urgence -->
         <tr>
-          <td style="padding:32px 32px 8px;">
-            <p style="font-size:16px;color:#2A1F14;font-weight:700;margin:0 0 12px;">Bonjour ${firstName} 👋</p>
-            <p style="font-size:14px;color:#5C4A38;line-height:1.7;margin:0 0 24px;">
-              ${reminderHours <= 2 ? "C'est bientôt l'heure !" : `Dans ${reminderHours}h, c'est votre séance chez`} <strong>${studio.name}</strong>.
+          <td style="background:${urgencyColor};padding:11px 36px;text-align:center;">
+            <span style="font-size:13px;font-weight:700;color:#fff;letter-spacing:0.3px;">${urgencyLabel}</span>
+          </td>
+        </tr>
+
+        <!-- Corps principal -->
+        <tr>
+          <td style="background:#FFFFFF;padding:32px 36px 24px;">
+
+            <!-- Salutation -->
+            <p style="font-size:17px;color:#2A1F14;font-weight:700;margin:0 0 8px;">
+              Bonjour ${firstName} 👋
             </p>
-            <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F2EA;border-radius:12px;border:1px solid #DDD5C8;margin-bottom:24px;">
-              <tr><td style="padding:20px 24px;">
-                <div style="font-size:20px;margin-bottom:10px;">${discIcon} <strong style="color:#2A1F14;">${discName}</strong></div>
-                <table width="100%" cellpadding="0" cellspacing="0">
-                  <tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;width:40%;">📅 Date</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${sessDate}</td></tr>
-                  ${sessTime ? `<tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;">🕐 Heure</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${sessTime}${sess.duration_min ? ` · ${sess.duration_min} min` : ""}</td></tr>` : ""}
-                  ${sess.teacher ? `<tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;">👤 Coach</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${sess.teacher}</td></tr>` : ""}
-                  ${sess.room ? `<tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;">📍 Salle</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${sess.room}</td></tr>` : ""}
-                </table>
-              </td></tr>
+            <p style="font-size:14px;color:#5C4A38;line-height:1.7;margin:0 0 28px;">
+              Votre prochaine séance chez <strong>${studio.name}</strong> approche. Voici tous les détails :
+            </p>
+
+            <!-- Carte séance -->
+            <table width="100%" cellpadding="0" cellspacing="0"
+              style="background:#FDFAF7;border:1.5px solid #DDD5C8;border-radius:12px;margin-bottom:28px;overflow:hidden;">
+              <tr>
+                <td style="background:#F5EBE0;padding:14px 20px;border-bottom:1px solid #EDE4D8;">
+                  <span style="font-size:18px;vertical-align:middle;">${discIcon}</span>
+                  <span style="font-size:16px;font-weight:800;color:#2A1F14;vertical-align:middle;margin-left:8px;">${discName}</span>
+                </td>
+              </tr>
+              <tr>
+                <td style="padding:16px 20px;">
+                  <table width="100%" cellpadding="0" cellspacing="0">
+                    <tr>
+                      <td style="padding:7px 0;border-bottom:1px solid #F0E8DC;">
+                        <span style="font-size:13px;color:#A06838;font-weight:700;">📅</span>
+                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Date</span>
+                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sessDate}</span>
+                      </td>
+                    </tr>
+                    ${sessTime ? `
+                    <tr>
+                      <td style="padding:7px 0;border-bottom:1px solid #F0E8DC;">
+                        <span style="font-size:13px;color:#A06838;font-weight:700;">🕐</span>
+                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Heure</span>
+                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sessTime}${sess.duration_min ? ` <span style="color:#8C7B6C;font-weight:400;font-size:12px;">· ${sess.duration_min} min</span>` : ""}</span>
+                      </td>
+                    </tr>` : ""}
+                    ${sess.teacher ? `
+                    <tr>
+                      <td style="padding:7px 0;border-bottom:1px solid #F0E8DC;">
+                        <span style="font-size:13px;color:#A06838;font-weight:700;">👤</span>
+                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Coach</span>
+                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sess.teacher}</span>
+                      </td>
+                    </tr>` : ""}
+                    ${sess.room ? `
+                    <tr>
+                      <td style="padding:7px 0;">
+                        <span style="font-size:13px;color:#A06838;font-weight:700;">📍</span>
+                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Salle</span>
+                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sess.room}</span>
+                      </td>
+                    </tr>` : ""}
+                  </table>
+                </td>
+              </tr>
             </table>
-            <p style="font-size:13px;color:#8C7B6C;line-height:1.7;margin:0 0 24px;">À très bientôt sur votre tapis !</p>
+
+            <!-- Message de clôture -->
+            <p style="font-size:14px;color:#5C4A38;line-height:1.7;margin:0;text-align:center;">
+              🌟 À très bientôt sur votre tapis !
+            </p>
+
           </td>
         </tr>
+
+        <!-- Footer -->
         <tr>
-          <td style="padding:16px 32px 24px;border-top:1px solid #EDE4D8;text-align:center;">
-            <p style="font-size:11px;color:#B0A090;margin:0;">
-              ${studio.name} · Géré avec <a href="https://fydelys.fr" style="color:#A06838;text-decoration:none;">Fydelys</a>
+          <td style="background:#F5EBE0;padding:16px 36px;border-radius:0 0 16px 16px;border-top:1px solid #DDD5C8;text-align:center;">
+            <p style="font-size:11px;color:#A08060;margin:0;line-height:1.8;">
+              ${studio.name} · Géré avec
+              <a href="https://fydelys.fr" style="color:#A06838;text-decoration:none;font-weight:600;">Fydelys</a>
+            </p>
+            <p style="font-size:10px;color:#C0A880;margin:4px 0 0;">
+              Vous recevez ce message car vous êtes inscrit(e) à cette séance.
             </p>
           </td>
         </tr>
+
       </table>
     </td></tr>
   </table>

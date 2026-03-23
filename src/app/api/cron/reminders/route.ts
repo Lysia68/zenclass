@@ -8,8 +8,9 @@ export const dynamic = "force-dynamic"
 // Envoie les rappels X heures avant chaque séance (selon reminder_hours_default du studio)
 export async function GET(request: Request) {
   // Sécurité : vérifier le header Vercel Cron
+  const cronSecret = process.env.CRON_SECRET
   const authHeader = request.headers.get("authorization")
-  if (authHeader !== `Bearer ${process.env.CRON_SECRET}`) {
+  if (cronSecret && authHeader !== `Bearer ${cronSecret}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
@@ -117,9 +118,9 @@ export async function GET(request: Request) {
         // Envoyer les emails
         await Promise.allSettled(recipients.map(async (member: any) => {
           const firstName = member.name.split(" ")[0] || member.name
-          const subjectLabel = reminderHours <= 3 ? "dans quelques heures" : reminderHours <= 12 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
+          const subjectLabel = reminderHours < 1 ? "maintenant" : reminderHours === 1 ? "dans 1 heure" : reminderHours < 24 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
           const body = {
-            personalizations: [{ to: [{ email: member.email }], subject: `⏰ Rappel — ${discName} ${subjectLabel} chez ${studio.name}` }],
+            personalizations: [{ to: [{ email: member.email }], subject: `Votre cours "${discName}" est ${subjectLabel} chez ${studio.name}` }],
             from: { email: "noreply@synq9.com", name: studio.name },
             content: [{ type: "text/html", value: buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }) }]
           }
@@ -183,131 +184,115 @@ function getTzOffsetMinutes(tz: string): number {
 }
 
 function buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }: any) {
-  const urgencyLabel = reminderHours <= 3
-    ? "⚡ C'est bientôt l'heure !"
-    : reminderHours <= 12
-      ? `Dans ${reminderHours}h, votre séance vous attend`
-      : reminderHours <= 26
-        ? "Votre séance est demain"
-        : `Votre séance est dans ${Math.round(reminderHours/24)} jours`
-
-  const urgencyColor = reminderHours <= 3 ? "#C4400C" : reminderHours <= 26 ? "#A06838" : "#4E8A58"
-  const urgencyBg    = reminderHours <= 3 ? "#FEF3E2" : reminderHours <= 26 ? "#F5EBE0" : "#E6F2E8"
+  const urgencyColor = reminderHours <= 2 ? "#C4400C" : reminderHours <= 26 ? "#A06838" : "#4E8A58"
+  const subjectLabel = reminderHours < 1
+    ? "C'est l'heure !"
+    : reminderHours === 1
+      ? "dans 1 heure"
+      : reminderHours < 24
+        ? `dans ${reminderHours}h`
+        : reminderHours <= 26
+          ? "demain"
+          : `dans ${Math.round(reminderHours/24)} jours`
 
   return `<!DOCTYPE html>
 <html lang="fr">
 <head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta charset="utf-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1"/>
   <title>Rappel — ${discName}</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family: 'Helvetica Neue', Arial, sans-serif; color: #1a1a1a; background: #F0EBE3; }
+    .wrap { max-width: 560px; margin: 32px auto; background: #fff; border-radius: 0; overflow: hidden; box-shadow: 0 4px 24px rgba(42,31,20,.10); }
+    /* Header */
+    .header { background: linear-gradient(135deg, #2A1F14 0%, #5C3D20 100%); padding: 24px 32px; display: flex; justify-content: space-between; align-items: center; }
+    .studio-name { font-size: 18px; font-weight: 800; color: #F5D5A8; letter-spacing: -0.3px; }
+    .header-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: rgba(255,255,255,.45); margin-top: 3px; }
+    /* Bande urgence */
+    .urgency-bar { background: ${urgencyColor}; padding: 8px 32px; font-size: 12px; font-weight: 700; color: #fff; letter-spacing: 0.3px; }
+    /* Body */
+    .body { padding: 28px 32px 20px; }
+    .greeting { font-size: 16px; font-weight: 700; color: #2A1F14; margin-bottom: 6px; }
+    .intro { font-size: 14px; color: #5C4A38; line-height: 1.7; margin-bottom: 22px; }
+    /* Card séance */
+    .sess-card { background: #FDFAF7; border: 1.5px solid #EDE4D8; border-radius: 10px; overflow: hidden; margin-bottom: 22px; }
+    .sess-header { background: #F5EBE0; padding: 12px 18px; display: flex; align-items: center; gap: 10px; border-bottom: 1px solid #EDE4D8; }
+    .disc-icon { font-size: 20px; line-height: 1; }
+    .disc-name { font-size: 15px; font-weight: 800; color: #2A1F14; }
+    .sess-rows { padding: 10px 18px 4px; }
+    .sess-row { display: flex; align-items: center; padding: 6px 0; border-bottom: 1px solid #F5EEE5; }
+    .sess-row:last-child { border-bottom: none; }
+    .row-label { font-size: 11px; color: #A06838; font-weight: 700; width: 22px; text-align: center; flex-shrink: 0; }
+    .row-key { font-size: 12px; color: #8C7B6C; width: 60px; flex-shrink: 0; }
+    .row-val { font-size: 13px; font-weight: 700; color: #2A1F14; }
+    .sign-off { font-size: 13px; color: #5C4A38; text-align: center; line-height: 1.7; padding: 4px 0 8px; }
+    /* Footer */
+    .footer { background: #FDFAF7; border-top: 2px solid #F0E8DC; padding: 12px 32px; text-align: center; }
+    .footer p { font-size: 10px; color: #B0A090; line-height: 1.8; }
+    .footer a { color: #A06838; text-decoration: none; font-weight: 600; }
+    @media (max-width:600px) { .wrap { margin: 0; border-radius: 0; } .header, .body, .footer { padding-left: 20px; padding-right: 20px; } .urgency-bar { padding-left: 20px; padding-right: 20px; } }
+  </style>
 </head>
-<body style="margin:0;padding:0;background:#F0EBE3;font-family:'Helvetica Neue',Arial,sans-serif;">
-  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F0EBE3;padding:32px 16px;">
-    <tr><td align="center">
-      <table width="100%" style="max-width:540px;">
+<body>
+<div class="wrap">
 
-        <!-- Header studio -->
-        <tr>
-          <td style="background:linear-gradient(135deg,#2A1F14 0%,#5C3D20 100%);padding:32px 36px 24px;text-align:center;border-radius:16px 16px 0 0;">
-            <div style="width:56px;height:56px;background:rgba(255,255,255,.12);border-radius:14px;margin:0 auto 14px;display:flex;align-items:center;justify-content:center;font-size:28px;line-height:56px;text-align:center;">${discIcon}</div>
-            <div style="font-size:22px;font-weight:800;color:#F5D5A8;letter-spacing:-0.5px;">${studio.name}</div>
-            <div style="margin-top:8px;display:inline-block;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.15);border-radius:20px;padding:4px 14px;">
-              <span style="font-size:11px;color:rgba(255,255,255,.7);text-transform:uppercase;letter-spacing:1.5px;font-weight:600;">⏰ Rappel de séance</span>
-            </div>
-          </td>
-        </tr>
+  <!-- Header -->
+  <div class="header">
+    <div>
+      <div class="studio-name">${studio.name}</div>
+      <div class="header-label">Rappel de séance</div>
+    </div>
+    <div style="font-size:28px;line-height:1;">${discIcon}</div>
+  </div>
 
-        <!-- Bandeau urgence -->
-        <tr>
-          <td style="background:${urgencyColor};padding:11px 36px;text-align:center;">
-            <span style="font-size:13px;font-weight:700;color:#fff;letter-spacing:0.3px;">${urgencyLabel}</span>
-          </td>
-        </tr>
+  <!-- Bande urgence -->
+  <div class="urgency-bar">${subjectLabel}</div>
 
-        <!-- Corps principal -->
-        <tr>
-          <td style="background:#FFFFFF;padding:32px 36px 24px;">
+  <!-- Corps -->
+  <div class="body">
+    <p class="greeting">Bonjour ${firstName} 👋</p>
+    <p class="intro">Nous vous rappelons votre prochaine séance chez <strong>${studio.name}</strong>.</p>
 
-            <!-- Salutation -->
-            <p style="font-size:17px;color:#2A1F14;font-weight:700;margin:0 0 8px;">
-              Bonjour ${firstName} 👋
-            </p>
-            <p style="font-size:14px;color:#5C4A38;line-height:1.7;margin:0 0 28px;">
-              Votre prochaine séance chez <strong>${studio.name}</strong> approche. Voici tous les détails :
-            </p>
+    <div class="sess-card">
+      <div class="sess-header">
+        <span class="disc-icon">${discIcon}</span>
+        <span class="disc-name">${discName}</span>
+      </div>
+      <div class="sess-rows">
+        <div class="sess-row">
+          <span class="row-label">📅</span>
+          <span class="row-key">Date</span>
+          <span class="row-val">${sessDate}</span>
+        </div>
+        ${sessTime ? `<div class="sess-row">
+          <span class="row-label">🕐</span>
+          <span class="row-key">Heure</span>
+          <span class="row-val">${sessTime}${sess.duration_min ? ` <span style="color:#8C7B6C;font-weight:400;font-size:11px;">· ${sess.duration_min} min</span>` : ""}</span>
+        </div>` : ""}
+        ${sess.teacher ? `<div class="sess-row">
+          <span class="row-label">👤</span>
+          <span class="row-key">Coach</span>
+          <span class="row-val">${sess.teacher}</span>
+        </div>` : ""}
+        ${sess.room ? `<div class="sess-row">
+          <span class="row-label">📍</span>
+          <span class="row-key">Salle</span>
+          <span class="row-val">${sess.room}</span>
+        </div>` : ""}
+      </div>
+    </div>
 
-            <!-- Carte séance -->
-            <table width="100%" cellpadding="0" cellspacing="0"
-              style="background:#FDFAF7;border:1.5px solid #DDD5C8;border-radius:12px;margin-bottom:28px;overflow:hidden;">
-              <tr>
-                <td style="background:#F5EBE0;padding:14px 20px;border-bottom:1px solid #EDE4D8;">
-                  <span style="font-size:18px;vertical-align:middle;">${discIcon}</span>
-                  <span style="font-size:16px;font-weight:800;color:#2A1F14;vertical-align:middle;margin-left:8px;">${discName}</span>
-                </td>
-              </tr>
-              <tr>
-                <td style="padding:16px 20px;">
-                  <table width="100%" cellpadding="0" cellspacing="0">
-                    <tr>
-                      <td style="padding:7px 0;border-bottom:1px solid #F0E8DC;">
-                        <span style="font-size:13px;color:#A06838;font-weight:700;">📅</span>
-                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Date</span>
-                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sessDate}</span>
-                      </td>
-                    </tr>
-                    ${sessTime ? `
-                    <tr>
-                      <td style="padding:7px 0;border-bottom:1px solid #F0E8DC;">
-                        <span style="font-size:13px;color:#A06838;font-weight:700;">🕐</span>
-                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Heure</span>
-                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sessTime}${sess.duration_min ? ` <span style="color:#8C7B6C;font-weight:400;font-size:12px;">· ${sess.duration_min} min</span>` : ""}</span>
-                      </td>
-                    </tr>` : ""}
-                    ${sess.teacher ? `
-                    <tr>
-                      <td style="padding:7px 0;border-bottom:1px solid #F0E8DC;">
-                        <span style="font-size:13px;color:#A06838;font-weight:700;">👤</span>
-                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Coach</span>
-                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sess.teacher}</span>
-                      </td>
-                    </tr>` : ""}
-                    ${sess.room ? `
-                    <tr>
-                      <td style="padding:7px 0;">
-                        <span style="font-size:13px;color:#A06838;font-weight:700;">📍</span>
-                        <span style="font-size:13px;color:#8C7B6C;margin-left:6px;width:60px;display:inline-block;">Salle</span>
-                        <span style="font-size:14px;color:#2A1F14;font-weight:700;">${sess.room}</span>
-                      </td>
-                    </tr>` : ""}
-                  </table>
-                </td>
-              </tr>
-            </table>
+    <p class="sign-off">🌟 À très bientôt sur votre tapis !</p>
+  </div>
 
-            <!-- Message de clôture -->
-            <p style="font-size:14px;color:#5C4A38;line-height:1.7;margin:0;text-align:center;">
-              🌟 À très bientôt sur votre tapis !
-            </p>
+  <!-- Footer -->
+  <div class="footer">
+    <p>${studio.name} · Géré avec <a href="https://fydelys.fr">Fydelys</a></p>
+    <p style="margin-top:3px;font-size:9px;color:#C4B8A8;">Vous recevez ce message car vous êtes inscrit(e) à cette séance.</p>
+  </div>
 
-          </td>
-        </tr>
-
-        <!-- Footer -->
-        <tr>
-          <td style="background:#F5EBE0;padding:16px 36px;border-radius:0 0 16px 16px;border-top:1px solid #DDD5C8;text-align:center;">
-            <p style="font-size:11px;color:#A08060;margin:0;line-height:1.8;">
-              ${studio.name} · Géré avec
-              <a href="https://fydelys.fr" style="color:#A06838;text-decoration:none;font-weight:600;">Fydelys</a>
-            </p>
-            <p style="font-size:10px;color:#C0A880;margin:4px 0 0;">
-              Vous recevez ce message car vous êtes inscrit(e) à cette séance.
-            </p>
-          </td>
-        </tr>
-
-      </table>
-    </td></tr>
-  </table>
+</div>
 </body>
 </html>`
 }

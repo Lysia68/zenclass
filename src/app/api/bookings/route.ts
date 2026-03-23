@@ -43,10 +43,10 @@ export async function POST(req: NextRequest) {
       db.from("studios").select("id, name, slug, email, reminder_hours_default, sms_enabled").eq("id", studioId).maybeSingle(),
     ])
 
-    console.log("[bookings] member:", member?.email || "null", "| mErr:", mErr?.message || "ok")
-    console.log("[bookings] studio:", studio?.name || "null", "| sErr:", sErr?.message || "ok")
+    console.log("[bookings] member:", member?.email || "NULL", "studio:", studio?.name || "NULL", "mErr:", mErr?.message||"ok", "sErr:", sErr?.message||"ok")
 
     if (process.env.SENDGRID_API_KEY && member?.email && studio) {
+      console.log("[bookings] → envoi emails vers", member.email, "et", studio.email)
       const disc = (sess as any).disciplines
       const discName = disc?.name || "Séance"
       const discIcon = disc?.icon || "🧘"

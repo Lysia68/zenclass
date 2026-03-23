@@ -361,14 +361,19 @@ export default function LoginPage() {
       setLoading(false)
       return
     }
-    // Si fallback, envoyer OTP via client anon
-    if (regResult.fallback) {
-      const {error}=await supabase.auth.signInWithOtp({email:reg.email,options:{
+    // Envoyer le magic link via Supabase (déclenche le template email configuré)
+    const {error}=await supabase.auth.signInWithOtp({
+      email: reg.email,
+      options:{
         emailRedirectTo:`https://fydelys.fr/auth/callback?next=/dashboard&register=1`,
-        shouldCreateUser:true,
-        data:{first_name:reg.firstName,last_name:reg.lastName},
-      }})
-      if(error&&!error.message?.includes("Database error")) setError(error.message)
+        shouldCreateUser: true,
+        data:{ first_name: reg.firstName, last_name: reg.lastName },
+      }
+    })
+    if(error && !error.message?.includes("Database error")) {
+      setError(error.message)
+      setLoading(false)
+      return
     }
     else setRegSent(true)
     setLoading(false)

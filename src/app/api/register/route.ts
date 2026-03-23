@@ -46,25 +46,9 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: "Erreur lors de l'enregistrement" }, { status: 500 })
     }
 
-    // Envoyer OTP via Supabase Admin (envoie l'email automatiquement)
-    const { createClient: createAnonClient } = await import("@supabase/supabase-js")
-    const anonClient = createAnonClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
-    )
-    const { error: otpErr } = await anonClient.auth.signInWithOtp({
-      email,
-      options: {
-        emailRedirectTo: `https://fydelys.fr/auth/callback?next=/dashboard&register=1`,
-        shouldCreateUser: true,
-        data: { first_name: firstName, last_name: lastName },
-      },
-    })
-    if (otpErr) {
-      console.error("[register] signInWithOtp error:", otpErr.message)
-      return NextResponse.json({ error: "Erreur envoi email" }, { status: 500 })
-    }
-    console.log("[register] OTP envoyé à", email)
+    // L'email OTP est envoyé côté client (login/page.tsx) via supabase.auth.signInWithOtp
+    // Le template Supabase est configuré dans Authentication > Email Templates
+    console.log("[register] pending_registrations OK pour", email, "| studio:", slug)
 
     console.log("[register] Inscription enregistrée pour", email, "| studio:", slug)
     return NextResponse.json({ ok: true })

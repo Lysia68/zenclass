@@ -150,7 +150,80 @@ export async function GET(request: NextRequest) {
     return response
   }
 
-  // Nouveau tenant via pending_registrations
+  // Adhérent ou Coach sur sous-domaine — PRIORITÉ sur tout le reste
+  // Si on est sur un sous-domaine, c'est TOUJOURS un adhérent/coach, jamais un nouveau tenant
+  if (isTenant) {
+    console.log("[auth/callback] isTenant flow — slug:", tenantSlug, "email:", userEmail)
+    const { data: studio } = await db
+      .from("studios").select("id").eq("slug", tenantSlug).single()
+
+    if (studio) {
+      const { data: invite } = await db.from("invitations")
+        .select("role").eq("email", userEmail).eq("studio_id", studio.id)
+        .eq("used", false).single()
+
+      const metaRole = data.user.user_metadata?.role
+      const role = invite
+        ? (invite.role as string)
+        : (metaRole === "coach" ? "coach" : "adherent")
+
+      console.log("[auth/callback] Creating profile role:", role, "for", userEmail)
+
+      let firstName = data.user.user_metadata?.first_name || ""
+      let lastName  = data.user.user_metadata?.last_name  || ""
+
+      if (!firstName || !lastName) {
+        const { data: memberRow } = await db.from("members")
+          .select("first_name, last_name")
+          .eq("studio_id", studio.id).eq("email", userEmail).single()
+        if (memberRow) {
+          firstName = memberRow.first_name || firstName
+          lastName  = memberRow.last_name  || lastName
+        }
+      }
+
+      const { error: profileErr } = await db.from("profiles").upsert({
+        id: userId, role, studio_id: studio.id,
+        first_name: firstName, last_name: lastName,
+      }, { onConflict: "id" })
+      if (profileErr) console.error("[auth/callback] profile upsert error:", profileErr)
+      else console.log("[auth/callback] Profile created:", role, "studio_id:", studio.id)
+
+      if (invite) {
+        await db.from("invitations").update({ used: true })
+          .eq("email", userEmail).eq("studio_id", studio.id)
+      }
+
+      if (role === "adherent") {
+        const { data: existingM } = await db.from("members")
+          .select("id").eq("studio_id", studio.id).eq("email", userEmail).single()
+        if (!existingM) {
+          const { error: mErr } = await db.from("members").insert({
+            studio_id: studio.id, auth_user_id: userId,
+            first_name: firstName || "Nouveau",
+            last_name:  lastName  || "Membre",
+            email: userEmail, status: "nouveau", credits: 0, credits_total: 0,
+            profile_complete: false,
+          })
+          if (mErr) console.error("[auth/callback] member insert error:", mErr)
+          else console.log("[auth/callback] Member created for", userEmail)
+        } else {
+          await db.from("members").update({ auth_user_id: userId })
+            .eq("studio_id", studio.id).eq("email", userEmail)
+          console.log("[auth/callback] Member updated auth_user_id for", userEmail)
+        }
+      }
+
+      response.headers.set("Location", `https://${tenantSlug}.fydelys.fr/dashboard`)
+      return response
+    }
+
+    console.error("[auth/callback] Studio not found for slug:", tenantSlug)
+    response.headers.set("Location", `https://${tenantSlug}.fydelys.fr/login?error=studio_not_found`)
+    return response
+  }
+
+  // Nouveau tenant via pending_registrations (fydelys.fr uniquement)
   const { data: pendingCheck } = await db
     .from("pending_registrations").select("email").eq("email", userEmail).single()
   const isRegisterDetected = isRegister || !!pendingCheck
@@ -200,63 +273,7 @@ export async function GET(request: NextRequest) {
     return response
   }
 
-  // Adhérent ou Coach sur sous-domaine — nouveau profil
-  if (isTenant) {
-    const { data: studio } = await db
-      .from("studios").select("id").eq("slug", tenantSlug).single()
 
-    if (studio) {
-      const { data: invite } = await db.from("invitations")
-        .select("role").eq("email", userEmail).eq("studio_id", studio.id)
-        .eq("used", false).single()
-
-      const metaRole = data.user.user_metadata?.role
-      const role = invite
-        ? (invite.role as string)
-        : (metaRole === "coach" ? "coach" : "adherent")
-
-      let firstName = data.user.user_metadata?.first_name || ""
-      let lastName  = data.user.user_metadata?.last_name  || ""
-
-      if (!firstName || !lastName) {
-        const { data: memberRow } = await db.from("members")
-          .select("first_name, last_name")
-          .eq("studio_id", studio.id).eq("email", userEmail).single()
-        if (memberRow) {
-          firstName = memberRow.first_name || firstName
-          lastName  = memberRow.last_name  || lastName
-        }
-      }
-
-      const { error: profileErr } = await db.from("profiles").upsert({
-        id: userId, role, studio_id: studio.id,
-        first_name: firstName, last_name: lastName,
-      }, { onConflict: "id" })
-      if (profileErr) console.error("profile upsert error:", profileErr)
-
-      if (invite) {
-        await db.from("invitations").update({ used: true })
-          .eq("email", userEmail).eq("studio_id", studio.id)
-      }
-
-      if (role === "adherent") {
-        const { data: existingM } = await db.from("members")
-          .select("id").eq("studio_id", studio.id).eq("email", userEmail).single()
-        if (!existingM) {
-          await db.from("members").insert({
-            studio_id: studio.id, auth_user_id: userId,
-            first_name: firstName || "Nouveau",
-            last_name:  lastName  || "Membre",
-            email: userEmail, status: "nouveau", credits: 0, credits_total: 0,
-            profile_complete: false,
-          })
-        } else {
-          await db.from("members").update({ auth_user_id: userId })
-            .eq("studio_id", studio.id).eq("email", userEmail)
-        }
-      }
-    }
-  }
 
   if (tenantSlug) {
     response.headers.set("Location", `https://${tenantSlug}.fydelys.fr/dashboard`)

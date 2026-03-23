@@ -38,16 +38,14 @@ export async function POST(req: NextRequest) {
     if (bookErr || !booking) return NextResponse.json({ error: bookErr?.message }, { status: 500 })
 
     // Charger les infos nécessaires pour les emails
-    const [{ data: member }, { data: studio }] = await Promise.all([
-      db.from("members").select("first_name, last_name, email, phone, sms_opt_in").eq("id", memberId).single(),
-      db.from("studios").select("id, name, slug, email, reminder_hours_default, sms_enabled").eq("id", studioId).single(),
+    const [{ data: member, error: mErr }, { data: studio, error: sErr }] = await Promise.all([
+      db.from("members").select("first_name, last_name, email, phone, sms_opt_in").eq("id", memberId).maybeSingle(),
+      db.from("studios").select("id, name, slug, email, reminder_hours_default, sms_enabled").eq("id", studioId).maybeSingle(),
     ])
 
-    // Envoyer les emails de confirmation si SendGrid configuré
-    console.log("[bookings] SENDGRID:", !!process.env.SENDGRID_API_KEY)
-    console.log("[bookings] member.email:", member?.email || "VIDE")
-    console.log("[bookings] studio.email:", studio?.email || "VIDE")
-    console.log("[bookings] member:", JSON.stringify(member))
+    console.log("[bookings] member:", member?.email || "null", "| mErr:", mErr?.message || "ok")
+    console.log("[bookings] studio:", studio?.name || "null", "| sErr:", sErr?.message || "ok")
+
     if (process.env.SENDGRID_API_KEY && member?.email && studio) {
       const disc = (sess as any).disciplines
       const discName = disc?.name || "Séance"

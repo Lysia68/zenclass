@@ -319,7 +319,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                         ⚠ Séance annulée{isBooked ? " — votre réservation est automatiquement annulée" : ""}
                       </div>
                     )}
-                    <div style={{ display:"flex", alignItems:"flex-start", gap:12 }}>
+                    <div style={{ display:"flex", alignItems:"flex-start", gap:12, flexWrap: isMobile ? "wrap" : "nowrap" }}>
                       <div style={{ fontSize:isMobile?15:16, fontWeight:700, color:isCancelled?C.warn:C.accent, width:38, flexShrink:0, paddingTop:2 }}>{s.time}</div>
                       <div style={{ flex:1, minWidth:0 }}>
                         <div style={{ display:"flex", alignItems:"center", gap:8, marginBottom:2 }}>
@@ -337,7 +337,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                           </div>
                         )}
                       </div>
-                      <div style={{ flexShrink:0 }}>
+                      <div style={{ flexShrink:0, ...(isMobile ? { width:"100%", marginTop:8 } : {}) }}>
                         {isCancelled ? null : isBooked
                           ? (() => {
                               const [y,mo,d] = (s.date||"").split("-").map(Number);
@@ -363,9 +363,10 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                                 const canBook = !paymentActive || isUnlimited || hasCredits;
                                 const noSub   = paymentActive && !isUnlimited && !hasC;
                                 const noCredit = paymentActive && !isUnlimited && hasC && me.credits <= 0;
-                                if (noCredit) return <button disabled style={{ fontSize:12, padding:"5px 12px", borderRadius:8, border:"1px solid #EFC8BC", background:C.warnBg, color:C.warn, cursor:"not-allowed", fontWeight:600 }}>⛔ Abonnement ou crédit requis</button>;
-                                if (noSub)    return <button disabled style={{ fontSize:12, padding:"5px 12px", borderRadius:8, border:"1px solid #DDD5C8", background:C.bgDeep, color:C.textMuted, cursor:"not-allowed", fontWeight:600 }}>🔒 Abonnement ou crédit requis</button>;
-                                return <Button sm onClick={()=>setConfirmSess(s)}>Réserver</Button>;
+                                const btnStyle = isMobile ? { width:"100%", textAlign:"center", display:"block" } : {};
+                                if (noCredit) return <button disabled style={{ fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #EFC8BC", background:C.warnBg, color:C.warn, cursor:"not-allowed", fontWeight:600, ...btnStyle }}>⛔ Abonnement ou crédit requis</button>;
+                                if (noSub)    return <button disabled style={{ fontSize:12, padding:"6px 12px", borderRadius:8, border:"1px solid #DDD5C8", background:C.bgDeep, color:C.textMuted, cursor:"not-allowed", fontWeight:600, ...btnStyle }}>🔒 Abonnement ou crédit requis</button>;
+                                return <Button sm onClick={()=>setConfirmSess(s)} style={isMobile?{width:"100%"}:{}}>Réserver</Button>;
                               })()
                         }
                       </div>

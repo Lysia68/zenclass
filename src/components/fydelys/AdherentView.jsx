@@ -704,20 +704,25 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
 
   // ── Onboarding gate ─────────────────────────────────────────────────────────
   // profile_complete === false → onboarding explicitement requis
-  // profile_complete === null/undefined + nom générique → colonne pas encore migrée, forcer onboarding
-  const needsOnboarding = !loading && me && (
-    me.profile_complete === false ||
-    (me.profile_complete == null && (
-      !me.first_name || me.first_name === "Nouveau" ||
-      !me.last_name  || me.last_name  === "Membre"  ||
-      !me.phone
-    ))
-  )
+  // profile_complete === null + nom générique ("Nouveau"/"Membre") → forcer onboarding
+  // Si le membre a un vrai nom, on ne force pas l'onboarding même si profile_complete est null
+  // Onboarding requis si profile_complete n'est pas explicitement true
+  // Une fois profile_complete = true sauvegardé en base, le F5 ne revient plus sur l'onboarding
+  const needsOnboarding = !loading && me && me.profile_complete !== true
   if (needsOnboarding) {
     return (
       <OnboardingView
         studioName={studioName}
-        onComplete={() => setMe(m => ({ ...m, profile_complete: true }))}
+        onComplete={async () => {
+          // Recharger le membre via API service role (contourne RLS)
+          try {
+            const res = await fetch(`/api/member-profile?studioId=${studioId}`, { credentials: "include" });
+            const result = await res.json();
+            if (result.member) { setMe(result.member); return; }
+          } catch {}
+          // Fallback local
+          setMe(m => ({ ...m, profile_complete: true }));
+        }}
       />
     );
   }

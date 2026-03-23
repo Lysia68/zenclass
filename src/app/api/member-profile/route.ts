@@ -67,3 +67,39 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: err.message }, { status: 500 })
   }
 }
+
+export async function GET(req: NextRequest) {
+  try {
+    const supabase = createServerClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+      { cookies: { getAll: () => req.cookies.getAll(), setAll: () => {} } }
+    )
+    const { data: { user } } = await supabase.auth.getUser()
+    if (!user) return NextResponse.json({ error: "Non authentifié" }, { status: 401 })
+
+    const { searchParams } = new URL(req.url)
+    const studioId = searchParams.get("studioId")
+    if (!studioId) return NextResponse.json({ error: "studioId manquant" }, { status: 400 })
+
+    const db = createServiceSupabase()
+    const SELECT = "id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete"
+
+    // Par auth_user_id en priorité
+    let { data: member } = await db.from("members").select(SELECT)
+      .eq("studio_id", studioId).eq("auth_user_id", user.id).maybeSingle()
+
+    // Fallback par email
+    if (!member && user.email) {
+      const { data: byEmail } = await db.from("members").select(SELECT)
+        .eq("studio_id", studioId).eq("email", user.email).maybeSingle()
+      member = byEmail
+    }
+
+    if (!member) return NextResponse.json({ error: "Membre introuvable" }, { status: 404 })
+    return NextResponse.json({ ok: true, member })
+
+  } catch (err: any) {
+    return NextResponse.json({ error: err.message }, { status: 500 })
+  }
+}

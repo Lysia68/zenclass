@@ -32,7 +32,14 @@ export async function POST(request: NextRequest) {
 
   const user = data.user
   let profileComplete = true
-  let slug = tenantSlug
+  let slug = tenantSlug || registerSlug || null
+
+  // Si inscription studio, récupérer le slug depuis pending_registrations
+  if (isRegister && !slug && user.email) {
+    const { data: pending } = await db.from("pending_registrations").select("data").eq("email", user.email).maybeSingle()
+    if (pending?.data) slug = (pending.data as any).slug || null
+    console.log("[verify-token] register slug from pending:", slug)
+  }
 
   if (tenantSlug) {
     const { data: studio } = await db.from("studios").select("id,slug").eq("slug", tenantSlug).single()

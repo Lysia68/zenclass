@@ -35,23 +35,29 @@ export async function GET(request: NextRequest) {
 
   // ── Cas 2b : code PKCE depuis fydelys.fr → rediriger vers /auth/confirm ────
   if (code && isApp) {
-    const redirectTo = searchParams.get("redirect_to") || ""
-    let finalIsRegister = isRegister
-    let finalSlug = registerSlug || tenantSlug
-    if (redirectTo) {
-      try {
-        const rParams = new URL(redirectTo).searchParams
-        if (rParams.get("register") === "1") finalIsRegister = true
-        if (rParams.get("slug")) finalSlug = rParams.get("slug")
-      } catch {}
+    try {
+      const redirectTo = searchParams.get("redirect_to") || ""
+      let finalIsRegister = isRegister
+      let finalSlug: string | null = registerSlug || tenantSlug || null
+      if (redirectTo) {
+        try {
+          const rParams = new URL(redirectTo).searchParams
+          if (rParams.get("register") === "1") finalIsRegister = true
+          const rSlug = rParams.get("slug")
+          if (rSlug) finalSlug = rSlug
+        } catch {}
+      }
+      const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
+      confirmUrl.searchParams.set("code", code)
+      if (finalSlug)       confirmUrl.searchParams.set("tenant", finalSlug)
+      if (finalIsRegister) confirmUrl.searchParams.set("register", "1")
+      if (finalSlug)       confirmUrl.searchParams.set("slug", finalSlug)
+      console.log("[CB] PKCE → confirm register:", finalIsRegister, "slug:", finalSlug)
+      return NextResponse.redirect(confirmUrl)
+    } catch (e: any) {
+      console.error("[CB] PKCE error:", e.message)
+      return NextResponse.redirect(new URL("/auth/confirm?code=" + code, "https://fydelys.fr"))
     }
-    const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
-    confirmUrl.searchParams.set("code", code)
-    if (finalSlug)       confirmUrl.searchParams.set("tenant", finalSlug)
-    if (finalIsRegister) confirmUrl.searchParams.set("register", "1")
-    if (finalSlug)       confirmUrl.searchParams.set("slug", finalSlug)
-    console.log("[CB] PKCE code → confirm register:", finalIsRegister, "slug:", finalSlug)
-    return NextResponse.redirect(confirmUrl)
   }
 
   // ── Cas 2 : token_hash depuis fydelys.fr avec tenant= ─────────────────────

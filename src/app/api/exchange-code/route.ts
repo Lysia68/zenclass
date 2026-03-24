@@ -32,6 +32,15 @@ export async function POST(request: NextRequest) {
   let profileComplete = true
   let slug = tenantSlug
 
+  // Si pas de slug, chercher dans pending_registrations (inscription studio)
+  if (!slug && user.email) {
+    const { data: pending } = await db.from("pending_registrations").select("data").eq("email", user.email).maybeSingle()
+    if (pending?.data) {
+      slug = (pending.data as any).slug || null
+      console.log("[exchange-code] slug from pending_registrations:", slug)
+    }
+  }
+
   if (tenantSlug) {
     const { data: studio } = await db.from("studios").select("id,slug").eq("slug", tenantSlug).single()
     if (studio) {

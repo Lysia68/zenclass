@@ -9,6 +9,9 @@ export async function GET(request: NextRequest) {
   const code         = searchParams.get("code")
   const next         = searchParams.get("next") ?? "/dashboard"
   const isRegister   = searchParams.get("register") === "1"
+  const registerSlug = searchParams.get("slug") || null
+  console.log("[auth/callback] URL:", request.url)
+  console.log("[auth/callback] isRegister:", isRegister, "| registerSlug:", registerSlug, "| tenantSlug:", searchParams.get("tenant"))
   const hostname     = request.headers.get("host") || ""
 
   const isApp        = hostname === "fydelys.fr" || hostname.includes("localhost")
@@ -24,6 +27,8 @@ export async function GET(request: NextRequest) {
   if (!code && !tokenHash) {
     const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
     if (tenantSlug) confirmUrl.searchParams.set("tenant", tenantSlug)
+    if (isRegister)  confirmUrl.searchParams.set("register", "1")
+    if (registerSlug) confirmUrl.searchParams.set("slug", registerSlug)
     return NextResponse.redirect(confirmUrl)
   }
 
@@ -31,11 +36,13 @@ export async function GET(request: NextRequest) {
   // Le cookie ne peut pas être propagé cross-domain depuis une réponse serveur.
   // On renvoie vers /auth/confirm qui gère la session côté client (setSession)
   // puis appelle /api/create-profile pour créer le profil.
-  if (tokenHash && isApp && tenantSlug) {
+  if (tokenHash && isApp) {
     const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
     confirmUrl.searchParams.set("token_hash", tokenHash)
     confirmUrl.searchParams.set("type", type || "magiclink")
-    confirmUrl.searchParams.set("tenant", tenantSlug)
+    if (tenantSlug)   confirmUrl.searchParams.set("tenant", tenantSlug)
+    if (isRegister)   confirmUrl.searchParams.set("register", "1")
+    if (registerSlug) confirmUrl.searchParams.set("slug", registerSlug)
     return NextResponse.redirect(confirmUrl)
   }
 
@@ -89,7 +96,7 @@ export async function GET(request: NextRequest) {
   const { data: existing } = await db
     .from("profiles").select("id,role,studio_id").eq("id", userId).single()
 
-  if (existing) {
+  if (existing && !isRegister) {
     if (existing.role === "superadmin") {
       response.headers.set("Location", "https://fydelys.fr/dashboard")
       return response
@@ -225,7 +232,7 @@ export async function GET(request: NextRequest) {
 
   // Nouveau tenant via pending_registrations (fydelys.fr uniquement)
   const { data: pendingCheck } = await db
-    .from("pending_registrations").select("email").eq("email", userEmail).single()
+    .from("pending_registrations").select("email").eq("email", userEmail).maybeSingle()
   const isRegisterDetected = isRegister || !!pendingCheck
 
   if (isRegisterDetected) {
@@ -233,6 +240,7 @@ export async function GET(request: NextRequest) {
       .from("pending_registrations").select("data").eq("email", userEmail).single()
     if (pending?.data) {
       const r = pending.data as any
+      console.log("[auth/callback] pending data:", JSON.stringify({ firstName: r.firstName, lastName: r.lastName, slug: r.slug }))
       const { data: exists } = await db.from("studios").select("slug").eq("slug", r.slug).single()
       if (exists) {
         response.headers.set("Location", "https://fydelys.fr/?error=slug_taken")
@@ -252,11 +260,13 @@ export async function GET(request: NextRequest) {
       console.log("[auth/callback] Studio insert:", studioErr ? studioErr.message : studio?.id)
       if (studioErr) console.error("Studio insert error:", JSON.stringify(studioErr))
       if (studio) {
-        await db.from("profiles").insert({
+        const { error: profileErr } = await db.from("profiles").upsert({
           id: userId, role: "admin", studio_id: studio.id,
           first_name: r.firstName || "", last_name: r.lastName || "",
           is_coach: r.isCoach || false,
-        })
+        }, { onConflict: "id" })
+        if (profileErr) console.error("[auth/callback] Profile upsert error:", profileErr.message)
+        else console.log("[auth/callback] Profile admin créé pour", userId)
         const { error: seedErr } = await db.rpc("seed_new_tenant", {
           p_studio_id: studio.id,
           p_type:      r.type || "Multi",

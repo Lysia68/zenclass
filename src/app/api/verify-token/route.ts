@@ -34,11 +34,13 @@ export async function POST(request: NextRequest) {
   let profileComplete = true
   let slug = tenantSlug || registerSlug || null
 
-  // Si inscription studio, récupérer le slug depuis pending_registrations
-  if (isRegister && !slug && user.email) {
+  // Chercher dans pending_registrations si pas de slug (inscription studio)
+  if (!slug && user.email) {
     const { data: pending } = await db.from("pending_registrations").select("data").eq("email", user.email).maybeSingle()
-    if (pending?.data) slug = (pending.data as any).slug || null
-    console.log("[verify-token] register slug from pending:", slug)
+    if (pending?.data) {
+      slug = (pending.data as any).slug || null
+      console.log("[verify-token] slug from pending_registrations:", slug)
+    }
   }
 
   if (tenantSlug) {

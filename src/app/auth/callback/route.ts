@@ -103,7 +103,16 @@ export async function GET(request: NextRequest) {
 
   const db = createServiceSupabase()
   const userId    = data.user.id
-  const userEmail = data.user.email || ""
+  let userEmail = data.user.email || ""
+
+  // Fallback : si l'email n'est pas dans la session, le récupérer depuis auth.users
+  if (!userEmail) {
+    const { data: authUser } = await db.auth.admin.getUserById(userId)
+    userEmail = authUser?.user?.email || ""
+    console.log("[auth/callback] Email fallback from admin API:", userEmail)
+  }
+
+  console.log("[auth/callback] userId:", userId, "userEmail:", userEmail, "isRegister:", isRegister, "registerSlug:", registerSlug)
 
   // Profil existant → rediriger selon rôle
   const { data: existing } = await db
@@ -270,8 +279,10 @@ export async function GET(request: NextRequest) {
   }
 
   // Nouveau tenant via pending_registrations (fydelys.fr uniquement)
-  const { data: pendingCheck } = await db
+  console.log("[auth/callback] Checking pending_registrations for email:", JSON.stringify(userEmail), "length:", userEmail.length)
+  const { data: pendingCheck, error: pendingError } = await db
     .from("pending_registrations").select("email").eq("email", userEmail).maybeSingle()
+  console.log("[auth/callback] pendingCheck:", JSON.stringify(pendingCheck), "error:", pendingError?.message || "none")
   const isRegisterDetected = isRegister || !!pendingCheck
 
   if (isRegisterDetected) {

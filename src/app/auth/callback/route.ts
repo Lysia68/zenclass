@@ -10,8 +10,9 @@ export async function GET(request: NextRequest) {
   const next         = searchParams.get("next") ?? "/dashboard"
   const isRegister   = searchParams.get("register") === "1"
   const registerSlug = searchParams.get("slug") || null
-  console.log("[auth/callback] URL:", request.url)
-  console.log("[auth/callback] isRegister:", isRegister, "| registerSlug:", registerSlug, "| tenantSlug:", searchParams.get("tenant"))
+  const urlShort = request.url.replace(/token_hash=[^&]+/, "token_hash=***")
+  console.log("[CB]", urlShort.slice(0, 200))
+  console.log("[CB] reg:", isRegister, "slug:", registerSlug, "tenant:", tenantSlug, "hash:", !!tokenHash, "code:", !!code)
   const hostname     = request.headers.get("host") || ""
 
   const isApp        = hostname === "fydelys.fr" || hostname.includes("localhost")
@@ -105,6 +106,15 @@ export async function GET(request: NextRequest) {
   // Profil existant → rediriger selon rôle
   const { data: existing } = await db
     .from("profiles").select("id,role,studio_id").eq("id", userId).single()
+
+  // Si profil admin existant avec studio → rediriger directement (même si isRegister)
+  if (existing && existing.role === "admin" && existing.studio_id) {
+    const { data: studio } = await db.from("studios").select("slug").eq("id", existing.studio_id).single()
+    if (studio?.slug) {
+      response.headers.set("Location", `https://${studio.slug}.fydelys.fr/dashboard`)
+      return response
+    }
+  }
 
   if (existing && !isRegister) {
     if (existing.role === "superadmin") {

@@ -122,49 +122,40 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       const d30 = new Date(); d30.setDate(d30.getDate() + 30);
       const toDate = d30.toISOString().slice(0,10);
 
-      // Charger sessions + bookings en parallèle
-      Promise.all([
-        sb.from("sessions")
-          .select("id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots, status, disciplines(name,color,icon)")
-          .eq("studio_id", studioId)
-          .in("status", ["scheduled", "cancelled"])
-          .gte("session_date", today)
-          .lte("session_date", toDate)
-          .order("session_date").order("session_time")
-          .limit(60),
-        sb.from("bookings")
-          .select("session_id, status")
-          .eq("member_id", me?.id || "")
-          .in("status", ["confirmed","waitlist"]),
-      ]).then(([{ data }, { data: myBk }]) => {
-        // Mettre à jour mes réservations
-        if (myBk) setMyBookings(myBk.map(b => b.session_id));
+      // Charger sessions d'abord
+      sb.from("sessions")
+        .select("id, discipline_id, teacher, room, level, session_date, session_time, duration_min, spots, status, disciplines(name,color,icon)")
+        .eq("studio_id", studioId)
+        .in("status", ["scheduled", "cancelled"])
+        .gte("session_date", today)
+        .lte("session_date", toDate)
+        .order("session_date").order("session_time")
+        .limit(60)
+        .then(({ data }) => {
+        if (!data?.length) { setSessions([]); setLoadingSess(false); return; }
 
-        if (data?.length) {
-          // Compter les bookings par session (une seule requête)
-          sb.from("bookings")
-            .select("session_id")
-            .in("session_id", data.map(s=>s.id))
-            .in("status", ["confirmed","waitlist"])
-            .then(({ data: bk }) => {
-              const counts = {};
-              (bk||[]).forEach(b => { counts[b.session_id] = (counts[b.session_id]||0)+1; });
-              setSessions(data.map(s => ({
-                ...s,
-                discName: s.disciplines?.name || "",
-                discColor: s.disciplines?.color || C.accent,
-                discIcon: s.disciplines?.icon || "",
-                booked: counts[s.id] || 0,
-                date: s.session_date,
-                time: s.session_time?.slice(0,5) || "",
-              })));
-            });
-        } else {
-          setSessions([]);
-        }
+        // Compter les bookings par session + mes réservations en parallèle
+        const sessionIds = data.map(s=>s.id);
+        Promise.all([
+          sb.from("bookings").select("session_id").in("session_id", sessionIds).in("status", ["confirmed","waitlist"]),
+          me?.id ? sb.from("bookings").select("session_id, status").eq("member_id", me.id).in("status", ["confirmed","waitlist"]) : Promise.resolve({ data: [] }),
+        ]).then(([{ data: bk }, { data: myBk }]) => {
+          if (myBk) setMyBookings(myBk.map(b => b.session_id));
+          const counts = {};
+          (bk||[]).forEach(b => { counts[b.session_id] = (counts[b.session_id]||0)+1; });
+          setSessions(data.map(s => ({
+            ...s,
+            discName: s.disciplines?.name || "",
+            discColor: s.disciplines?.color || C.accent,
+            discIcon: s.disciplines?.icon || "",
+            booked: counts[s.id] || 0,
+            date: s.session_date,
+            time: s.session_time?.slice(0,5) || "",
+          })));
           setLoadingSess(false);
         });
-    }, [studioId]);
+      });
+    }, [studioId, me?.id]);
 
     const grouped = sessions
       .filter(s => !filterDisc || s.discipline_id === filterDisc)

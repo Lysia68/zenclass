@@ -36,6 +36,44 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
   const [accountSaving, setAccountSaving] = React.useState(false);
   const [accountForm, setAccountForm] = React.useState(null);
 
+  // Init form quand me est chargé
+  useEffect(() => {
+    if (me && !accountForm) {
+      setAccountForm({
+        first_name:  me.first_name  || "",
+        last_name:   me.last_name   || "",
+        phone:       me.phone       || "",
+        birth_date:  me.birth_date  || "",
+        address:     me.address     || "",
+        postal_code: me.postal_code || "",
+        city:        me.city        || "",
+      });
+    }
+  }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const accountSetField = k => e => setAccountForm(f => ({ ...f, [k]: e.target.value }));
+
+  const accountSave = async () => {
+    setAccountSaving(true);
+    try {
+      const res = await fetch("/api/member-profile", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ studioId, ...accountForm }),
+      });
+      const result = await res.json();
+      if (res.ok) {
+        setMe(m => ({ ...m, ...accountForm }));
+        setAccountEditing(false);
+        showToast("Coordonnées mises à jour ✓");
+      } else {
+        showToast(result.error || "Erreur lors de la sauvegarde", false);
+      }
+    } catch { showToast("Erreur réseau", false); }
+    setAccountSaving(false);
+  };
+
 
   useEffect(() => {
     if (!studioId) return;
@@ -447,44 +485,9 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
     const editing = accountEditing;
     const setEditing = setAccountEditing;
     const saving = accountSaving;
-    const setSaving = setAccountSaving;
     const form = accountForm;
-    const setForm = setAccountForm;
-
-    React.useEffect(() => {
-      if (me && !accountForm) setForm({
-        first_name:  me.first_name  || "",
-        last_name:   me.last_name   || "",
-        phone:       me.phone       || "",
-        birth_date:  me.birth_date  || "",
-        address:     me.address     || "",
-        postal_code: me.postal_code || "",
-        city:        me.city        || "",
-      });
-    }, [me?.id]);
-
-    const set = k => e => setForm(f => ({ ...f, [k]: e.target.value }));
-
-    const save = async () => {
-      setSaving(true);
-      try {
-        const res = await fetch("/api/member-profile", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          credentials: "include",
-          body: JSON.stringify({ studioId, ...form }),
-        });
-        const result = await res.json();
-        if (res.ok) {
-          setMe(m => ({ ...m, ...form }));
-          setEditing(false);
-          showToast("Coordonnées mises à jour ✓");
-        } else {
-          showToast(result.error || "Erreur lors de la sauvegarde", false);
-        }
-      } catch { showToast("Erreur réseau", false); }
-      setSaving(false);
-    };
+    const set = accountSetField;
+    const save = accountSave;
 
     if (loading) return <div style={{ padding:p, color:C.textMuted, fontSize:14 }}>Chargement…</div>;
     if (!me) return (
@@ -537,7 +540,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
             {!editing
               ? <Button sm variant="secondary" onClick={()=>setEditing(true)}>✏ Modifier</Button>
               : <div style={{ display:"flex", gap:8 }}>
-                  <Button sm variant="secondary" onClick={()=>{ setEditing(false); setForm({ first_name:me.first_name||"" ,last_name:me.last_name||"", phone:me.phone||"", birth_date:me.birth_date||"", address:me.address||"", postal_code:me.postal_code||"", city:me.city||"" }); }}>Annuler</Button>
+                  <Button sm variant="secondary" onClick={()=>{ setEditing(false); setAccountForm({ first_name:me.first_name||"", last_name:me.last_name||"", phone:me.phone||"", birth_date:me.birth_date||"", address:me.address||"", postal_code:me.postal_code||"", city:me.city||"" }); }}>Annuler</Button>
                   <Button sm onClick={save} disabled={saving}>{saving ? "…" : "Enregistrer"}</Button>
                 </div>
             }

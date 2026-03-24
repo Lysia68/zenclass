@@ -208,6 +208,7 @@ export default function LoginPage() {
     type:"Yoga", firstName:"", lastName:"", email:"", phone:"",
     isCoach:false,
   })
+  const [selectedDiscs, setSelectedDiscs] = useState<string[]>(DEFAULTS["Yoga"])
   const [regErrors, setRegErrors] = useState<Record<string,string>>({})
   const [regStep, setRegStep]     = useState(1)
   const [regSent, setRegSent]     = useState(false)
@@ -252,6 +253,7 @@ export default function LoginPage() {
     if(k==="studioName") { n.slug=toSlug(v); checkSlug(n.slug) }
     if(k==="slug") { n.slug=v.toLowerCase().replace(/[^a-z0-9]/g,""); checkSlug(n.slug) }
     if(k==="email") checkEmail(v)
+    if(k==="type") setSelectedDiscs(DEFAULTS[v] || DEFAULTS.Multi)
     setReg(n); setRegErrors(e=>({...e,[k]:undefined as any}))
   }
 
@@ -353,6 +355,10 @@ export default function LoginPage() {
         city: reg.city, zip: reg.zip||null, address: reg.address||null,
         type: reg.type, firstName: reg.firstName, lastName: reg.lastName,
         phone: reg.phone, isCoach: reg.isCoach,
+        disciplines: selectedDiscs.map(name => {
+          const d = DISC_OPTS.find(o => o.name === name)
+          return { name, icon: d?.icon || "🧘" }
+        }),
       }),
     })
     const regResult = await regRes.json()
@@ -386,6 +392,7 @@ export default function LoginPage() {
     if(!reg.address.trim())    e.address="Obligatoire"
     if(!reg.slug.trim())       e.slug="Obligatoire"
     else if(!validSlug(reg.slug)) e.slug="Lettres minuscules et chiffres uniquement, sans tirets"
+    if(selectedDiscs.length===0) e.disciplines="Sélectionnez au moins une discipline"
     return e
   }
   const step2valid = () => {
@@ -565,6 +572,36 @@ export default function LoginPage() {
                     {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi"}
                   ]}/>
 
+                  <div>
+                    <label style={{fontSize:11,fontWeight:700,color:"#8C7B6C",textTransform:"uppercase" as const,letterSpacing:.8,display:"block",marginBottom:8}}>
+                      Disciplines proposées <span style={{color:"#B0A090",fontWeight:400,textTransform:"none"}}>(modifiable après)</span>
+                    </label>
+                    <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
+                      {DISC_OPTS.map(d => {
+                        const sel = selectedDiscs.includes(d.name)
+                        return (
+                          <button key={d.name} type="button"
+                            onClick={() => setSelectedDiscs(prev =>
+                              sel ? prev.filter(n => n !== d.name) : [...prev, d.name]
+                            )}
+                            style={{
+                              padding:"6px 12px",borderRadius:20,fontSize:12,cursor:"pointer",
+                              border:`1.5px solid ${sel?"rgba(160,104,56,.4)":"#DDD5C8"}`,
+                              background:sel?"#F5EBE0":"#FDFAF7",
+                              color:sel?"#8C5E38":"#8C7B6C",
+                              fontWeight:sel?700:400,
+                              transition:"all .15s",
+                            }}>
+                            {d.icon} {d.name}
+                          </button>
+                        )
+                      })}
+                    </div>
+                    {selectedDiscs.length === 0 && regErrors.disciplines && (
+                      <div style={{fontSize:11,color:"#F87171",marginTop:4}}>{regErrors.disciplines}</div>
+                    )}
+                  </div>
+
                   <button
                     disabled={slugStatus==="taken"||slugStatus==="checking"}
                     onClick={()=>{const e=step1valid();if(Object.keys(e).length){setRegErrors(e);return};setRegStep(2)}}
@@ -642,7 +679,7 @@ export default function LoginPage() {
                       ["Ville",       reg.city],
                       ["Code postal",  reg.zip],
                       ["Type",        reg.type],
-
+                      ["Disciplines", selectedDiscs.map(n => { const d = DISC_OPTS.find(o=>o.name===n); return d ? `${d.icon} ${d.name}` : n }).join(", ")],
                       ["Plan",        "À choisir après l'activation (9 · 29 · 69 €/mois)"],
                       ["Gérant",      `${reg.firstName} ${reg.lastName}`],
                       ["Email",       reg.email],
@@ -656,7 +693,7 @@ export default function LoginPage() {
                     ))}
                   </div>
                   <div style={{padding:"10px 14px",background:"#FBF6EE",borderRadius:9,border:"1px solid rgba(160,104,56,.2)",fontSize:12,color:C.sub,lineHeight:1.6}}>
-                    🌱 Vos disciplines, créneaux et abonnements de base seront configurés automatiquement.
+                    🌱 Vos {selectedDiscs.length} discipline{selectedDiscs.length > 1 ? "s" : ""} et abonnements de base seront créés à l'activation.
                   </div>
                   {error&&<div style={{background:"#FDF0EC",border:"1px solid #EFC8BC",borderRadius:9,padding:"9px 13px",fontSize:13,color:"#A85030"}}>⚠ {error}</div>}
                   <div style={{display:"flex",gap:10}}>

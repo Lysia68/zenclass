@@ -4,6 +4,22 @@ import { NextResponse, type NextRequest } from "next/server"
 
 export const dynamic = "force-dynamic"
 
+const DISC_DEFAULTS: Record<string, { name: string; icon: string }[]> = {
+  Yoga:       [{ name: "Yoga Vinyasa", icon: "🧘" }, { name: "Yin Yoga", icon: "🌙" }, { name: "Méditation", icon: "☯" }],
+  Pilates:    [{ name: "Pilates Mat", icon: "⚡" }, { name: "Pilates Réformateur", icon: "🏋" }, { name: "Stretching", icon: "🤸" }],
+  Danse:      [{ name: "Danse Contemporaine", icon: "💃" }, { name: "Hip-Hop", icon: "🎵" }, { name: "Classique", icon: "🩰" }],
+  Fitness:    [{ name: "HIIT", icon: "🔥" }, { name: "Cardio", icon: "❤️" }, { name: "Musculation", icon: "💪" }],
+  Méditation: [{ name: "Méditation", icon: "☯" }, { name: "Yin Yoga", icon: "🌙" }, { name: "Yoga Vinyasa", icon: "🧘" }],
+  Multi:      [{ name: "Yoga Vinyasa", icon: "🧘" }, { name: "Pilates Mat", icon: "⚡" }, { name: "Méditation", icon: "☯" }],
+}
+
+const DEFAULT_SUBSCRIPTIONS = [
+  { name: "Séance à l'unité",  price: 25,  period: "séance",    description: "Idéal pour découvrir",                popular: false, color: "#6A8FAE" },
+  { name: "Carnet 10 séances", price: 120, period: "carnet",    description: "Valable 6 mois, toutes disciplines",  popular: false, color: "#6B9E7A" },
+  { name: "Mensuel illimité",  price: 89,  period: "mois",      description: "Accès illimité à toutes les séances", popular: true,  color: "#C4956A" },
+  { name: "Trimestriel",       price: 240, period: "trimestre", description: "3 mois d'accès illimité, -10%",       popular: false, color: "#AE7A7A" },
+]
+
 export async function GET(request: NextRequest) {
   try {
   const { searchParams } = new URL(request.url)
@@ -316,12 +332,26 @@ export async function GET(request: NextRequest) {
         }, { onConflict: "id" })
         if (profileErr) console.error("[auth/callback] Profile upsert error:", profileErr.message)
         else console.log("[auth/callback] Profile admin créé pour", userId)
-        const { error: seedErr } = await db.rpc("seed_new_tenant", {
-          p_studio_id: studio.id,
-          p_type:      r.type || "Multi",
-        })
-        if (seedErr) console.error("[auth/callback] Seed error:", seedErr.message)
-        else console.log("[auth/callback] Seed OK for", studio.slug)
+
+        // Créer les disciplines choisies lors de l'onboarding (ou défaut par type)
+        const discs = (r.disciplines && r.disciplines.length > 0)
+          ? r.disciplines
+          : (DISC_DEFAULTS[r.type] || DISC_DEFAULTS.Multi)
+        for (const d of discs) {
+          const { error: discErr } = await db.from("disciplines").insert({
+            studio_id: studio.id, name: d.name, icon: d.icon || "🧘",
+          })
+          if (discErr) console.error("[auth/callback] Discipline insert error:", discErr.message)
+        }
+        console.log("[auth/callback] Disciplines créées:", discs.length, "pour", studio.slug)
+
+        // Abonnements standard
+        const { error: subErr } = await db.from("subscriptions").insert(
+          DEFAULT_SUBSCRIPTIONS.map(s => ({ studio_id: studio.id, ...s }))
+        )
+        if (subErr) console.error("[auth/callback] Subscriptions insert error:", subErr.message)
+        else console.log("[auth/callback] Subscriptions créées pour", studio.slug)
+
         await db.from("pending_registrations").delete().eq("email", userEmail)
         response.headers.set("Location", `https://${studio.slug}.fydelys.fr/dashboard`)
         return response

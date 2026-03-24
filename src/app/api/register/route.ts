@@ -23,7 +23,7 @@ export async function POST(req: NextRequest) {
       rateLimitMap.set(ip, { count: 1, resetAt: now + 3600_000 })
     }
 
-    const { email, studioName, slug, city, zip, address, type, firstName, lastName, phone, isCoach } = await req.json()
+    const { email, studioName, slug, city, zip, address, type, firstName, lastName, phone, isCoach, disciplines } = await req.json()
     if (!email || !slug || !studioName) {
       return NextResponse.json({ error: "Champs obligatoires manquants" }, { status: 400 })
     }
@@ -37,7 +37,7 @@ export async function POST(req: NextRequest) {
     // Enregistrer l'inscription en attente via service role (contourne RLS)
     const { error: upsertErr } = await db.from("pending_registrations").upsert({
       email,
-      data: { studioName, slug, city, zip: zip || null, address: address || null, type, firstName, lastName, phone, isCoach },
+      data: { studioName, slug, city, zip: zip || null, address: address || null, type, firstName, lastName, phone, isCoach, disciplines: disciplines || [] },
       expires_at: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
     }, { onConflict: "email" })
 

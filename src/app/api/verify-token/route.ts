@@ -4,6 +4,22 @@ import { createServiceSupabase } from "@/lib/supabase-server"
 
 export const dynamic = "force-dynamic"
 
+const DISC_DEFAULTS: Record<string, { name: string; icon: string }[]> = {
+  Yoga:       [{ name: "Yoga Vinyasa", icon: "🧘" }, { name: "Yin Yoga", icon: "🌙" }, { name: "Méditation", icon: "☯" }],
+  Pilates:    [{ name: "Pilates Mat", icon: "⚡" }, { name: "Pilates Réformateur", icon: "🏋" }, { name: "Stretching", icon: "🤸" }],
+  Danse:      [{ name: "Danse Contemporaine", icon: "💃" }, { name: "Hip-Hop", icon: "🎵" }, { name: "Classique", icon: "🩰" }],
+  Fitness:    [{ name: "HIIT", icon: "🔥" }, { name: "Cardio", icon: "❤️" }, { name: "Musculation", icon: "💪" }],
+  Méditation: [{ name: "Méditation", icon: "☯" }, { name: "Yin Yoga", icon: "🌙" }, { name: "Yoga Vinyasa", icon: "🧘" }],
+  Multi:      [{ name: "Yoga Vinyasa", icon: "🧘" }, { name: "Pilates Mat", icon: "⚡" }, { name: "Méditation", icon: "☯" }],
+}
+
+const DEFAULT_SUBSCRIPTIONS = [
+  { name: "Séance à l'unité",  price: 25,  period: "séance",    description: "Idéal pour découvrir",                popular: false, color: "#6A8FAE" },
+  { name: "Carnet 10 séances", price: 120, period: "carnet",    description: "Valable 6 mois, toutes disciplines",  popular: false, color: "#6B9E7A" },
+  { name: "Mensuel illimité",  price: 89,  period: "mois",      description: "Accès illimité à toutes les séances", popular: true,  color: "#C4956A" },
+  { name: "Trimestriel",       price: 240, period: "trimestre", description: "3 mois d'accès illimité, -10%",       popular: false, color: "#AE7A7A" },
+]
+
 export async function POST(request: NextRequest) {
   const { tokenHash, type, tenantSlug, accessToken, refreshToken, isRegister, registerSlug } = await request.json()
   if (!tokenHash && !accessToken) return NextResponse.json({ error: "token manquant" }, { status: 400 })
@@ -71,12 +87,26 @@ export async function POST(request: NextRequest) {
               first_name: r.firstName || "", last_name: r.lastName || "",
               is_coach: r.isCoach || false,
             }, { onConflict: "id" })
-            // Seed disciplines
-            await db.rpc("seed_new_tenant", { p_studio_id: studio.id, p_type: r.type || "Multi" })
-              .then(({ error: seedErr }) => {
-                if (seedErr) console.error("[verify-token] Seed error:", seedErr.message)
-                else console.log("[verify-token] Seed OK")
+
+            // Créer les disciplines choisies lors de l'onboarding (ou défaut par type)
+            const discs = (r.disciplines && r.disciplines.length > 0)
+              ? r.disciplines
+              : (DISC_DEFAULTS[r.type] || DISC_DEFAULTS.Multi)
+            for (const d of discs) {
+              await db.from("disciplines").insert({
+                studio_id: studio.id, name: d.name, icon: d.icon || "🧘",
               })
+            }
+            console.log("[verify-token] Disciplines créées:", discs.length)
+
+            // Abonnements standard
+            await db.from("subscriptions").insert(
+              DEFAULT_SUBSCRIPTIONS.map(s => ({ studio_id: studio.id, ...s }))
+            ).then(({ error: subErr }) => {
+              if (subErr) console.error("[verify-token] Subscriptions error:", subErr.message)
+              else console.log("[verify-token] Subscriptions OK")
+            })
+
             // Nettoyer pending_registrations
             await db.from("pending_registrations").delete().eq("email", user.email)
           }

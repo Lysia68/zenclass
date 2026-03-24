@@ -33,16 +33,26 @@ export async function GET(request: NextRequest) {
   }
 
   // ── Cas 2 : token_hash depuis fydelys.fr avec tenant= ─────────────────────
-  // Le cookie ne peut pas être propagé cross-domain depuis une réponse serveur.
-  // On renvoie vers /auth/confirm qui gère la session côté client (setSession)
-  // puis appelle /api/create-profile pour créer le profil.
   if (tokenHash && isApp) {
+    // Extraire register + slug depuis redirect_to si présent
+    const redirectTo = searchParams.get("redirect_to") || ""
+    let finalIsRegister = isRegister
+    let finalSlug = registerSlug || tenantSlug
+    if (redirectTo) {
+      try {
+        const rParams = new URL(redirectTo).searchParams
+        if (rParams.get("register") === "1") finalIsRegister = true
+        if (rParams.get("slug")) finalSlug = rParams.get("slug")
+        if (rParams.get("tenant")) finalSlug = finalSlug || rParams.get("tenant")
+      } catch {}
+    }
     const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
     confirmUrl.searchParams.set("token_hash", tokenHash)
     confirmUrl.searchParams.set("type", type || "magiclink")
-    if (tenantSlug)   confirmUrl.searchParams.set("tenant", tenantSlug)
-    if (isRegister)   confirmUrl.searchParams.set("register", "1")
-    if (registerSlug) confirmUrl.searchParams.set("slug", registerSlug)
+    if (finalSlug)       confirmUrl.searchParams.set("tenant", finalSlug)
+    if (finalIsRegister) confirmUrl.searchParams.set("register", "1")
+    if (finalSlug)       confirmUrl.searchParams.set("slug", finalSlug)
+    console.log("[auth/callback] → confirm register:", finalIsRegister, "slug:", finalSlug)
     return NextResponse.redirect(confirmUrl)
   }
 

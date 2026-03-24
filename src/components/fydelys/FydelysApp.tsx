@@ -228,11 +228,12 @@ const PAGE_TITLES = {
           </button>
         </div>
       )}
-      <div style={{ display:"flex", minHeight:"100vh", background:C.bg, marginTop: isImpersonatingAdmin ? 38 : 0, overflowX:"hidden" }}>
+      <div style={{ display:"flex", minHeight:"100vh", background:C.bg, marginTop: isImpersonatingAdmin ? 38 : 0 }}>
         <style>{`
           @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
           * { box-sizing:border-box; font-family:-apple-system,'Inter',sans-serif; }
-          body { margin:0; }
+          body { margin:0; overflow-x:hidden; }
+          #__next, html { overflow-x:hidden; }
           select { cursor:pointer; }
           input[type=date]::-webkit-calendar-picker-indicator { opacity:.5; cursor:pointer; }
           ::-webkit-scrollbar { width:5px; height:5px; }
@@ -240,7 +241,7 @@ const PAGE_TITLES = {
           ::-webkit-scrollbar-track { background:transparent; }
         `}</style>
         {!isMobile && <Sidebar active={page} onNav={handleNav} studioName={activeStudioName} planName={planName} membersCount={dynamicMembersCount !== null ? dynamicMembersCount : membersCount} userName={userName} userRole={userRole} trialEndsAt={trialEndsAt} billingStatus={billingStatus}/>}
-        <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?60:0 }}>
+        <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?62:0 }}>
           <TopBar title={PAGE_TITLES[page]} isMobile={isMobile} onSignOut={onSignOut} isSuperAdmin={initialRole==="superadmin" && !isImpersonatingAdmin} studioName={activeStudioName} billingStatus={billingStatus} planName={planName}/>
           {showTrialBanner && (
             <div style={{ background:trialDaysLeft<=3?"#F5EAE6":"#FDF4E3", borderBottom:`1px solid ${trialDaysLeft<=3?"#F5C2B5":"rgba(196,146,42,.25)"}`, padding:"10px 20px", display:"flex", alignItems:"center", justifyContent:"space-between", gap:12, flexWrap:"wrap" }}>
@@ -267,7 +268,7 @@ const PAGE_TITLES = {
               {PAGE_TITLES[page]}
             </div>
           )}
-          <div style={{ flex:1, overflowY:"auto", overflowX:"hidden" }}>
+          <div style={{ flex:1, overflowY:"auto" }}>
             {page === "settings"
               ? <Settings isMobile={isMobile} onImpersonate={startImpersonate}/>
               : <Page isMobile={isMobile}/>

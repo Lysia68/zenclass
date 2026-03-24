@@ -533,8 +533,6 @@ function Planning({ isMobile }) {
           duration: s.duration_min || 60, spots: s.spots || 12,
           status: s.status || "scheduled", booked: 0, waitlist: 0,
         }));
-        // Afficher les sessions immédiatement sans attendre les bookings
-        setSessions(mapped);
         const { data: bkData } = await sb.from("bookings")
           .select("id, session_id, member_id, status, attended, members(id, first_name, last_name, email, phone, credits, credits_total, subscription_id, subscriptions(period))")
           .in("session_id", mapped.map(s => s.id));

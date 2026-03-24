@@ -199,7 +199,7 @@ function Dashboard({ isMobile }) {
   return (
     <div>
       {isDemo && <DemoBanner/>}
-      <div style={{ padding:p, overflow:"hidden", boxSizing:"border-box" }}>
+      <div style={{ padding:p }}>
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:isMobile?8:14, marginBottom:isMobile?12:20 }}>
           <KpiCard icon={<IcoUsers2 s={isMobile?16:18} c={C.ok}/>}      label="Adhérents actifs" value={activeMembers>0?String(activeMembers):"—"}  delta={null} accentColor={C.ok}     isMobile={isMobile}/>
           <KpiCard icon={<IcoCalendar2 s={isMobile?16:18} c="#6B9E7A"/>} label="Séances ce mois"  value={monthSessions>0?String(monthSessions):"—"}   delta={null} accentColor="#6B9E7A"  isMobile={isMobile}/>

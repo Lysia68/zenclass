@@ -12,19 +12,20 @@ import { OnboardingView } from "./OnboardingView";
 // ── DatePicker custom — 3 selects stylés ───────────────────────────────────
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
-const DatePicker = React.memo(function DatePicker({ value, onChange }) {
+function DatePicker({ value, onChange }) {
   const parts = value ? value.split("-") : ["", "", ""];
-  const year  = parts[0] || "";
-  const month = parts[1] || "";
-  const day   = parts[2] || "";
+  const [year,  setYear]  = React.useState(parts[0] || "");
+  const [month, setMonth] = React.useState(parts[1] || "");
+  const [day,   setDay]   = React.useState(parts[2] || "");
 
-  const update = (y, m, d) => {
-    if (y && m && d) {
-      const synth = { target: { value: `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}` } };
-      onChange(synth);
-    } else {
-      onChange({ target: { value: "" } });
-    }
+  // Sync depuis value externe (ex: reset)
+  React.useEffect(() => {
+    const p = value ? value.split("-") : ["","",""];
+    setYear(p[0]||""); setMonth(p[1]||""); setDay(p[2]||"");
+  }, [value]);
+
+  const notify = (y, m, d) => {
+    if (y && m && d) onChange({ target: { value: `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}` } });
   };
 
   const selStyle = {
@@ -35,28 +36,28 @@ const DatePicker = React.memo(function DatePicker({ value, onChange }) {
     backgroundRepeat:"no-repeat", backgroundPosition:"right 8px center", paddingRight:24,
   };
 
-  const days   = Array.from({length:31}, (_,i) => String(i+1));
+  const days   = Array.from({length:31}, (_,i) => String(i+1).padStart(2,"0"));
   const months = MONTHS_FR.map((m,i) => ({ v:String(i+1).padStart(2,"0"), l:m }));
   const curY   = new Date().getFullYear();
   const years  = Array.from({length:100}, (_,i) => String(curY - i));
 
   return (
     <div style={{ display:"flex", gap:8 }}>
-      <select value={day} onChange={e=>update(year,month,e.target.value)} style={selStyle}>
+      <select value={day} onChange={e=>{ const v=e.target.value; setDay(v); notify(year,month,v); }} style={selStyle}>
         <option value="">Jour</option>
-        {days.map(d=><option key={d} value={d.padStart(2,"0")}>{d}</option>)}
+        {days.map(d=><option key={d} value={d}>{parseInt(d)}</option>)}
       </select>
-      <select value={month} onChange={e=>update(year,e.target.value,day)} style={{...selStyle, flex:2}}>
+      <select value={month} onChange={e=>{ const v=e.target.value; setMonth(v); notify(year,v,day); }} style={{...selStyle, flex:2}}>
         <option value="">Mois</option>
         {months.map(m=><option key={m.v} value={m.v}>{m.l}</option>)}
       </select>
-      <select value={year} onChange={e=>update(e.target.value,month,day)} style={{...selStyle, flex:2}}>
+      <select value={year} onChange={e=>{ const v=e.target.value; setYear(v); notify(v,month,day); }} style={{...selStyle, flex:2}}>
         <option value="">Année</option>
         {years.map(y=><option key={y} value={y}>{y}</option>)}
       </select>
     </div>
   );
-});
+}
 
 // ── AdhAccountPanel — composant standalone (hors AdherentView pour éviter remontage) ──
 const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, history, p, editing, setEditing, saving, form, setForm, setFirst, setLast, setPhone, setBirth, setAddress, setPostal, setCity, save }) {

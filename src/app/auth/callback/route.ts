@@ -33,6 +33,27 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(confirmUrl)
   }
 
+  // ── Cas 2b : code PKCE depuis fydelys.fr → rediriger vers /auth/confirm ────
+  if (code && isApp) {
+    const redirectTo = searchParams.get("redirect_to") || ""
+    let finalIsRegister = isRegister
+    let finalSlug = registerSlug || tenantSlug
+    if (redirectTo) {
+      try {
+        const rParams = new URL(redirectTo).searchParams
+        if (rParams.get("register") === "1") finalIsRegister = true
+        if (rParams.get("slug")) finalSlug = rParams.get("slug")
+      } catch {}
+    }
+    const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
+    confirmUrl.searchParams.set("code", code)
+    if (finalSlug)       confirmUrl.searchParams.set("tenant", finalSlug)
+    if (finalIsRegister) confirmUrl.searchParams.set("register", "1")
+    if (finalSlug)       confirmUrl.searchParams.set("slug", finalSlug)
+    console.log("[CB] PKCE code → confirm register:", finalIsRegister, "slug:", finalSlug)
+    return NextResponse.redirect(confirmUrl)
+  }
+
   // ── Cas 2 : token_hash depuis fydelys.fr avec tenant= ─────────────────────
   if (tokenHash && isApp) {
     // Extraire register + slug depuis redirect_to si présent
@@ -257,7 +278,7 @@ export async function GET(request: NextRequest) {
 
   if (isRegisterDetected) {
     const { data: pending } = await db
-      .from("pending_registrations").select("data").eq("email", userEmail).single()
+      .from("pending_registrations").select("data").eq("email", userEmail).maybeSingle()
     if (pending?.data) {
       const r = pending.data as any
       console.log("[auth/callback] pending data:", JSON.stringify({ firstName: r.firstName, lastName: r.lastName, slug: r.slug }))

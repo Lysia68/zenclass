@@ -9,6 +9,55 @@ import { IcoCalendar2, IcoUser2, IcoChevron, IcoCreditCard2, IcoCheck, IcoX, Ico
 import { Card, SectionHead, Button, Tag, Pill, EmptyState, DateLabel, Field, SessionRow } from "./ui";
 import { OnboardingView } from "./OnboardingView";
 
+// ── DatePicker custom — 3 selects stylés ───────────────────────────────────
+const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
+
+function DatePicker({ value, onChange }) {
+  const parts = value ? value.split("-") : ["", "", ""];
+  const year  = parts[0] || "";
+  const month = parts[1] || "";
+  const day   = parts[2] || "";
+
+  const update = (y, m, d) => {
+    if (y && m && d) {
+      const synth = { target: { value: `${y}-${m.padStart(2,"0")}-${d.padStart(2,"0")}` } };
+      onChange(synth);
+    } else {
+      onChange({ target: { value: "" } });
+    }
+  };
+
+  const selStyle = {
+    flex:1, padding:"9px 8px", borderRadius:9, border:`1.5px solid ${C.border}`,
+    fontSize:14, background:"#FDFAF7", color:C.text, fontFamily:"inherit",
+    outline:"none", cursor:"pointer", appearance:"none", WebkitAppearance:"none",
+    backgroundImage:`url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238C7B6C' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E")`,
+    backgroundRepeat:"no-repeat", backgroundPosition:"right 8px center", paddingRight:24,
+  };
+
+  const days   = Array.from({length:31}, (_,i) => String(i+1));
+  const months = MONTHS_FR.map((m,i) => ({ v:String(i+1).padStart(2,"0"), l:m }));
+  const curY   = new Date().getFullYear();
+  const years  = Array.from({length:100}, (_,i) => String(curY - i));
+
+  return (
+    <div style={{ display:"flex", gap:8 }}>
+      <select value={day} onChange={e=>update(year,month,e.target.value)} style={selStyle}>
+        <option value="">Jour</option>
+        {days.map(d=><option key={d} value={d.padStart(2,"0")}>{d}</option>)}
+      </select>
+      <select value={month} onChange={e=>update(year,e.target.value,day)} style={{...selStyle, flex:2}}>
+        <option value="">Mois</option>
+        {months.map(m=><option key={m.v} value={m.v}>{m.l}</option>)}
+      </select>
+      <select value={year} onChange={e=>update(e.target.value,month,day)} style={{...selStyle, flex:2}}>
+        <option value="">Année</option>
+        {years.map(y=><option key={y} value={y}>{y}</option>)}
+      </select>
+    </div>
+  );
+}
+
 // ── AdhAccountPanel — composant standalone (hors AdherentView pour éviter remontage) ──
 const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, history, p, editing, setEditing, saving, form, setForm, set, save }) {
   const initials = me ? `${me.first_name?.[0]||""}${me.last_name?.[0]||""}`.toUpperCase() : "?";
@@ -117,12 +166,7 @@ const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, histo
             </div>
             <div>
               <label style={{ fontSize:12, color:C.textMuted, fontWeight:600, display:"block", marginBottom:5 }}>Date de naissance</label>
-              <input
-                value={form.birth_date||""}
-                onChange={e => set("birth_date")(e)}
-                type="date"
-                style={{ width:"100%", padding:"9px 12px", borderRadius:9, border:`1.5px solid ${C.border}`, fontSize:14, boxSizing:"border-box", outline:"none", background:"#FDFAF7", color:C.text, fontFamily:"inherit", WebkitAppearance:"none", colorScheme:"light" }}
-              />
+              <DatePicker value={form.birth_date||""} onChange={e => set("birth_date")(e)} />
             </div>
             <div>
               <label style={{ fontSize:12, color:C.textMuted, fontWeight:600, display:"block", marginBottom:5 }}>Adresse</label>

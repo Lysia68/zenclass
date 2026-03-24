@@ -5,6 +5,7 @@ import { NextResponse, type NextRequest } from "next/server"
 export const dynamic = "force-dynamic"
 
 export async function GET(request: NextRequest) {
+  try {
   const { searchParams } = new URL(request.url)
   const code         = searchParams.get("code")
   const next         = searchParams.get("next") ?? "/dashboard"
@@ -33,31 +34,14 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(confirmUrl)
   }
 
-  // ── Cas 2b : code PKCE depuis fydelys.fr → rediriger vers /auth/confirm ────
+  // ── Cas 2b : code PKCE depuis fydelys.fr → /auth/confirm ────
   if (code && isApp) {
-    try {
-      const redirectTo = searchParams.get("redirect_to") || ""
-      let finalIsRegister = isRegister
-      let finalSlug: string | null = registerSlug || tenantSlug || null
-      if (redirectTo) {
-        try {
-          const rParams = new URL(redirectTo).searchParams
-          if (rParams.get("register") === "1") finalIsRegister = true
-          const rSlug = rParams.get("slug")
-          if (rSlug) finalSlug = rSlug
-        } catch {}
-      }
-      const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
-      confirmUrl.searchParams.set("code", code)
-      if (finalSlug)       confirmUrl.searchParams.set("tenant", finalSlug)
-      if (finalIsRegister) confirmUrl.searchParams.set("register", "1")
-      if (finalSlug)       confirmUrl.searchParams.set("slug", finalSlug)
-      console.log("[CB] PKCE → confirm register:", finalIsRegister, "slug:", finalSlug)
-      return NextResponse.redirect(confirmUrl)
-    } catch (e: any) {
-      console.error("[CB] PKCE error:", e.message)
-      return NextResponse.redirect(new URL("/auth/confirm?code=" + code, "https://fydelys.fr"))
-    }
+    const confirmUrl = new URL("/auth/confirm", "https://fydelys.fr")
+    confirmUrl.searchParams.set("code", code)
+    if (tenantSlug)    confirmUrl.searchParams.set("tenant", tenantSlug)
+    if (isRegister)    confirmUrl.searchParams.set("register", "1")
+    if (registerSlug)  confirmUrl.searchParams.set("slug", registerSlug)
+    return NextResponse.redirect(confirmUrl)
   }
 
   // ── Cas 2 : token_hash depuis fydelys.fr avec tenant= ─────────────────────
@@ -338,4 +322,8 @@ export async function GET(request: NextRequest) {
     response.headers.set("Location", new URL(next, request.url).toString())
   }
   return response
+  } catch (err: any) {
+    console.error("[auth/callback] uncaught error:", err.message, err.stack?.slice(0,200))
+    return NextResponse.redirect(new URL("/?error=callback_error", "https://fydelys.fr"))
+  }
 }

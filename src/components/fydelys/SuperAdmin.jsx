@@ -316,6 +316,31 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
 
 // ── Delete Confirm Modal ──────────────────────────────────────────────────────
 function DeleteModal({ tenant, setModal, showToast, setTenants, createClient }) {
+  const [deleting, setDeleting] = useState(false);
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      const res = await fetch("/api/sa/update-tenant", {
+        method: "DELETE",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({ studioId: tenant.id }),
+      });
+      const result = await res.json();
+      if (!res.ok || result.error) {
+        showToast(`Erreur : ${result.error || "suppression échouée"}`, false);
+        setDeleting(false);
+        return;
+      }
+      setTenants(prev=>prev.filter(t=>t.id!==tenant.id));
+      setModal(null);
+      showToast(`"${tenant.name}" supprimé`);
+    } catch (err) {
+      showToast("Erreur réseau", false);
+      setDeleting(false);
+    }
+  };
+
   return (
     <div onClick={e=>e.target===e.currentTarget&&setModal(null)}
       style={{position:"fixed",inset:0,background:"rgba(42,31,20,.5)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
@@ -326,10 +351,10 @@ function DeleteModal({ tenant, setModal, showToast, setTenants, createClient }) 
           <strong style={{color:"#F87171"}}>{tenant.name}</strong> et toutes ses données (membres, séances, paiements) seront supprimées définitivement.
         </div>
         <div style={{display:"flex",gap:10}}>
-          <button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#8C7B6C",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
-          <button onClick={()=>{ setTenants(prev=>prev.filter(t=>t.id!==tenant.id)); setModal(null); showToast(`"${tenant.name}" supprimé`,false); }}
-            style={{flex:1,padding:"11px",background:"linear-gradient(135deg,#DC2626,#B91C1C)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-            Supprimer définitivement
+          <button onClick={()=>setModal(null)} disabled={deleting} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#8C7B6C",fontSize:14,fontWeight:600,cursor:"pointer"}}>Annuler</button>
+          <button onClick={handleDelete} disabled={deleting}
+            style={{flex:1,padding:"11px",background:"linear-gradient(135deg,#DC2626,#B91C1C)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer",opacity:deleting?0.6:1}}>
+            {deleting?"Suppression…":"Supprimer définitivement"}
           </button>
         </div>
       </div>

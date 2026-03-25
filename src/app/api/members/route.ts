@@ -32,7 +32,7 @@ export async function GET(request: NextRequest) {
   return NextResponse.json({ members: data || [] })
 }
 
-// POST /api/members → créer un membre
+// POST /api/members → créer un membre + envoyer invitation magic link
 export async function POST(request: NextRequest) {
   const body = await request.json()
   const { studioId, ...payload } = body
@@ -48,6 +48,31 @@ export async function POST(request: NextRequest) {
     .select("id").single()
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Envoyer une invitation magic link à l'adhérent
+  if (payload.email) {
+    try {
+      const { data: studio } = await db.from("studios").select("slug, name").eq("id", studioId).single()
+      if (studio?.slug) {
+        const origin = request.headers.get("origin") || `https://${studio.slug}.fydelys.fr`
+        // Appel interne à send-magic-link
+        const mlRes = await fetch(`${origin}/api/send-magic-link`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: payload.email, tenantSlug: studio.slug }),
+        })
+        if (!mlRes.ok) {
+          console.warn("[members POST] Magic link envoi échoué pour", payload.email)
+        } else {
+          console.log("[members POST] Magic link envoyé à", payload.email, "pour", studio.slug)
+        }
+      }
+    } catch (err: any) {
+      // Ne pas bloquer la création si l'envoi échoue
+      console.warn("[members POST] Erreur envoi invitation:", err.message)
+    }
+  }
+
   return NextResponse.json({ id: data.id })
 }
 

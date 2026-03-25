@@ -97,20 +97,26 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
     const since = `${mois[now.getMonth()]} ${now.getFullYear()}`;
 
     if(editing) {
-      // Mettre à jour le studio en base
-      const { error } = await supabase.from("studios").update({
-        name: f.name, slug: f.slug, city: f.city, address: f.address || null,
-        phone: f.phone || null, email: f.email, notes: f.notes || null,
-        payment_mode: f.paymentMode || "none",
-        stripe_connect_enabled: f.paymentMode === "connect",
-      }).eq("id", editing.id);
-      if(error) { showToast(`Erreur : ${error.message}`, false); return; }
-
-      // Mettre à jour le profil admin si existe
-      await supabase.from("profiles").update({
-        first_name: f.firstName, last_name: f.lastName,
-        is_coach: f.isCoach || false,
-      }).eq("studio_id", editing.id).eq("role", "admin");
+      // Mettre à jour via API route (service role — contourne RLS)
+      const res = await fetch("/api/sa/update-tenant", {
+        method: "PATCH",
+        headers: {"Content-Type":"application/json"},
+        body: JSON.stringify({
+          studioId: editing.id,
+          studio: {
+            name: f.name, slug: f.slug, city: f.city, address: f.address || null,
+            phone: f.phone || null, email: f.email, notes: f.notes || null,
+            payment_mode: f.paymentMode || "none",
+            stripe_connect_enabled: f.paymentMode === "connect",
+          },
+          profile: {
+            first_name: f.firstName, last_name: f.lastName,
+            is_coach: f.isCoach || false,
+          },
+        }),
+      });
+      const result = await res.json();
+      if (!res.ok || result.error) { showToast(`Erreur : ${result.error || "mise à jour échouée"}`, false); return; }
 
       setTenants(prev=>prev.map(t=>t.id===editing.id ? {
         ...t, name:f.name, slug:f.slug, city:f.city, address:f.address,

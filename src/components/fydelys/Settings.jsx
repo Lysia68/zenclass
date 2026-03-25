@@ -146,7 +146,7 @@ function Settings({ isMobile, onImpersonate }) {
   const realRole = userRole || "admin";
   const [currentRole, setCurrentRole] = useState(realRole);
   // ── Données studio depuis Supabase
-  const [studioForm, setStudioForm] = useState({ name:"", address:"", city:"", phone:"", email:"", website:"", cancel_delay_hours:12, booking_days_ahead:7, waitlist_max:10, timezone:"Europe/Paris", reminder_hours_default:24, description:"", cover_photo_url:"", accent_color:"#B07848", public_page_enabled:false, sms_enabled:false });
+  const [studioForm, setStudioForm] = useState({ name:"", address:"", city:"", postal_code:"", phone:"", email:"", website:"", cancel_delay_hours:12, booking_days_ahead:7, waitlist_max:10, timezone:"Europe/Paris", reminder_hours_default:24, description:"", cover_photo_url:"", accent_color:"#B07848", public_page_enabled:false, sms_enabled:false });
   const [studioSaving, setStudioSaving] = useState(false);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [studioToast, setStudioToast] = useState(null);
@@ -155,13 +155,14 @@ function Settings({ isMobile, onImpersonate }) {
   React.useEffect(() => {
     if (!studioId) return;
     createClient().from("studios")
-      .select("name, address, city, phone, email, website, cancel_delay_hours, booking_days_ahead, waitlist_max, timezone, reminder_hours_default, description, cover_photo_url, accent_color, slug, public_page_enabled, sms_enabled")
+      .select("name, address, city, postal_code, phone, email, website, cancel_delay_hours, booking_days_ahead, waitlist_max, timezone, reminder_hours_default, description, cover_photo_url, accent_color, slug, public_page_enabled, sms_enabled")
       .eq("id", studioId).single()
       .then(({ data }) => {
         if (data) setStudioForm({
           name: data.name || "",
           address: data.address || "",
           city: data.city || "",
+          postal_code: data.postal_code || "",
           phone: data.phone || "",
           email: data.email || "",
           website: data.website || "",
@@ -188,6 +189,7 @@ function Settings({ isMobile, onImpersonate }) {
       name: studioForm.name,
       address: studioForm.address,
       city: studioForm.city,
+      postal_code: studioForm.postal_code || null,
       phone: studioForm.phone,
       email: studioForm.email,
       website: studioForm.website,
@@ -562,7 +564,10 @@ function Settings({ isMobile, onImpersonate }) {
               <SI label="Nom du studio" fkey="name" placeholder="Mon Studio Yoga"/>
             </div>
             <SI label="Adresse" fkey="address" placeholder="12 rue de la Paix"/>
-            <SI label="Ville" fkey="city" placeholder="Paris"/>
+            <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:12 }}>
+              <SI label="Ville" fkey="city" placeholder="Paris"/>
+              <SI label="Code postal" fkey="postal_code" placeholder="75001"/>
+            </div>
             <SI label="Téléphone" fkey="phone" type="tel" placeholder="06 00 00 00 00"/>
             <SI label="Email de contact" fkey="email" type="email" placeholder="contact@studio.fr"/>
             <SI label="Site web" fkey="website" placeholder="https://monstudio.fr"/>

@@ -250,7 +250,7 @@ function BillingPageContent() {
 
       <div style={{maxWidth:860,margin:"0 auto",padding:"40px 24px"}}>
         <div style={{marginBottom:32}}>
-          <a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:13,fontWeight:600,color:C.textMid,textDecoration:"none",marginBottom:16,padding:"7px 14px",borderRadius:8,border:`1px solid ${C.border}`,background:C.surface}}>
+          <a href="/dashboard" style={{display:"inline-flex",alignItems:"center",gap:6,fontSize:14,fontWeight:700,color:"#fff",textDecoration:"none",marginBottom:16,padding:"9px 18px",borderRadius:10,border:"none",background:"linear-gradient(135deg,#B07848,#8C5E38)",boxShadow:"0 2px 8px rgba(176,120,72,.25)"}}>
             ← Tableau de bord
           </a>
           <h1 style={{fontSize:26,fontWeight:800,color:C.text,margin:0,letterSpacing:-0.5}}>Abonnement</h1>

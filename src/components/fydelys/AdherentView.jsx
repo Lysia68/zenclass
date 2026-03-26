@@ -115,7 +115,7 @@ const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, histo
           {!editing
             ? <Button sm variant="secondary" onClick={()=>setEditing(true)}>✏ Modifier</Button>
             : <div style={{ display:"flex", gap:8 }}>
-                <Button sm variant="secondary" onClick={()=>{ setEditing(false); setForm({ first_name:me.first_name||"", last_name:me.last_name||"", phone:me.phone||"", birth_date:me.birth_date||"", address:me.address||"", postal_code:me.postal_code||"", city:me.city||"" }); }}>Annuler</Button>
+                <Button sm variant="secondary" onClick={()=>{ setEditing(false); setForm({ first_name:me.first_name||"", last_name:me.last_name||"", phone:me.phone||"", birth_date:me.birth_date||"", address:me.address||"", postal_code:me.postal_code||"", city:me.city||"", profession:me.profession||"" }); }}>Annuler</Button>
                 <Button sm onClick={save} disabled={saving}>{saving ? "…" : "Enregistrer"}</Button>
               </div>
           }
@@ -131,6 +131,7 @@ const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, histo
               { l:"Adresse",          v:me?.address },
               { l:"Code postal",      v:me?.postal_code },
               { l:"Ville",            v:me?.city },
+              { l:"Profession",       v:me?.profession },
               { l:"Email",            v:me?.email, locked:true },
             ].filter(f=>f.v).map(f=>(
               <div key={f.l} style={{ display:"flex", justifyContent:"space-between", alignItems:"center", padding:"9px 0", borderBottom:`1px solid ${C.border}`, gap:8 }}>
@@ -175,8 +176,12 @@ const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, histo
                 <input value={form?.city||""} onChange={setCity} placeholder="Paris" style={inpStyle}/>
               </div>
             </div>
+            <div>
+              <label style={{ fontSize:12, color:C.textMuted, fontWeight:600, display:"block", marginBottom:5 }}>Profession</label>
+              <input value={form?.profession||""} onChange={e=>setForm(f=>({...f,profession:e.target.value}))} placeholder="Ex : Ingénieur, Enseignant…" style={inpStyle}/>
+            </div>
             <div style={{ padding:"8px 12px", background:C.bg, borderRadius:8, fontSize:12, color:C.textMuted }}>
-              🔒 L'adresse email ne peut pas être modifiée
+              L'adresse email ne peut pas être modifiée
             </div>
           </div>
         )}
@@ -223,6 +228,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
         address:     me.address     || "",
         postal_code: me.postal_code || "",
         city:        me.city        || "",
+        profession:  me.profession  || "",
       });
     }
   }, [me?.id]); // eslint-disable-line react-hooks/exhaustive-deps
@@ -235,6 +241,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
   const accountSetAddress   = React.useCallback(e => setAccountForm(f => ({ ...f, address:     e.target.value })), []);
   const accountSetPostal    = React.useCallback(e => setAccountForm(f => ({ ...f, postal_code: e.target.value })), []);
   const accountSetCity      = React.useCallback(e => setAccountForm(f => ({ ...f, city:        e.target.value })), []);
+  const accountSetProfession = React.useCallback(e => setAccountForm(f => ({ ...f, profession: e.target.value })), []);
   const accountSetField = null; // gardé pour compatibilité
 
   const accountSave = React.useCallback(async () => {
@@ -272,14 +279,14 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       const targetUid = impersonateUserId || user.id;
       let member = null;
       const { data: byUid } = await sb.from("members")
-        .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete, subscription_id, subscriptions(period)")
+        .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profession, profile_complete, subscription_id, subscriptions(period)")
         .eq("studio_id", studioId).eq("auth_user_id", targetUid).maybeSingle();
       member = byUid;
 
       // Fallback email uniquement pour l'user réel (pas l'impersonate)
       if (!member && !impersonateUserId && user.email) {
         const { data: byEmail } = await sb.from("members")
-          .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete, subscription_id, subscriptions(period)")
+          .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profession, profile_complete, subscription_id, subscriptions(period)")
           .eq("studio_id", studioId).eq("email", user.email).maybeSingle();
         member = byEmail;
         if (member) {
@@ -297,7 +304,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
         window.history.replaceState({}, "", window.location.pathname);
         setTimeout(async () => {
           const { data: fresh } = await sb.from("members")
-            .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete, subscription_id, subscriptions(period)")
+            .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profession, profile_complete, subscription_id, subscriptions(period)")
             .eq("id", member.id).maybeSingle();
           if (fresh) setMe(fresh);
         }, 2000);
@@ -646,7 +653,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       const sb = createClient();
       // Recharger credits + statut
       sb.from("members")
-        .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profile_complete, subscription_id, subscriptions(period)")
+        .select("id, first_name, last_name, email, status, credits, credits_total, created_at, phone, address, postal_code, city, profession, profile_complete, subscription_id, subscriptions(period)")
         .eq("id", me.id).maybeSingle()
         .then(({ data }) => { if (data) setMe(data); });
       // Recharger historique pour avoir les présences à jour

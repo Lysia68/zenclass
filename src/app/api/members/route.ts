@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
   } else {
     // Liste complète pour la page Adhérents
     query = query
-      .select("id, first_name, last_name, email, phone, address, postal_code, city, birth_date, status, credits, credits_total, joined_at, next_payment, notes, subscription_id, profile_complete, subscriptions(name)")
+      .select("id, first_name, last_name, email, phone, address, postal_code, city, birth_date, status, credits, credits_total, joined_at, next_payment, notes, subscription_id, profile_complete, profession, subscriptions(name)")
       .eq("studio_id", studioId)
       .order("last_name")
   }

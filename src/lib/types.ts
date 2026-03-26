@@ -71,6 +71,7 @@ export type Member = {
   joined_at: string
   next_payment: string | null
   notes: string | null
+  profession: string | null
   created_at: string
   subscription?: Subscription
 }

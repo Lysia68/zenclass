@@ -13,7 +13,7 @@ import { Card, SectionHead, Button, Field, FieldLabel, Tag, Pill, MemberRow, Dem
 const EMPTY_FORM = {
   firstName:"", lastName:"", email:"", phone:"",
   address:"", postalCode:"", city:"",
-  birthDate:"", subscription:"",
+  birthDate:"", subscription:"", profession:"",
 };
 
 function MemberForm({ value, onChange, errors={}, isMobile }) {
@@ -50,13 +50,14 @@ function MemberForm({ value, onChange, errors={}, isMobile }) {
         </div>
       </div>
       <div>
-        {sec("📍","Adresse")}
+        {sec("📍","Adresse & Infos")}
         <div style={{ display:"flex", flexDirection:"column", gap:10 }}>
           <div>{lbl("Rue")}<input value={value.address} onChange={e=>onChange({...value,address:e.target.value})} placeholder="12 rue des Lilas" style={inp()}/></div>
           <div style={cols(2)}>
             <div>{lbl("Code postal")}<input value={value.postalCode} onChange={e=>onChange({...value,postalCode:e.target.value})} placeholder="75000" maxLength={10} style={inp()}/></div>
             <div>{lbl("Ville")}<input value={value.city} onChange={e=>onChange({...value,city:e.target.value})} placeholder="Paris" style={inp()}/></div>
           </div>
+          <div>{lbl("Profession")}<input value={value.profession||""} onChange={e=>onChange({...value,profession:e.target.value})} placeholder="Ex : Ingénieur, Enseignant, Retraité…" style={inp()}/></div>
         </div>
       </div>
 
@@ -117,7 +118,7 @@ function Members({ isMobile }) {
       console.log("[Members] trying Supabase client fallback...");
       const { data, error } = await createClient()
         .from("members")
-        .select("id,first_name,last_name,email,phone,address,postal_code,city,birth_date,status,credits,credits_total,joined_at,next_payment,notes,subscription_id,profile_complete,frozen_until,subscriptions(name)")
+        .select("id,first_name,last_name,email,phone,address,postal_code,city,birth_date,status,credits,credits_total,joined_at,next_payment,notes,subscription_id,profile_complete,frozen_until,profession,subscriptions(name)")
         .eq("studio_id", studioId).order("last_name");
       console.log("[Members] fallback →", { count: data?.length, error: error?.message });
 
@@ -137,7 +138,7 @@ function Members({ isMobile }) {
       status:m.status||"actif", credits:m.credits||0, creditTotal:m.credits_total||0,
       joined:m.joined_at, nextPayment:m.next_payment, notes:m.notes||"",
       subscription:m.subscriptions?.name||"—", subscriptionId:m.subscription_id||null,
-      profileComplete:m.profile_complete, frozenUntil:m.frozen_until||null,
+      profileComplete:m.profile_complete, frozenUntil:m.frozen_until||null, profession:m.profession||"",
       avatar:(m.first_name?.[0]||"")+(m.last_name?.[0]||""),
     };
   }
@@ -147,7 +148,7 @@ function Members({ isMobile }) {
       first_name:f.firstName, last_name:f.lastName,
       email:f.email.toLowerCase().trim(), phone:f.phone||"",
       address:f.address||null, postal_code:f.postalCode||null, city:f.city||null,
-      birth_date:f.birthDate||null,
+      birth_date:f.birthDate||null, profession:f.profession||null,
     };
   }
 
@@ -176,7 +177,7 @@ function Members({ isMobile }) {
   };
 
   const startEdit = (m) => {
-    setEditForm({ firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone||"",address:m.address||"",postalCode:m.postalCode||"",city:m.city||"",birthDate:m.birthDate||"",subscription:m.subscription||"" });
+    setEditForm({ firstName:m.firstName,lastName:m.lastName,email:m.email,phone:m.phone||"",address:m.address||"",postalCode:m.postalCode||"",city:m.city||"",birthDate:m.birthDate||"",subscription:m.subscription||"",profession:m.profession||"" });
     setNMErrors({}); setEditMode(true);
   };
 
@@ -476,6 +477,7 @@ function Members({ isMobile }) {
         <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr",gap:10,marginBottom:16,background:C.bg,borderRadius:10,padding:"14px 16px",border:`1px solid ${C.borderSoft}`}}>
           {infoRow("🎂","Date de naissance",birthdayFmt)}
           {infoRow("📍","Adresse",adresseFull||null)}
+          {infoRow("💼","Profession",m.profession||null)}
 
         </div>
         <div style={{display:"flex",gap:10,flexWrap:"wrap"}}>

@@ -19,17 +19,17 @@ export async function GET(req: NextRequest) {
 
   if (type === "members") {
     const { data } = await db.from("members")
-      .select("first_name, last_name, email, phone, status, credits, credits_total, joined_at, birth_date, subscriptions(name)")
+      .select("first_name, last_name, email, phone, status, credits, credits_total, joined_at, birth_date, profession, subscriptions(name)")
       .eq("studio_id", studioId)
       .order("last_name")
 
-    csv = "Prénom;Nom;Email;Téléphone;Statut;Crédits;Crédits total;Abonnement;Date inscription;Date naissance\n"
+    csv = "Prénom;Nom;Email;Téléphone;Statut;Crédits;Crédits total;Abonnement;Date inscription;Date naissance;Profession\n"
     for (const m of data || []) {
       const sub = (m as any).subscriptions?.name || ""
       csv += [
         m.first_name, m.last_name, m.email, m.phone || "",
         m.status, m.credits ?? "", m.credits_total ?? "", sub,
-        m.joined_at?.slice(0, 10) || "", m.birth_date || "",
+        m.joined_at?.slice(0, 10) || "", m.birth_date || "", (m as any).profession || "",
       ].map(v => `"${String(v).replace(/"/g, '""')}"`).join(";") + "\n"
     }
   } else if (type === "payments") {

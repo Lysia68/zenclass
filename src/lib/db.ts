@@ -96,6 +96,7 @@ export async function updateMember(id: string, updates: any) {
   if (updates.credits   !== undefined) map.credits    = updates.credits;
   if (updates.notes     !== undefined) map.notes      = updates.notes;
   if (updates.nextPayment !== undefined) map.next_payment = updates.nextPayment;
+  if (updates.profession !== undefined) map.profession = updates.profession;
   await sb().from("members").update(map).eq("id", id);
 }
 

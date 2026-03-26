@@ -81,12 +81,11 @@ export async function POST(req: NextRequest) {
     console.log("[member-profile] Updated for user:", user.id, "studio:", studioId)
 
     // Envoyer emails de bienvenue (asynchrone, non bloquant)
-    const memberId = byUid?.id
-    if (memberId) {
+    if (targetId) {
       fetch(`${req.nextUrl.origin}/api/notify-new-member`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ memberId, studioId }),
+        body: JSON.stringify({ memberId: targetId, studioId }),
       }).catch(e => console.warn("[member-profile] notify error:", e.message))
     }
 

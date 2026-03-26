@@ -160,7 +160,7 @@ const AdhAccountPanel = React.memo(function AdhAccountPanel({ me, loading, histo
             </div>
             <div>
               <label style={{ fontSize:12, color:C.textMuted, fontWeight:600, display:"block", marginBottom:5 }}>Date de naissance</label>
-              <DatePicker value={form?.birth_date||""} onChange={setBirth} />
+              <DatePicker key={form?.birth_date||"empty"} value={form?.birth_date||""} onChange={setBirth} />
             </div>
             <div>
               <label style={{ fontSize:12, color:C.textMuted, fontWeight:600, display:"block", marginBottom:5 }}>Adresse</label>

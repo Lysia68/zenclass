@@ -755,7 +755,7 @@ function Planning({ isMobile }) {
       const cur = new Date(from);
       while (cur.getDay() !== targetDay) cur.setDate(cur.getDate() + 1);
       while (cur <= to) {
-        const date = cur.toISOString().slice(0, 10);
+        const date = `${cur.getFullYear()}-${String(cur.getMonth()+1).padStart(2,"0")}-${String(cur.getDate()).padStart(2,"0")}`;
         const key = `${date}|${slot.time}|${slot.disciplineId}`;
         if (!existingKeys.has(key)) {
           generated.push({

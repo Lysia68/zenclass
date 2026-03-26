@@ -13,7 +13,7 @@ import { OnboardingView } from "./OnboardingView";
 const MONTHS_FR = ["Janvier","Février","Mars","Avril","Mai","Juin","Juillet","Août","Septembre","Octobre","Novembre","Décembre"];
 
 function DatePicker({ value, onChange }) {
-  const parts = value ? value.split("-") : ["", "", ""];
+  const parts = (typeof value === "string" && value) ? value.split("-") : ["", "", ""];
   const [year,  setYear]  = React.useState(parts[0] || "");
   const [month, setMonth] = React.useState(parts[1] || "");
   const [day,   setDay]   = React.useState(parts[2] || "");
@@ -246,6 +246,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
 
   const accountSave = React.useCallback(async () => {
     setAccountSaving(true);
+    console.log("[accountSave] payload:", JSON.stringify({ studioId, ...accountForm }));
     try {
       const res = await fetch("/api/member-profile", {
         method: "POST",

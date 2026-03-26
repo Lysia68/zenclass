@@ -878,7 +878,7 @@ function Planning({ isMobile }) {
     // Ajouter les séances insérées (avec vrais IDs) à l'UI
     const newSessions = (inserted || []).map(s => ({
       id: s.id, disciplineId: s.discipline_id, teacher: s.teacher, room: s.room, level: s.level,
-      date: s.session_date, time: s.session_time, duration: s.duration_min, spots: s.spots,
+      date: s.session_date, time: s.session_time?.slice(0,5) || s.session_time, duration: s.duration_min, spots: s.spots,
       status: s.status, booked: 0, waitlist: 0,
     }));
     if (isDemoData) { setSessions(newSessions); setIsDemoData(false); }

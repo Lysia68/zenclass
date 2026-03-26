@@ -678,14 +678,20 @@ function Planning({ isMobile }) {
       return;
     }
     setSessions(prev => prev.filter(s => s.id !== id));
+    // Supprimer les bookings restants (annulés/waitlist) puis la session
+    await sb.from("bookings").delete().eq("session_id", id);
     await sb.from("sessions").delete().eq("id", id);
   };
 
   const cancelSession = id => {
     openConfirm("Annuler cette séance ?", async () => {
       setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "cancelled" } : s));
-      const { error } = await createClient().from("sessions").update({ status: "cancelled" }).eq("id", id);
-      if (error) {
+      const sb = createClient();
+      const [sessRes, bookRes] = await Promise.all([
+        sb.from("sessions").update({ status: "cancelled" }).eq("id", id),
+        sb.from("bookings").update({ status: "cancelled" }).eq("session_id", id).in("status", ["confirmed", "waitlist"]),
+      ]);
+      if (sessRes.error) {
         setSessions(prev => prev.map(s => s.id === id ? { ...s, status: "scheduled" } : s));
         showPlanToast("Erreur lors de l'annulation", false);
       }

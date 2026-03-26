@@ -1039,14 +1039,24 @@ function Planning({ isMobile }) {
   const deleteSession = async (id) => {
     setSessions(prev => prev.filter(s => s.id !== id));
     if (!studioId) return;
-    try { await createClient().from("sessions").delete().eq("id", id); }
+    try {
+      const sb = createClient();
+      await sb.from("bookings").delete().eq("session_id", id);
+      await sb.from("sessions").delete().eq("id", id);
+    }
     catch(e) { console.error("delete session", e); }
   };
 
   const cancelSession = async (id) => {
     setSessions(prev => prev.map(s => s.id===id ? {...s, status:"cancelled"} : s));
     if (!studioId) return;
-    try { await createClient().from("sessions").update({ status:"cancelled" }).eq("id", id); }
+    try {
+      const sb = createClient();
+      await Promise.all([
+        sb.from("sessions").update({ status:"cancelled" }).eq("id", id),
+        sb.from("bookings").update({ status:"cancelled" }).eq("session_id", id).in("status", ["confirmed", "waitlist"]),
+      ]);
+    }
     catch(e) { console.error("cancel session", e); }
   };
 

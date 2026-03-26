@@ -716,6 +716,142 @@ function AideIllustration({ type, color = "#3A6E90" }) {
     </svg>
   );
 
+  // ── Vue adhérent ─────────────────────────────────────────────────────────
+  if (type === "adherent_planning") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="12" fontWeight="700" fill={text}>Planning des cours</text>
+      {[
+        {y:26, disc:"Yoga Vinyasa", time:"18:30", coach:"Sophie L.", spots:"3/12", ok:true},
+        {y:54, disc:"Pilates", time:"12:00", coach:"Marie D.", spots:"0/8", ok:false},
+        {y:82, disc:"Yin Yoga", time:"19:00", coach:"Sophie L.", spots:"5/10", ok:true},
+      ].map((s,i) => (
+        <g key={i}>
+          <rect x="16" y={s.y} width="370" height="24" rx="6" fill="#fff" stroke={border} strokeWidth="1"/>
+          <text x="28" y={s.y+16} fontSize="12" fontWeight="600" fill={text}>{s.disc}</text>
+          <text x="160" y={s.y+16} fontSize="11" fill={muted}>{s.time} · {s.coach}</text>
+          <text x="330" y={s.y+16} fontSize="11" fontWeight="700" fill={s.ok?"#4E8A58":"#C0392B"} textAnchor="end">{s.spots}</text>
+          <rect x="400" y={s.y+3} width="84" height="18" rx="6" fill={s.ok?accent:"#DDD5C8"}/>
+          <text x="442" y={s.y+15} textAnchor="middle" fontSize="10" fontWeight="700" fill={s.ok?"#fff":muted}>{s.ok?"Réserver":"Complet"}</text>
+        </g>
+      ))}
+      <text x="16" y="120" fontSize="10" fill={muted} fontStyle="italic">L'adhérent voit les séances des 30 prochains jours et peut réserver en 1 clic</text>
+    </svg>
+  );
+
+  if (type === "adherent_profile") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="10" width="220" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <circle cx="56" cy="42" r="18" fill={accentLight} stroke={accent} strokeWidth="1.5"/>
+      <text x="56" y="47" textAnchor="middle" fontSize="14" fontWeight="700" fill={accent}>MD</text>
+      <text x="82" y="38" fontSize="13" fontWeight="700" fill={text}>Marie Dupont</text>
+      <text x="82" y="52" fontSize="10" fill={muted}>marie@gmail.com</text>
+      <text x="28" y="76" fontSize="10" fontWeight="700" fill={muted}>CRÉDITS</text>
+      <rect x="28" y="82" width="140" height="10" rx="5" fill={border}/>
+      <rect x="28" y="82" width="98" height="10" rx="5" fill={accent}/>
+      <text x="28" y="106" fontSize="11" fill={text}>7 / 10 séances restantes</text>
+      {/* Stats */}
+      <rect x="252" y="10" width="232" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="264" y="30" fontSize="10" fontWeight="700" fill={muted}>MON ACTIVITÉ</text>
+      {[{y:40,label:"Séances ce mois",val:"6"},{y:60,label:"Total séances",val:"42"},{y:80,label:"Membre depuis",val:"Oct. 2025"},{y:100,label:"Statut",val:"Actif",col:"#4E8A58"}].map((r,i)=>(
+        <g key={i}>
+          <text x="264" y={r.y+10} fontSize="11" fill={muted}>{r.label}</text>
+          <text x="470" y={r.y+10} textAnchor="end" fontSize="11" fontWeight="700" fill={r.col||text}>{r.val}</text>
+        </g>
+      ))}
+    </svg>
+  );
+
+  // ── Page vitrine ────────────────────────────────────────────────────────
+  if (type === "vitrine_toggle") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="16" width="468" height="98" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="28" y="38" fontSize="13" fontWeight="700" fill={text}>Page vitrine publique</text>
+      <text x="28" y="54" fontSize="11" fill={muted}>Site gratuit pour présenter votre studio en ligne</text>
+      {/* Toggle */}
+      <rect x="400" y="26" width="44" height="22" rx="11" fill="#4E8A58"/>
+      <circle cx="433" cy="37" r="8" fill="#fff"/>
+      {/* Requirements */}
+      <rect x="28" y="66" width="200" height="22" rx="6" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="1"/>
+      <text x="38" y="81" fontSize="10" fill="#3A6E46" fontWeight="600">Photo de couverture</text>
+      <text x="190" y="81" fontSize="12" fill="#4E8A58">OK</text>
+      <rect x="240" y="66" width="200" height="22" rx="6" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="1"/>
+      <text x="250" y="81" fontSize="10" fill="#3A6E46" fontWeight="600">Description du studio</text>
+      <text x="400" y="81" fontSize="12" fill="#4E8A58">OK</text>
+      <text x="28" y="106" fontSize="10" fill={accent} fontWeight="600">votre-studio.fydelys.fr</text>
+      <text x="210" y="106" fontSize="10" fill={muted}>Visible par tous les visiteurs</text>
+    </svg>
+  );
+
+  if (type === "vitrine_config") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      {/* Photo */}
+      <rect x="16" y="10" width="160" height="110" rx="10" fill="#DDD5C8" stroke={border} strokeWidth="1"/>
+      <text x="96" y="55" textAnchor="middle" fontSize="24" fill={muted}>&#128247;</text>
+      <text x="96" y="75" textAnchor="middle" fontSize="10" fill={muted}>Photo de couverture</text>
+      <rect x="46" y="90" width="100" height="22" rx="6" fill={accent}/>
+      <text x="96" y="105" textAnchor="middle" fontSize="10" fontWeight="700" fill="#fff">Changer</text>
+      {/* Description */}
+      <rect x="190" y="10" width="294" height="68" rx="8" fill="#fff" stroke={accent} strokeWidth="1.5"/>
+      <text x="200" y="28" fontSize="10" fontWeight="700" fill={muted}>DESCRIPTION (0-300 car.)</text>
+      <text x="200" y="46" fontSize="11" fill={text}>Bienvenue dans notre studio de yoga</text>
+      <text x="200" y="60" fontSize="11" fill={text}>au coeur de Paris. Cours pour tous...</text>
+      {/* Couleur */}
+      <text x="190" y="96" fontSize="10" fontWeight="700" fill={muted}>COULEUR D'ACCENT</text>
+      {["#C4956A","#8B7BB5","#6B9E7A","#C49090","#6A8FAE","#9B7CB5","#7BA3C4","#C4B07A"].map((col,i)=>(
+        <circle key={i} cx={200+i*26} cy={113} r="9" fill={col} stroke={i===0?"#2A1F14":"none"} strokeWidth="2"/>
+      ))}
+    </svg>
+  );
+
+  // ── SMS & rappels ───────────────────────────────────────────────────────
+  if (type === "sms_config") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <rect x="16" y="10" width="468" height="110" rx="10" fill="#fff" stroke={border} strokeWidth="1.5"/>
+      <text x="28" y="32" fontSize="13" fontWeight="700" fill={text}>SMS de confirmation et rappels</text>
+      <text x="28" y="48" fontSize="11" fill={muted}>Envoie un SMS aux adhérents pour chaque réservation et avant chaque séance</text>
+      {/* Toggle */}
+      <rect x="400" y="20" width="44" height="22" rx="11" fill="#4E8A58"/>
+      <circle cx="433" cy="31" r="8" fill="#fff"/>
+      {/* Config items */}
+      <rect x="28" y="58" width="200" height="24" rx="6" fill={accentLight}/>
+      <text x="38" y="74" fontSize="11" fill={accent} fontWeight="600">Rappel : 24h avant la séance</text>
+      <rect x="240" y="58" width="200" height="24" rx="6" fill="#E6EFF5"/>
+      <text x="250" y="74" fontSize="11" fill="#3A6E90" fontWeight="600">Fuseau : Europe/Paris</text>
+      {/* Credits */}
+      <rect x="28" y="90" width="160" height="24" rx="6" fill="#EAF5EC" stroke="#A8D5B0" strokeWidth="1"/>
+      <text x="38" y="106" fontSize="11" fill="#3A6E46" fontWeight="600">Crédits SMS : 47</text>
+      <rect x="200" y="90" width="120" height="24" rx="6" fill={accent}/>
+      <text x="260" y="106" textAnchor="middle" fontSize="11" fontWeight="700" fill="#fff">Acheter des SMS</text>
+    </svg>
+  );
+
+  if (type === "sms_timeline") return (
+    <svg width={w} height={h} viewBox="0 0 500 130" style={{ borderRadius:10, border:`1px solid ${border}` }}>
+      <rect width="500" height="130" fill={bg}/>
+      <text x="16" y="18" fontSize="10" fontWeight="700" fill={muted}>PARCOURS D'UN ADHÉRENT — NOTIFICATIONS</text>
+      {/* Timeline */}
+      <line x1="60" y1="60" x2="460" y2="60" stroke={border} strokeWidth="2"/>
+      {[
+        {x:60, label:"Réservation", sub:"SMS + Email", color:"#4E8A58"},
+        {x:180, label:"J-1 (24h)", sub:"Rappel auto", color:"#3A6E90"},
+        {x:300, label:"J-0 (1h)", sub:"Rappel auto", color:"#E67E22"},
+        {x:420, label:"Séance", sub:"Présences", color:accent},
+      ].map((p,i)=>(
+        <g key={i}>
+          <circle cx={p.x} cy={60} r="8" fill={p.color}/>
+          <text x={p.x} y={44} textAnchor="middle" fontSize="11" fontWeight="700" fill={p.color}>{p.label}</text>
+          <text x={p.x} y={84} textAnchor="middle" fontSize="10" fill={muted}>{p.sub}</text>
+        </g>
+      ))}
+      <text x="16" y="120" fontSize="10" fill={muted} fontStyle="italic">Les rappels sont envoyés automatiquement selon la configuration (1h, 3h, 6h, 12h, 24h ou 48h avant)</text>
+    </svg>
+  );
+
   return null;
 }
 
@@ -881,6 +1017,47 @@ function AidePage({ isMobile }) {
         { q: "Comment révoquer l'accès d'un coach ?", a: "Dans Paramètres → Équipe, cliquez sur ··· à côté du coach puis Désactiver. Il ne pourra plus se connecter mais son historique est conservé." },
         { q: "Le lien magic link a expiré, que faire ?", a: "Les magic links expirent après 1 heure. Il suffit de revenir sur votre-studio.fydelys.fr et de saisir à nouveau l'email pour recevoir un nouveau lien." },
         { q: "Les emails arrivent en spam ?", a: "Les emails Fydelys sont envoyés depuis noreply@fydelys.fr avec authentification DKIM et SPF complète. Si un email arrive en spam, demandez à vos adhérents de marquer l'expéditeur comme fiable. Les emails sont envoyés en format texte et HTML pour une compatibilité maximale." },
+      ]
+    },
+    // ── 8. Vue adhérent ─────────────────────────────────────────────────────
+    {
+      id: "adherent-view", icon: "🧘", title: "Espace adhérent", color: "#2E86AB",
+      items: [
+        { q: "Que voit un adhérent quand il se connecte ?", type: "guide", steps: [
+          { num: "1", title: "Le planning des cours", text: "L'adhérent voit les séances des 30 prochains jours avec les places disponibles, le coach et la salle. Il peut filtrer par discipline. Les séances complètes affichent un badge Complet.", visual: "adherent_planning" },
+          { num: "2", title: "Son profil et ses crédits", text: "L'adhérent consulte son profil (nom, email, téléphone, date de naissance), sa jauge de crédits restants, son historique de séances et son statut d'abonnement.", visual: "adherent_profile" },
+        ]},
+        { q: "Comment un adhérent réserve une séance ?", a: "En un clic sur le bouton Réserver. Si la séance est complète, il est placé en liste d'attente. Si son abonnement fonctionne par crédits, un crédit est automatiquement réservé. L'adhérent recoit un email et un SMS (si activé) de confirmation." },
+        { q: "Comment un adhérent annule une réservation ?", a: "L'adhérent clique sur Annuler à côté de sa réservation. L'annulation est possible jusqu'à X heures avant la séance (configurable dans Paramètres, par défaut 12h). Le crédit est restitué automatiquement." },
+        { q: "L'adhérent peut-il modifier son profil ?", a: "Oui, l'adhérent peut modifier son prénom, nom, téléphone, date de naissance et adresse. L'email (identifiant de connexion) n'est pas modifiable. Les changements sont enregistrés immédiatement." },
+        { q: "Quelles données l'adhérent ne voit PAS ?", a: "L'adhérent ne voit pas les paiements, les autres adhérents, les paramètres du studio ni les outils d'administration. Il voit uniquement le planning, ses propres réservations et son profil." },
+      ]
+    },
+    // ── 9. Page vitrine ─────────────────────────────────────────────────────
+    {
+      id: "vitrine", icon: "🌐", title: "Page vitrine publique", color: "#8E44AD",
+      items: [
+        { q: "Qu'est-ce que la page vitrine ?", type: "guide", steps: [
+          { num: "1", title: "Activer la vitrine", text: "Dans Paramètres, activez la page vitrine publique. Deux prérequis : une photo de couverture et une description du studio. Une fois activée, votre studio est visible sur votre-studio.fydelys.fr sans connexion.", visual: "vitrine_toggle" },
+          { num: "2", title: "Personnaliser le contenu", text: "Ajoutez une photo de couverture (upload ou choix parmi 6 photos par défaut), une description (300 caractères max) et choisissez une couleur d'accent parmi 8 proposées. Un apercu s'affiche en temps réel.", visual: "vitrine_config" },
+        ]},
+        { q: "Que voient les visiteurs sur la page vitrine ?", a: "Les visiteurs voient la photo de couverture, le nom et la ville de votre studio, votre description, et la liste des prochaines séances (30 jours) avec les places disponibles. Un bouton les invite à se connecter pour réserver." },
+        { q: "Que se passe-t-il si la vitrine est désactivée ?", a: "Les visiteurs sur votre-studio.fydelys.fr sont redirigés directement vers la page de connexion. Le nom de votre studio s'affiche quand même sur cette page à la place de Fydelys." },
+        { q: "La vitrine est-elle gratuite ?", a: "Oui, la page vitrine est incluse dans toutes les formules Fydelys, y compris pendant la période d'essai. C'est un mini-site gratuit pour présenter votre studio si vous n'avez pas encore de site web." },
+      ]
+    },
+    // ── 10. SMS & rappels ────────────────────────────────────────────────────
+    {
+      id: "sms", icon: "📱", title: "SMS et rappels automatiques", color: "#16A085",
+      items: [
+        { q: "Comment fonctionnent les SMS et rappels ?", type: "guide", steps: [
+          { num: "1", title: "Activer les SMS", text: "Dans Paramètres, activez les SMS de confirmation et rappels. Configurez le délai de rappel (1h, 3h, 6h, 12h, 24h ou 48h avant la séance) et le fuseau horaire de votre studio.", visual: "sms_config" },
+          { num: "2", title: "Parcours de notifications", text: "L'adhérent recoit un SMS et un email à chaque réservation, puis des rappels automatiques avant chaque séance selon le délai configuré. Tout est automatique.", visual: "sms_timeline" },
+        ]},
+        { q: "Comment fonctionne le système de crédits SMS ?", a: "Chaque SMS envoyé consomme 1 crédit. Vous pouvez acheter des crédits SMS directement depuis Paramètres via Stripe. Le solde de crédits est affiché dans les paramètres. Quand le solde atteint 0, les SMS ne sont plus envoyés (les emails continuent normalement)." },
+        { q: "Quels SMS sont envoyés automatiquement ?", a: "4 types de SMS : confirmation de réservation, notification de liste d'attente, rappel avant la séance (selon le délai configuré), et notification d'annulation de séance. Chaque adhérent peut désactiver les SMS depuis son profil (opt-out)." },
+        { q: "Les rappels fonctionnent-ils sans SMS ?", a: "Oui, les rappels par email sont toujours envoyés gratuitement, même si les SMS sont désactivés. Les SMS sont un complément optionnel pour améliorer le taux de présence." },
+        { q: "Comment configurer le délai de rappel ?", a: "Dans Paramètres, choisissez le délai dans la liste déroulante : 1h, 2h, 3h, 6h, 12h, 24h ou 48h avant la séance. Ce délai s'applique à toutes les séances du studio. Les rappels sont envoyés automatiquement par un cron job toutes les heures." },
       ]
     },
   ];

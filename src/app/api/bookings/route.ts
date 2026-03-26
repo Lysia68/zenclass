@@ -5,19 +5,34 @@ import { sendEmail } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
 
-// GET /api/bookings?memberId=xxx&studioId=xxx — liste les bookings actifs d'un membre
+// GET /api/bookings?memberId=xxx&studioId=xxx  ou  ?sessionIds=id1,id2&studioId=xxx
 export async function GET(req: NextRequest) {
   const memberId = req.nextUrl.searchParams.get("memberId")
+  const sessionIds = req.nextUrl.searchParams.get("sessionIds")
   const studioId = req.nextUrl.searchParams.get("studioId")
-  if (!memberId || !studioId) return NextResponse.json({ error: "memberId et studioId requis" }, { status: 400 })
 
   const db = createServiceSupabase()
-  const { data } = await db.from("bookings")
-    .select("id, session_id, status")
-    .eq("member_id", memberId)
-    .in("status", ["confirmed", "waitlist"])
 
-  return NextResponse.json({ bookings: data || [] })
+  // Mode 1 : bookings d'un membre
+  if (memberId && studioId) {
+    const { data } = await db.from("bookings")
+      .select("id, session_id, status")
+      .eq("member_id", memberId)
+      .in("status", ["confirmed", "waitlist"])
+    return NextResponse.json({ bookings: data || [] })
+  }
+
+  // Mode 2 : bookings de plusieurs sessions (pour le planning admin)
+  if (sessionIds && studioId) {
+    const ids = sessionIds.split(",").filter(Boolean)
+    if (ids.length === 0) return NextResponse.json({ bookings: [] })
+    const { data } = await db.from("bookings")
+      .select("id, session_id, member_id, status, attended, guest_name, host_member_id, members(id, first_name, last_name, email, phone, credits, credits_total, subscription_id, subscriptions(period))")
+      .in("session_id", ids)
+    return NextResponse.json({ bookings: data || [] })
+  }
+
+  return NextResponse.json({ error: "(memberId ou sessionIds) + studioId requis" }, { status: 400 })
 }
 
 // POST /api/bookings — crée une réservation (membre ou invité) et envoie les emails de confirmation

@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
+import { sendEmail } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
 
@@ -8,8 +9,7 @@ export async function POST(req: NextRequest) {
     const { memberId, studioId } = await req.json()
     if (!memberId || !studioId) return NextResponse.json({ error: "memberId et studioId requis" }, { status: 400 })
 
-    const SENDGRID_API_KEY = process.env.SENDGRID_API_KEY
-    if (!SENDGRID_API_KEY) {
+    if (!process.env.SENDGRID_API_KEY) {
       console.warn("[notify-new-member] SENDGRID_API_KEY absent — simulé")
       return NextResponse.json({ ok: true, simulated: true })
     }
@@ -29,32 +29,21 @@ export async function POST(req: NextRequest) {
     const studioEmail = studio.email || "noreply@fydelys.fr"
     const studioUrl   = `https://${studio.slug}.fydelys.fr`
 
-    async function sendEmail(to: string, subject: string, html: string) {
-      const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${SENDGRID_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          personalizations: [{ to: [{ email: to }], subject }],
-          from: { email: "noreply@fydelys.fr", name: studioName },
-          reply_to: { email: studioEmail, name: studioName },
-          content: [{ type: "text/html", value: html }],
-        }),
-      })
-      if (!res.ok) console.error("[notify-new-member] SendGrid error:", await res.text())
-      return res.ok
-    }
-
     await Promise.allSettled([
-      member.email && sendEmail(
-        member.email,
-        `Bienvenue chez ${studioName} 🎉`,
-        buildWelcomeEmail({ studioName, studioUrl, firstName })
-      ),
-      studio.email && sendEmail(
-        studio.email,
-        `👤 Nouveau membre — ${memberName}`,
-        buildAdminEmail({ studioName, studioUrl, memberName, memberEmail: member.email || "", memberPhone: member.phone || "" })
-      ),
+      member.email && sendEmail({
+        to: member.email,
+        subject: `Bienvenue chez ${studioName}`,
+        html: buildWelcomeEmail({ studioName, studioUrl, firstName }),
+        fromName: studioName,
+        replyTo: { email: studioEmail, name: studioName },
+      }),
+      studio.email && sendEmail({
+        to: studio.email,
+        subject: `Nouveau membre — ${memberName}`,
+        html: buildAdminEmail({ studioName, studioUrl, memberName, memberEmail: member.email || "", memberPhone: member.phone || "" }),
+        fromName: studioName,
+        replyTo: { email: studioEmail, name: studioName },
+      }),
     ])
 
     console.log("[notify-new-member] Envoyés pour", memberName, "| studio:", studioName)

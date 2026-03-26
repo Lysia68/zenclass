@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
+import { sendEmail } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
 
@@ -68,19 +69,14 @@ export async function GET(request: Request) {
       : null
 
     if (SENDGRID_API_KEY) {
-      const body = {
-        personalizations: [{ to: [{ email: member.email }], subject: `🎂 Joyeux anniversaire ${firstName} !` }],
-        from: { email: "noreply@synq9.com", name: studio.name },
-        content: [{ type: "text/html", value: buildBirthdayEmail({ studio, member, firstName, age }) }]
-      }
-      const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-        method: "POST",
-        headers: { "Authorization": `Bearer ${SENDGRID_API_KEY}`, "Content-Type": "application/json" },
-        body: JSON.stringify(body)
+      const result = await sendEmail({
+        to: member.email,
+        subject: `Joyeux anniversaire ${firstName} !`,
+        html: buildBirthdayEmail({ studio, member, firstName, age }),
+        fromName: studio.name,
       })
-      if (!res.ok) {
-        const e = await res.text()
-        errors.push(`${member.email}: ${e}`)
+      if (!result.ok) {
+        errors.push(`${member.email}: ${result.error}`)
         continue
       }
     } else {

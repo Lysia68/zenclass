@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
 import { sendSMS, smsReminder } from "@/lib/sms"
+import { sendEmail } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
 
@@ -124,17 +125,12 @@ export async function GET(request: Request) {
         await Promise.allSettled(recipients.map(async (member: any) => {
           const firstName = member.name.split(" ")[0] || member.name
           const subjectLabel = reminderHours < 1 ? "maintenant" : reminderHours === 1 ? "dans 1 heure" : reminderHours < 24 ? `dans ${reminderHours}h` : reminderHours <= 26 ? "demain" : `dans ${Math.round(reminderHours/24)} jours`
-          const body = {
-            personalizations: [{ to: [{ email: member.email }], subject: `Votre cours "${discName}" est ${subjectLabel} chez ${studio.name}` }],
-            from: { email: "noreply@fydelys.fr", name: studio.name },
-            content: [{ type: "text/html", value: buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }) }]
-          }
-          const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-            method: "POST",
-            headers: { "Authorization": `Bearer ${SENDGRID_API_KEY}`, "Content-Type": "application/json" },
-            body: JSON.stringify(body)
+          await sendEmail({
+            to: member.email,
+            subject: `Votre cours "${discName}" est ${subjectLabel} chez ${studio.name}`,
+            html: buildReminderEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, reminderHours }),
+            fromName: studio.name,
           })
-          if (!res.ok) { const e = await res.text(); throw new Error(e) }
         }))
         totalSent += recipients.length
       } else {

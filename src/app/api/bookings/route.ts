@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
 import { sendSMS, normalizePhone, smsConfirmation, smsWaitlist } from "@/lib/sms"
+import { sendEmail } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
 
@@ -94,15 +95,15 @@ export async function POST(req: NextRequest) {
         sendEmail({
           to: member.email,
           subject: status === "waitlist"
-            ? `⏳ Liste d'attente — ${discName} chez ${studio.name}`
-            : `✅ Réservation confirmée — ${discName} chez ${studio.name}`,
+            ? `Liste d'attente — ${discName} chez ${studio.name}`
+            : `Réservation confirmée — ${discName} chez ${studio.name}`,
           html: buildConfirmationEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member: { name: memberName }, firstName, status }),
           fromName: studio.name,
         }),
         // 2. Email à l'admin du studio
         studio.email && sendEmail({
           to: studio.email,
-          subject: `📋 Nouvelle inscription — ${memberName} · ${discName} ${sessDate}`,
+          subject: `Nouvelle inscription — ${memberName} · ${discName} ${sessDate}`,
           html: buildAdminNotifEmail({ studio, sess, sessDate, sessTime, discName, discIcon, memberName, status }),
           fromName: studio.name,
         }),
@@ -143,19 +144,6 @@ export async function POST(req: NextRequest) {
   }
 }
 
-async function sendEmail({ to, subject, html, fromName = "Fydelys" }: { to: string; subject: string; html: string; fromName?: string }) {
-  const res = await fetch("https://api.sendgrid.com/v3/mail/send", {
-    method: "POST",
-    headers: { "Authorization": `Bearer ${process.env.SENDGRID_API_KEY}`, "Content-Type": "application/json" },
-    body: JSON.stringify({
-      personalizations: [{ to: [{ email: to }], subject }],
-      from: { email: "noreply@fydelys.fr", name: fromName },
-      content: [{ type: "text/html", value: html }],
-    }),
-  })
-  if (!res.ok) console.error("SendGrid error:", await res.text())
-  else console.log("[bookings] Email envoyé →", to, "|", subject.slice(0, 40))
-}
 
 function buildConfirmationEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member, firstName, status }: any) {
   const isWaitlist = status === "waitlist"

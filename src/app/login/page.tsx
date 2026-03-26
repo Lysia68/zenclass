@@ -453,7 +453,12 @@ export default function LoginPage() {
           )}
           <h1 style={{fontSize:ctx === "tenant-login" && studioName ? 28 : 30,fontWeight:800,color:C.title,margin:"0 0 6px",letterSpacing:-0.8,lineHeight:1}}>
             {ctx === "tenant-login" && studioName
-              ? studioName
+              ? (() => {
+                  const name = studioName.charAt(0).toUpperCase() + studioName.slice(1)
+                  // Première moitié en couleur sombre, dernière syllabe en accent (comme Fyde+lys)
+                  const splitAt = Math.max(1, Math.ceil(name.length * 0.6))
+                  return <>{name.slice(0, splitAt)}<span style={{color:C.accent}}>{name.slice(splitAt)}</span></>
+                })()
               : <>Fyde<span style={{color:C.accent}}>lys</span></>
             }
           </h1>

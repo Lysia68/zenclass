@@ -82,9 +82,60 @@ export async function PATCH(request: NextRequest) {
   if (!id) return NextResponse.json({ error: "id requis" }, { status: 400 })
 
   const db = createServiceSupabase()
-  const { error } = await db.from("members").update(updates).eq("id", id)
 
+  // Si on assigne un abonnement, récupérer les infos avant la mise à jour
+  const isSubChange = updates.subscription_id !== undefined
+  let oldSubId: string | null = null
+  let member: any = null
+  if (isSubChange) {
+    const { data } = await db.from("members")
+      .select("subscription_id, studio_id, first_name, last_name")
+      .eq("id", id).single()
+    oldSubId = data?.subscription_id || null
+    member = data
+  }
+
+  const { error } = await db.from("members").update(updates).eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Enregistrer l'achat dans member_payments si un nouvel abonnement est assigné
+  if (isSubChange && updates.subscription_id && updates.subscription_id !== oldSubId && member?.studio_id) {
+    try {
+      const { data: sub } = await db.from("subscriptions")
+        .select("name, price, period, credits")
+        .eq("id", updates.subscription_id).single()
+
+      if (sub) {
+        // Ajouter les crédits au membre si c'est un carnet/séance
+        const CREDIT_PERIODS = ["séance", "carnet", "once"]
+        if (CREDIT_PERIODS.includes(sub.period) && sub.credits && sub.credits > 0) {
+          const { data: currentMember } = await db.from("members").select("credits, credits_total").eq("id", id).single()
+          if (currentMember) {
+            await db.from("members").update({
+              credits: (currentMember.credits || 0) + sub.credits,
+              credits_total: (currentMember.credits_total || 0) + sub.credits,
+            }).eq("id", id)
+          }
+        }
+
+        await db.from("member_payments").insert({
+          studio_id: member.studio_id,
+          member_id: id,
+          subscription_id: updates.subscription_id,
+          amount: sub.price || 0,
+          status: "payé",
+          payment_date: new Date().toISOString().slice(0, 10),
+          payment_type: "Manuel",
+          source: "admin_subscription",
+          notes: sub.name || "Abonnement",
+        })
+        console.log("[members PATCH] member_payments créé pour", id, "—", sub.name)
+      }
+    } catch (err: any) {
+      console.warn("[members PATCH] Erreur création member_payments:", err.message)
+    }
+  }
+
   return NextResponse.json({ ok: true })
 }
 

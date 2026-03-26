@@ -117,7 +117,7 @@ function Members({ isMobile }) {
       console.log("[Members] trying Supabase client fallback...");
       const { data, error } = await createClient()
         .from("members")
-        .select("id,first_name,last_name,email,phone,address,postal_code,city,birth_date,status,credits,credits_total,joined_at,next_payment,notes,subscription_id,profile_complete,subscriptions(name)")
+        .select("id,first_name,last_name,email,phone,address,postal_code,city,birth_date,status,credits,credits_total,joined_at,next_payment,notes,subscription_id,profile_complete,frozen_until,subscriptions(name)")
         .eq("studio_id", studioId).order("last_name");
       console.log("[Members] fallback →", { count: data?.length, error: error?.message });
 
@@ -137,7 +137,7 @@ function Members({ isMobile }) {
       status:m.status||"actif", credits:m.credits||0, creditTotal:m.credits_total||0,
       joined:m.joined_at, nextPayment:m.next_payment, notes:m.notes||"",
       subscription:m.subscriptions?.name||"—", subscriptionId:m.subscription_id||null,
-      profileComplete:m.profile_complete,
+      profileComplete:m.profile_complete, frozenUntil:m.frozen_until||null,
       avatar:(m.first_name?.[0]||"")+(m.last_name?.[0]||""),
     };
   }
@@ -483,7 +483,29 @@ function Members({ isMobile }) {
           <Button variant="ghost" sm onClick={()=>setModal({type:"subscription",member:m})}><span style={{display:"flex",alignItems:"center",gap:5}}><IcoTag2 s={13} c={C.textMid}/>Modifier l'abonnement</span></Button>
           <Button variant="ghost" sm onClick={()=>setModal({type:"history",member:m})}><span style={{display:"flex",alignItems:"center",gap:5}}><IcoCalendar2 s={13} c={C.textMid}/>Historique séances</span></Button>
           <Button variant="ghost" sm onClick={()=>setModal({type:"gift",member:m})}><span style={{display:"flex",alignItems:"center",gap:5}}>🎁 Offrir des séances</span></Button>
+          {m.frozenUntil && new Date(m.frozenUntil) >= new Date(new Date().toISOString().slice(0,10))
+            ? <Button variant="ghost" sm onClick={async()=>{
+                await createClient().from("members").update({frozen_until:null}).eq("id",m.id);
+                setMembers(prev=>prev.map(x=>x.id===m.id?{...x,frozenUntil:null}:x));
+                setSelected(prev=>prev?{...prev,frozenUntil:null}:prev);
+                setToast({msg:"Abonnement dégelé",ok:true}); setTimeout(()=>setToast(null),3000);
+              }}><span style={{display:"flex",alignItems:"center",gap:5}}>&#10052; Dégeler</span></Button>
+            : <Button variant="ghost" sm onClick={()=>{
+                const until = prompt("Geler jusqu'au (AAAA-MM-JJ) :", new Date(Date.now()+30*86400000).toISOString().slice(0,10));
+                if (!until || !/^\d{4}-\d{2}-\d{2}$/.test(until)) return;
+                createClient().from("members").update({frozen_until:until}).eq("id",m.id).then(()=>{
+                  setMembers(prev=>prev.map(x=>x.id===m.id?{...x,frozenUntil:until}:x));
+                  setSelected(prev=>prev?{...prev,frozenUntil:until}:prev);
+                  setToast({msg:`Abonnement gelé jusqu'au ${new Date(until).toLocaleDateString("fr-FR")}`,ok:true}); setTimeout(()=>setToast(null),3000);
+                });
+              }}><span style={{display:"flex",alignItems:"center",gap:5}}>&#10052; Geler l'abonnement</span></Button>
+          }
         </div>
+        {m.frozenUntil && new Date(m.frozenUntil) >= new Date(new Date().toISOString().slice(0,10)) && (
+          <div style={{marginTop:10,padding:"8px 14px",background:"#FFF8E8",border:"1.5px solid #F0D080",borderRadius:8,fontSize:13,color:"#8B6914",fontWeight:600}}>
+            Abonnement gelé jusqu'au {new Date(m.frozenUntil).toLocaleDateString("fr-FR")} — l'adhérent ne peut pas réserver de séances
+          </div>
+        )}
       </Card>
     );
   };
@@ -527,6 +549,7 @@ function Members({ isMobile }) {
               style={{flex:1,padding:isMobile?"9px 12px":"10px 14px",paddingLeft:34,border:`1px solid ${C.border}`,borderRadius:8,fontSize:16,outline:"none",color:C.text,background:C.surfaceWarm,width:"100%"}}
               onFocus={e=>e.target.style.borderColor=C.accent} onBlur={e=>e.target.style.borderColor=C.border}/>
           </div>
+          <Button sm variant="ghost" onClick={()=>window.open(`/api/export?type=members&studioId=${studioId}`)}>CSV</Button>
           <Button sm variant="primary" onClick={()=>{setShowAdd(!showAdd);setNM(EMPTY_FORM);setNMErrors({});}}>＋ {!isMobile&&"Adhérent"}</Button>
         </div>
 

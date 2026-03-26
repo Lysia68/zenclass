@@ -459,12 +459,11 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
         showToast(`Annulation impossible — délai de ${delayH}h dépassé`, false);
         return;
       }
-      const sb = createClient();
-      const { data: { user } } = await sb.auth.getUser();
-      if (!user) return;
-      const { error } = await sb.from("bookings")
-        .delete().eq("session_id", s.id).eq("member_id", me.id);
-      if (!error) {
+      const res = await fetch("/api/bookings/cancel", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId: s.id, memberId: me.id }),
+      });
+      if (res.ok) {
         setMyBookings(p=>p.filter(id=>id!==s.id));
         setSessions(p=>p.map(x=>x.id===s.id?{...x,booked:Math.max(0,x.booked-1)}:x));
         showToast("Réservation annulée");

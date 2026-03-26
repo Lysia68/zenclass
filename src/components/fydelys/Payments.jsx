@@ -64,6 +64,9 @@ function Payments({ isMobile }) {
           <IcoMail s={16} c="white"/>{toast}
         </div>
       )}
+      <div style={{ display:"flex", justifyContent:"flex-end", marginBottom:10 }}>
+        <Button sm variant="ghost" onClick={()=>window.open(`/api/export?type=payments&studioId=${studioId}`)}>CSV</Button>
+      </div>
       <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"repeat(3,1fr)", gap:isMobile?8:14, marginBottom:isMobile?16:20 }}>
         {stats.map(s=>(
           <Card key={s.lbl} style={{ padding:"14px 16px" }}>

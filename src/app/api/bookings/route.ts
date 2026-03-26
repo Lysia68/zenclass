@@ -23,8 +23,13 @@ export async function POST(req: NextRequest) {
     // Charger studio + membre en parallèle pour vérification accès
     const [{ data: studioData }, { data: memberCredits }] = await Promise.all([
       db.from("studios").select("payment_mode").eq("id", studioId).maybeSingle(),
-      db.from("members").select("credits, credits_total, status, subscription_id, subscriptions(period)").eq("id", memberId).single(),
+      db.from("members").select("credits, credits_total, status, subscription_id, frozen_until, subscriptions(period)").eq("id", memberId).single(),
     ])
+
+    // Vérifier gel d'abonnement
+    if (memberCredits?.frozen_until && new Date(memberCredits.frozen_until) >= new Date(new Date().toISOString().slice(0, 10))) {
+      return NextResponse.json({ error: "Abonnement gelé", frozen_until: memberCredits.frozen_until }, { status: 403 })
+    }
 
     const paymentMode = studioData?.payment_mode || "none"
     const subPeriod   = (memberCredits as any)?.subscriptions?.period

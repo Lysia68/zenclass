@@ -742,16 +742,46 @@ function Planning({ isMobile }) {
       nb[sid] = (nb[sid] || []).map(b => b.id === bid ? { ...b, st: ns } : b);
       return nb;
     });
-    const { error } = await createClient().from("bookings").update({ status: ns }).eq("id", bid);
-    if (error) {
-      console.error("update booking status", error);
-      // Rollback UI
-      setBookings(prev => {
-        const nb = { ...prev };
-        const old = ns === "cancelled" ? "confirmed" : ns === "confirmed" ? "cancelled" : "waitlist";
-        nb[sid] = (nb[sid] || []).map(b => b.id === bid ? { ...b, st: old } : b);
-        return nb;
+
+    // Si annulation d'un confirmé → API cancel (promeut waitlist + restitue crédit)
+    if (ns === "cancelled") {
+      const res = await fetch("/api/bookings/cancel", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ bookingId: bid }),
       });
+      const data = await res.json();
+      if (!res.ok) {
+        setBookings(prev => {
+          const nb = { ...prev };
+          nb[sid] = (nb[sid] || []).map(b => b.id === bid ? { ...b, st: "confirmed" } : b);
+          return nb;
+        });
+      } else if (data.promoted) {
+        // Rafraîchir les bookings pour voir le promu
+        showPlanToast(`${data.promoted} promu(e) depuis la liste d'attente`, true);
+        // Recharger les bookings de cette session
+        const sb = createClient();
+        const { data: fresh } = await sb.from("bookings")
+          .select("id, member_id, status, members(first_name, last_name, email, phone)")
+          .eq("session_id", sid);
+        if (fresh) {
+          setBookings(prev => ({
+            ...prev,
+            [sid]: fresh.map(b => ({ id: b.id, memberId: b.member_id, st: b.status, name: `${b.members?.first_name||""} ${b.members?.last_name||""}`.trim(), email: b.members?.email, phone: b.members?.phone })),
+          }));
+        }
+      }
+    } else {
+      const { error } = await createClient().from("bookings").update({ status: ns }).eq("id", bid);
+      if (error) {
+        console.error("update booking status", error);
+        setBookings(prev => {
+          const nb = { ...prev };
+          const old = ns === "confirmed" ? "cancelled" : "waitlist";
+          nb[sid] = (nb[sid] || []).map(b => b.id === bid ? { ...b, st: old } : b);
+          return nb;
+        });
+      }
     }
   };
 

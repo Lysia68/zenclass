@@ -138,21 +138,7 @@ async function promoteWaitlist(db: any, sessionId: string): Promise<{ memberName
     })
   }
 
-  // SMS si activé
-  if (studio?.sms_enabled && member?.phone && member.sms_opt_in !== false) {
-    const balance = studio.sms_credits_balance ?? 0
-    if (balance > 0) {
-      const disc = sess.disciplines as any
-      const discName = disc?.name || "Séance"
-      const sessDate = new Date(sess.session_date).toLocaleDateString("fr-FR", { weekday: "short", day: "numeric", month: "short" })
-      const sessTime = sess.session_time?.slice(0, 5) || ""
-      await (await import("@/lib/sms")).sendSMS({
-        to: member.phone,
-        body: `Place liberee : ${discName} ${sessDate} a ${sessTime} chez ${studio.name}. Votre reservation est confirmee !`,
-      })
-      await db.from("studios").update({ sms_credits_balance: balance - 1 }).eq("id", sess.studio_id)
-    }
-  }
+  // SMS réservé uniquement aux rappels de séance (cron/reminders)
 
   console.log(`[waitlist] Promu: ${memberName} pour session ${sessionId}`)
   return { memberName }

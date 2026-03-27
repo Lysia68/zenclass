@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createServiceSupabase } from "@/lib/supabase-server"
-import { sendSMS, normalizePhone, smsConfirmation, smsWaitlist } from "@/lib/sms"
 import { sendEmail } from "@/lib/email"
 
 export const dynamic = "force-dynamic"
@@ -66,11 +65,17 @@ export async function POST(req: NextRequest) {
     }
 
     // ── Regular member booking ────────────────────────────────────────
-    // Vérifier doublon
+    // Vérifier doublon (y compris cancelled pour la contrainte unique)
     const { data: existing } = await db.from("bookings")
       .select("id, status").eq("session_id", sessionId).eq("member_id", memberId)
-      .neq("status", "cancelled").maybeSingle()
-    if (existing) return NextResponse.json({ already: true, status: existing.status })
+      .maybeSingle()
+    if (existing && existing.status !== "cancelled") {
+      return NextResponse.json({ already: true, status: existing.status })
+    }
+    // Supprimer l'ancienne réservation annulée pour permettre la ré-inscription
+    if (existing && existing.status === "cancelled") {
+      await db.from("bookings").delete().eq("id", existing.id)
+    }
 
     // Charger studio + membre en parallèle pour vérification accès
     const [{ data: studioData }, { data: memberCredits }] = await Promise.all([
@@ -150,7 +155,7 @@ export async function POST(req: NextRequest) {
           const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim()
           const firstName  = member.first_name || memberName
 
-          Promise.allSettled([
+          const emails: Promise<any>[] = [
             sendEmail({
               to: member.email,
               subject: status === "waitlist"
@@ -159,33 +164,35 @@ export async function POST(req: NextRequest) {
               html: buildConfirmationEmail({ studio, sess, sessDate, sessTime, discName, discIcon, member: { name: memberName }, firstName, status }),
               fromName: studio.name,
             }),
-            studio.email && sendEmail({
+          ]
+          if (studio.email) {
+            emails.push(sendEmail({
               to: studio.email,
               subject: `Nouvelle inscription — ${memberName} · ${discName} ${sessDate}`,
               html: buildAdminNotifEmail({ studio, sess, sessDate, sessTime, discName, discIcon, memberName, status }),
               fromName: studio.name,
-            }),
-          ])
-        }
+            }))
+          }
 
-        if (studio?.sms_enabled && member?.phone && member.sms_opt_in !== false) {
-          const { data: studioCredits } = await db.from("studios")
-            .select("sms_credits_balance").eq("id", studioId).single()
-          const balance = studioCredits?.sms_credits_balance ?? 0
-          if (balance > 0) {
-            const sessDate = new Date(sess.session_date).toLocaleDateString("fr-FR", { weekday:"short", day:"numeric", month:"short" })
-            const sessTime = sess.session_time?.slice(0, 5) || ""
-            const disc     = (sess as any).disciplines
-            const discName = disc?.name || "Séance"
-            const body = status === "waitlist"
-              ? smsWaitlist({ studioName: studio.name, discName, sessDate, sessTime })
-              : smsConfirmation({ studioName: studio.name, discName, sessDate, sessTime })
-            const smsResult = await sendSMS({ to: member.phone, body })
-            if (smsResult.ok) {
-              await db.from("studios").update({ sms_credits_balance: balance - 1 }).eq("id", studioId)
+          // Email admin "cours complet" si cette inscription remplit la séance
+          if (status === "confirmed" && studio.email) {
+            const { count: newCount } = await db.from("bookings").select("id", { count: "exact", head: true })
+              .eq("session_id", sessionId).eq("status", "confirmed")
+            const spots = sess.spots || 999
+            if ((newCount || 0) >= spots) {
+              emails.push(sendEmail({
+                to: studio.email,
+                subject: `Cours complet — ${discName} ${sessDate} a ${sessTime}`,
+                html: buildFullSessionEmail({ studio, sess, sessDate, sessTime, discName, discIcon, spots, count: newCount || spots }),
+                fromName: studio.name,
+              }))
             }
           }
+
+          Promise.allSettled(emails)
         }
+
+        // SMS réservé uniquement aux rappels de séance (cron/reminders)
       } catch (e: any) { console.error("[bookings] notification error:", e.message) }
     })()
 
@@ -232,6 +239,37 @@ function buildConfirmationEmail({ studio, sess, sessDate, sessTime, discName, di
         </td></tr>
         <tr><td style="padding:16px 32px 24px;border-top:1px solid #EDE4D8;text-align:center;">
           <p style="font-size:11px;color:#B0A090;margin:0;">${studio.name} · Géré avec <a href="https://fydelys.fr" style="color:#A06838;text-decoration:none;">Fydelys</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
+</body></html>`
+}
+
+function buildFullSessionEmail({ studio, sess, sessDate, sessTime, discName, discIcon, spots, count }: any) {
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"></head>
+<body style="margin:0;padding:0;background:#F4EFE8;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4EFE8;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:480px;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #DDD5C8;">
+        <tr><td style="background:#2E6B3E;padding:20px 28px;text-align:center;">
+          <div style="font-size:18px;font-weight:800;color:#fff;">${studio.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.7);margin-top:4px;text-transform:uppercase;letter-spacing:1px;">Cours complet</div>
+        </td></tr>
+        <tr><td style="padding:24px 28px;text-align:center;">
+          <div style="font-size:40px;margin-bottom:8px;">🎉</div>
+          <p style="font-size:16px;color:#2A1F14;font-weight:700;margin:0 0 6px;">Felicitations !</p>
+          <p style="font-size:14px;color:#5C4A38;line-height:1.6;margin:0 0 20px;">Votre cours est complet : <strong>${count}/${spots} places</strong> reservees.</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F2EA;border-radius:10px;border:1px solid #DDD5C8;">
+            <tr><td style="padding:16px 20px;">
+              <div style="font-size:16px;margin-bottom:8px;">${discIcon} <strong>${discName}</strong></div>
+              <div style="font-size:13px;color:#5C4A38;">📅 ${sessDate}${sessTime ? ` · 🕐 ${sessTime}` : ""}${sess.teacher ? ` · 👤 ${sess.teacher}` : ""}</div>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:12px 28px 20px;border-top:1px solid #EDE4D8;text-align:center;">
+          <p style="font-size:11px;color:#B0A090;margin:0;"><a href="https://${studio.slug}.fydelys.fr/planning" style="color:#A06838;">Voir le planning →</a></p>
         </td></tr>
       </table>
     </td></tr>

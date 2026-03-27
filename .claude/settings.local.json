@@ -7,7 +7,8 @@
       "Bash(grep -r \"member_payments\\\\|reminder_logs\" /c/Users/Bernard/Fydelys_v6/fydelys --include=*.sql --include=*.ts --include=*.tsx)",
       "Bash(grep -r \"from.*member_payments\\\\|from.*reminder_logs\" /c/Users/Bernard/Fydelys_v6/fydelys/src --include=*.ts --include=*.tsx)",
       "Bash(grep -rn \"create table\\\\|CREATE TABLE\\\\|member_payments\\\\|reminder_logs\" /c/Users/Bernard/Fydelys_v6/fydelys --include=*.ts --include=*.tsx --include=*.sql)",
-      "Bash(node scripts/seed-yogaplus.mjs)"
+      "Bash(node scripts/seed-yogaplus.mjs)",
+      "Bash(npx tsc:*)"
     ]
   }
 }

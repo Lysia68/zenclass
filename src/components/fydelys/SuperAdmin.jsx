@@ -104,7 +104,7 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
         body: JSON.stringify({
           studioId: editing.id,
           studio: {
-            name: f.name, slug: f.slug, city: f.city, address: f.address || null,
+            name: f.name, slug: f.slug, city: f.city, postal_code: f.zip || null, address: f.address || null,
             phone: f.phone || null, email: f.email, notes: f.notes || null,
             payment_mode: f.paymentMode || "none",
             stripe_connect_enabled: f.paymentMode === "connect",
@@ -163,25 +163,38 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
     setModal(null);
   };
 
-  const STEPS = ["Studio", "Contact", "Confirmation"];
+  const TABS = ["Studio", "Contact", "Confirmation"];
+  const tabStyle = (i) => ({
+    flex:1, padding:"9px 0", textAlign:"center", fontSize:13, fontWeight:step===i+1?700:400, cursor:"pointer",
+    color:step===i+1?"#A06838":"#8C7B6C", borderBottom:`2px solid ${step===i+1?"#A06838":"transparent"}`,
+    background:"none", border:"none", borderBottomStyle:"solid",
+  });
   return (
     <div onClick={e=>e.target===e.currentTarget&&setModal(null)}
       style={{position:"fixed",inset:0,background:"rgba(42,31,20,.5)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{background:"#FFFFFF",border:"1px solid rgba(167,139,250,.2)",borderRadius:20,padding:32,width:"100%",maxWidth:520,boxShadow:"0 32px 64px rgba(0,0,0,.5)",maxHeight:"90vh",overflowY:"auto"}}>
 
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:24}}>
-          <div>
-            <div style={{fontSize:20,fontWeight:800,color:"#2A1F14",letterSpacing:-0.5}}>{editing?"Modifier le tenant":"Nouveau tenant"}</div>
-            <div style={{fontSize:12,color:"#8C7B6C",marginTop:2}}>Étape {step} / 3 — {STEPS[step-1]}</div>
-          </div>
+        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
+          <div style={{fontSize:20,fontWeight:800,color:"#2A1F14",letterSpacing:-0.5}}>{editing?"Modifier le tenant":"Nouveau tenant"}</div>
           <button onClick={()=>setModal(null)} style={{background:"#F4EFE8",border:"1px solid #DDD5C8",borderRadius:8,width:32,height:32,cursor:"pointer",color:"#8C7B6C",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
 
-        <div style={{display:"flex",gap:6,marginBottom:28}}>
-          {STEPS.map((s,i)=>(
-            <div key={s} style={{flex:1,height:3,borderRadius:2,background:i+1<=step?"#A06838":"#EAE4DA"}}/>
-          ))}
-        </div>
+        {editing ? (
+          <div style={{display:"flex",borderBottom:"1px solid #EAE4DA",marginBottom:20}}>
+            {TABS.map((t,i)=>(
+              <button key={t} onClick={()=>setStep(i+1)} style={tabStyle(i)}>{t}</button>
+            ))}
+          </div>
+        ) : (
+          <>
+            <div style={{fontSize:12,color:"#8C7B6C",marginBottom:8}}>Étape {step} / 3 — {TABS[step-1]}</div>
+            <div style={{display:"flex",gap:6,marginBottom:20}}>
+              {TABS.map((s,i)=>(
+                <div key={s} style={{flex:1,height:3,borderRadius:2,background:i+1<=step?"#A06838":"#EAE4DA"}}/>
+              ))}
+            </div>
+          </>
+        )}
 
         {step===1&&(
           <div style={{display:"flex",flexDirection:"column",gap:16}}>
@@ -209,7 +222,7 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
                 {v:"Fitness",l:"🏋 Fitness"},{v:"Méditation",l:"☯ Méditation"},{v:"Multi",l:"🌀 Multi-disciplines"}
               ]}/>
               <SelectSA label="Plan Fydelys" k="plan" value={f.plan} onChange={upd} opts={[
-                ...FYDELYS_PLANS.map(p=>({v:p.id,l:`${p.name} — ${p.price} €/mois`}))
+                ...FYDELYS_PLANS.map(p=>({v:p.slug||p.id,l:`${p.name} — ${p.price} €/mois`}))
               ]}/>
             </div>
           </div>
@@ -255,7 +268,7 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
                 ["Ville",        f.city],
                 ["Code postal",  f.zip],
                 ["Type",         f.type],
-                ["Plan",         (FYDELYS_PLANS.find(p=>p.id===f.plan)||{}).name || f.plan],
+                ["Plan",         (FYDELYS_PLANS.find(p=>(p.slug||p.id)===f.plan)||{}).name || f.plan],
                 ["Gérant",       `${f.firstName} ${f.lastName}`],
                 ["Email",        f.email],
                 ["Téléphone",    f.phone],
@@ -297,17 +310,24 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
         )}
 
         <div style={{display:"flex",gap:10,marginTop:24}}>
-          {step>1&&(
-            <button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#8C7B6C",fontSize:14,fontWeight:600,cursor:"pointer"}}>← Retour</button>
+          {editing ? (
+            <>
+              <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(135deg,#2563EB,#1D4ED8)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Enregistrer</button>
+              <button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#B0A090",fontSize:14,cursor:"pointer"}}>Annuler</button>
+            </>
+          ) : (
+            <>
+              {step>1&&(
+                <button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#8C7B6C",fontSize:14,fontWeight:600,cursor:"pointer"}}>Retour</button>
+              )}
+              {step<3?(
+                <button onClick={nextStep} style={{flex:2,padding:"11px",background:"linear-gradient(145deg,#B88050,#9A6030)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Continuer</button>
+              ):(
+                <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(135deg,#059669,#047857)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Créer le tenant</button>
+              )}
+              {step===1&&<button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#B0A090",fontSize:14,cursor:"pointer"}}>Annuler</button>}
+            </>
           )}
-          {step<3?(
-            <button onClick={nextStep} style={{flex:2,padding:"11px",background:"linear-gradient(145deg,#B88050,#9A6030)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Continuer →</button>
-          ):(
-            <button onClick={save} style={{flex:2,padding:"11px",background:editing?"linear-gradient(135deg,#2563EB,#1D4ED8)":"linear-gradient(135deg,#059669,#047857)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>
-              {editing?"💾 Enregistrer":"🚀 Créer le tenant"}
-            </button>
-          )}
-          {step===1&&<button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#B0A090",fontSize:14,cursor:"pointer"}}>Annuler</button>}
         </div>
       </div>
     </div>
@@ -405,11 +425,12 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
           name:      s.name || "Sans nom",
           slug:      s.slug || "",
           city:      s.city || "",
+          zip:       s.postal_code || "",
           address:   s.address || "",
           email:     s.email || "",
           phone:     s.phone || admin?.phone || "",
           status:    s.status === "actif" ? "actif" : s.billing_status === "canceled" ? "suspendu" : "actif",
-          plan:      s.plan_slug || "Essentiel",
+          plan:      s.plan_slug || "essentiel",
           since:     (() => { const d = new Date(s.created_at); return `${mois[d.getMonth()]} ${d.getFullYear()}`; })(),
           firstName: admin?.first_name || "",
           lastName:  admin?.last_name  || "",

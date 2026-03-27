@@ -108,6 +108,25 @@ export async function POST(req: NextRequest) {
           }
         }
 
+        // ── Abonnement studio Fydelys (plan Essentiel/Standard/Pro) ────────
+        const planSlug = session.metadata?.planSlug
+        if (planSlug && !memberId) {
+          L.info(`Abonnement studio — plan: ${planSlug}, studio: ${studioId}`)
+          const subscriptionId = session.subscription as string
+          const updateData: any = {
+            billing_status: "active",
+            plan_slug: planSlug,
+            plan_started_at: new Date().toISOString(),
+          }
+          if (subscriptionId) updateData.stripe_subscription_id = subscriptionId
+          // Supprimer la date de fin d'essai
+          updateData.trial_ends_at = null
+          const { error: uErr } = await db.from("studios").update(updateData).eq("id", studioId)
+          if (uErr) L.err("Échec update studio billing", uErr)
+          else L.ok(`Studio ${studioId} → billing_status=active, plan=${planSlug}`)
+          break
+        }
+
         // ── Achat à l'unité (séance) ────────────────────────────────────────
         if (type === "subscription_once" && memberId) {
           const creditsToAdd = parseInt(session.metadata?.credits || "1")
@@ -264,11 +283,25 @@ export async function POST(req: NextRequest) {
         const obj = event.data.object as any
         const subId = obj.id || obj.subscription
         if (!subId) { L.warn("subId absent — ignoré"); break }
-        L.info(`${event.type} — subId ${subId}`)
+        const subIdStr = typeof subId === "string" ? subId : subId.id
+        L.info(`${event.type} — subId ${subIdStr}`)
+
+        // Vérifier si c'est un abonnement studio (Fydelys platform)
+        const { data: studio } = await db.from("studios")
+          .select("id").eq("stripe_subscription_id", subIdStr).maybeSingle()
+        if (studio) {
+          const studioStatus = event.type === "customer.subscription.deleted" ? "canceled" : "past_due"
+          const { error: sErr } = await db.from("studios").update({ billing_status: studioStatus }).eq("id", studio.id)
+          if (sErr) L.err(`Échec update billing_status studio → ${studioStatus}`, sErr)
+          else L.ok(`Studio ${studio.id} → billing_status=${studioStatus}`)
+          break
+        }
+
+        // Sinon, c'est un abonnement membre
         const { data: member, error: mErr } = await db.from("members")
-          .select("id").eq("stripe_sub_id", typeof subId === "string" ? subId : subId.id).maybeSingle()
+          .select("id").eq("stripe_sub_id", subIdStr).maybeSingle()
         if (mErr) { L.err("Erreur lookup membre par stripe_sub_id", mErr); break }
-        if (!member) { L.warn(`Aucun membre trouvé pour stripe_sub_id ${subId}`); break }
+        if (!member) { L.warn(`Aucun studio ni membre trouvé pour stripe_sub_id ${subIdStr}`); break }
         const newStatus = event.type === "customer.subscription.deleted" ? "Inactif" : "Suspendu"
         const { error: uErr } = await db.from("members").update({ status: newStatus }).eq("id", member.id)
         if (uErr) L.err(`Échec update statut membre → ${newStatus}`, uErr)

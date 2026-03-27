@@ -6,6 +6,7 @@ import { AppCtx } from "./context";
 import { C } from "./theme";
 import { IcoUser2, IcoCheck, IcoAlert2 } from "./icons";
 import { Button, Field, formatPhone, formatPostalCode, formatName } from "./ui";
+import { BirthDatePicker } from "./pickers";
 
 function OnboardingView({ studioName = "", onComplete }) {
   const { studioId } = useContext(AppCtx);
@@ -23,6 +24,7 @@ function OnboardingView({ studioName = "", onComplete }) {
     address:      "",
     postal_code:  "",
     city:         "",
+    profession:   "",
   });
   const set = (k) => (v) => setForm(f => ({ ...f, [k]: v }));
 
@@ -67,6 +69,7 @@ function OnboardingView({ studioName = "", onComplete }) {
           address:      form.address.trim(),
           postal_code:  form.postal_code.trim(),
           city:         form.city.trim(),
+          profession:   form.profession.trim() || null,
         }),
       });
       const result = await res.json();
@@ -147,8 +150,12 @@ function OnboardingView({ studioName = "", onComplete }) {
                 {errors.phone && <div style={{ fontSize:11, color:C.warn, marginTop:3 }}>{errors.phone}</div>}
               </div>
               <div>
-                <Field label="Date de naissance *" value={form.birth_date} onChange={set("birth_date")} type="date"/>
+                <div style={{ fontSize:11, fontWeight:700, color:C.textMuted, textTransform:"uppercase", letterSpacing:.8, marginBottom:5 }}>Date de naissance *</div>
+                <BirthDatePicker value={form.birth_date} onChange={v => setForm(f => ({ ...f, birth_date: v }))} error={!!errors.birth_date}/>
                 {errors.birth_date && <div style={{ fontSize:11, color:C.warn, marginTop:3 }}>{errors.birth_date}</div>}
+              </div>
+              <div>
+                <Field label="Profession" value={form.profession} onChange={set("profession")} placeholder="Ex : Enseignant, Infirmière…"/>
               </div>
             </div>
 

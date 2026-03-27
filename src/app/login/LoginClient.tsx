@@ -37,11 +37,11 @@ const DISC_OPTS = [
   {name:"Yoga Vinyasa",icon:"🧘"},{name:"Yin Yoga",icon:"🌙"},{name:"Méditation",icon:"☯"},
   {name:"Pilates Mat",icon:"⚡"},{name:"Pilates Réform.",icon:"🔧"},{name:"Stretching",icon:"🤸"},
   {name:"Danse Contemp.",icon:"💃"},{name:"Hip-Hop",icon:"🎵"},{name:"Classique",icon:"🩰"},
-  {name:"HIIT",icon:"🔥"},{name:"Cardio",icon:"❤"},{name:"Musculation",icon:"💪"},
+  {name:"HIIT",icon:"🔥"},{name:"Cardio",icon:"❤"},
 ]
 const DEFAULTS: Record<string,string[]> = {
   Yoga:["Yoga Vinyasa","Yin Yoga","Méditation"], Pilates:["Pilates Mat","Pilates Réform.","Stretching"],
-  Danse:["Danse Contemp.","Hip-Hop","Classique"], Fitness:["HIIT","Cardio","Musculation"],
+  Danse:["Danse Contemp.","Hip-Hop","Classique"], Fitness:["HIIT","Cardio","Stretching"],
   Méditation:["Méditation","Yin Yoga","Yoga Vinyasa"], Multi:["Yoga Vinyasa","Pilates Mat","HIIT"],
 }
 
@@ -573,17 +573,17 @@ export default function LoginPage({ initialStudioName }: { initialStudioName?: s
 
                   <div>
                     <label style={{fontSize:11,fontWeight:700,color:"#8C7B6C",textTransform:"uppercase" as const,letterSpacing:.8,display:"block",marginBottom:8}}>
-                      Disciplines proposées <span style={{color:"#B0A090",fontWeight:400,textTransform:"none"}}>(1 à 2, modifiable après)</span>
+                      Disciplines proposées <span style={{color:"#B0A090",fontWeight:400,textTransform:"none"}}>(1 à 3, modifiable après)</span>
                     </label>
                     <div style={{display:"flex",flexWrap:"wrap",gap:6}}>
                       {DISC_OPTS.map(d => {
                         const sel = selectedDiscs.includes(d.name)
-                        const atMax = selectedDiscs.length >= 2 && !sel
+                        const atMax = selectedDiscs.length >= 3 && !sel
                         return (
                           <button key={d.name} type="button"
                             disabled={atMax}
                             onClick={() => setSelectedDiscs(prev =>
-                              sel ? prev.filter(n => n !== d.name) : prev.length < 2 ? [...prev, d.name] : prev
+                              sel ? prev.filter(n => n !== d.name) : prev.length < 3 ? [...prev, d.name] : prev
                             )}
                             style={{
                               padding:"6px 12px",borderRadius:20,fontSize:12,

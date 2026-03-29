@@ -738,7 +738,7 @@ function Members({ isMobile, onImpersonate }) {
           <Card noPad>{filtered.map(m=><MemberRow key={m.id} m={m} onSelect={m=>setSelected(selected?.id===m.id?null:m)} selected={selected?.id===m.id}/>)}</Card>
         )}
       </div>
-      {selected && !editMode && <MemberDetail/>}
+      {selected && !editMode && !modal && <MemberDetail/>}
     </div>
   );
 }

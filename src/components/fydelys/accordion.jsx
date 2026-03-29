@@ -193,7 +193,9 @@ export function PlanningAccordion({ sess, sessId, bookings, onChangeStatus, onAd
                 <CreditBadge credits={b.credits} total={b.total} sub={b.sub} subPeriod={b.subPeriod}/>
               </div>
               <div style={{ display:"flex", alignItems:"center", gap:6, paddingLeft:39 }}>
-                <span style={{ padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, ...stStyle(b.st) }}>{stLbl(b.st)}</span>
+                <span style={{ padding:"3px 10px", borderRadius:20, fontSize:12, fontWeight:600, whiteSpace:"nowrap", flexShrink:0, ...stStyle(b.st) }}>
+                  {stLbl(b.st)}{b.st==="cancelled" && b.cancelledBy ? ` · ${b.cancelledBy}` : ""}
+                </span>
                 {b.phone && (
                   <a href={`tel:${b.phone}`}
                     style={{ display:"flex", alignItems:"center", gap:3, fontSize:12, color:C.textSoft, textDecoration:"none", padding:"3px 7px", borderRadius:7, border:`1px solid ${C.borderSoft}`, background:C.surface, flexShrink:0, whiteSpace:"nowrap" }}>

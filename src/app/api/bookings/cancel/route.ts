@@ -28,8 +28,8 @@ export async function POST(req: NextRequest) {
       if (!booking) return NextResponse.json({ error: "Booking introuvable" }, { status: 404 })
       if (booking.status === "cancelled") return NextResponse.json({ ok: true, already: true })
 
-      // Annuler le booking
-      await db.from("bookings").update({ status: "cancelled" }).eq("id", bookingId)
+      // Annuler le booking (admin)
+      await db.from("bookings").update({ status: "cancelled", cancelled_by: "admin" }).eq("id", bookingId)
 
       // Restituer le crédit si applicable
       await restoreCredit(db, booking.member_id)
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest) {
 
       if (!booking) return NextResponse.json({ error: "Booking introuvable" }, { status: 404 })
 
-      await db.from("bookings").update({ status: "cancelled" }).eq("id", booking.id)
+      await db.from("bookings").update({ status: "cancelled", cancelled_by: "membre" }).eq("id", booking.id)
       await restoreCredit(db, memberId)
       const promoted = await promoteWaitlist(db, sessionId)
 

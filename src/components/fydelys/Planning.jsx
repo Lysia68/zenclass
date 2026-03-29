@@ -789,6 +789,7 @@ function Planning({ isMobile }) {
           const isGuest = !!b.guest_name;
           map[b.session_id].push({
             id: b.id, memberId: b.member_id, st: b.status, attended: b.attended ?? null,
+            cancelledBy: b.cancelled_by || null,
             name: isGuest ? `${b.guest_name} (invité)` : b.members ? `${b.members.first_name || ""} ${b.members.last_name || ""}`.trim() : "—",
             email: b.members?.email || "", phone: b.members?.phone || "",
             credits: b.members?.credits ?? null, total: b.members?.credits_total ?? null,

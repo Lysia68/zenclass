@@ -26,7 +26,7 @@ export async function GET(req: NextRequest) {
     const ids = sessionIds.split(",").filter(Boolean)
     if (ids.length === 0) return NextResponse.json({ bookings: [] })
     const { data } = await db.from("bookings")
-      .select("id, session_id, member_id, status, attended, guest_name, host_member_id, members!bookings_member_id_fkey(id, first_name, last_name, email, phone, credits, credits_total, subscription_id, subscriptions(period))")
+      .select("id, session_id, member_id, status, attended, cancelled_by, guest_name, host_member_id, members!bookings_member_id_fkey(id, first_name, last_name, email, phone, credits, credits_total, subscription_id, subscriptions(period))")
       .in("session_id", ids)
     return NextResponse.json({ bookings: data || [] })
   }

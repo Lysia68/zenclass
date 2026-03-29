@@ -231,9 +231,9 @@ function Members({ isMobile, onImpersonate }) {
   };
 
   const Modal = ({children}) => (
-    <div style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:500,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}
+    <div style={{position:"fixed",inset:0,background:"rgba(42,31,20,.45)",zIndex:700,display:"flex",alignItems:isMobile?"flex-end":"center",justifyContent:"center",padding:isMobile?0:16}}
       onClick={e=>{if(e.target===e.currentTarget)setModal(null);}}>
-      <div style={{background:C.surface,borderRadius:16,padding:24,width:"100%",maxWidth:480,boxShadow:"0 24px 60px rgba(0,0,0,.18)",maxHeight:"85vh",overflowY:"auto"}}>
+      <div style={{background:C.surface,borderRadius:isMobile?"16px 16px 0 0":16,padding:isMobile?"18px 18px 28px":24,width:"100%",maxWidth:isMobile?"100%":480,boxShadow:"0 24px 60px rgba(0,0,0,.18)",maxHeight:isMobile?"90vh":"85vh",overflowY:"auto",WebkitOverflowScrolling:"touch"}}>
         {children}
       </div>
     </div>

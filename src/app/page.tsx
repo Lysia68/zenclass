@@ -265,15 +265,6 @@ function useVisible(ref: React.RefObject<HTMLElement | null>, threshold = 0.2) {
 
 // ── Page vitrine studio (sous-domaine) ────────────────────────────────────
 // ── Icônes SVG inline ───────────────────────────────────────────────────────
-function Svg({ d, d2, size=14, color="currentColor", sw=2 }: { d:string; d2?:string; size?:number; color?:string; sw?:number }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
-      stroke={color} strokeWidth={sw} strokeLinecap="round" strokeLinejoin="round"
-      style={{ display:"inline-block", verticalAlign:"middle", flexShrink:0 }}>
-      <path d={d}/>{d2 && <path d={d2}/>}
-    </svg>
-  )
-}
 const IcoPin   = (p:any) => <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke={p.color||"currentColor"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
 const IcoCal   = (p:any) => <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke={p.color||"currentColor"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle",flexShrink:0,...(p.style||{})}}><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="3" y1="9" x2="21" y2="9"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="16" y1="2" x2="16" y2="6"/></svg>
 const IcoClock = (p:any) => <svg width={p.size||14} height={p.size||14} viewBox="0 0 24 24" fill="none" stroke={p.color||"currentColor"} strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" style={{display:"inline-block",verticalAlign:"middle",flexShrink:0}}><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
@@ -812,7 +803,7 @@ export default function LandingPage() {
             <div className="footer-h">Support</div>
             <div className="footer-links">
               <a href="#" onClick={e=>{e.preventDefault();document.querySelector<HTMLButtonElement>('[data-floating-contact]')?.click();}} className="footer-link">Contact</a>
-              <a href="mailto:support@fydelys.fr" className="footer-link">Assistance</a>
+              <a href="#" onClick={e=>{e.preventDefault();document.querySelector<HTMLButtonElement>('[data-floating-contact]')?.click();}} className="footer-link">Assistance</a>
             </div>
           </div>
           {/* Légal */}

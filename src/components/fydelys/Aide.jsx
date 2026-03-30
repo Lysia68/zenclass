@@ -856,33 +856,8 @@ function AideIllustration({ type, color = "#3A6E90" }) {
 }
 
 const AlbertAvatar = ({ size = 52 }) => (
-  <svg width={size} height={size} viewBox="0 0 52 52" style={{ borderRadius:"50%", flexShrink:0 }}>
-    <circle cx="26" cy="26" r="26" fill="#F5D5A8"/>
-    {/* Cheveux blancs */}
-    <ellipse cx="26" cy="16" rx="18" ry="12" fill="#E8E0D0"/>
-    <ellipse cx="12" cy="22" rx="5" ry="8" fill="#E8E0D0"/>
-    <ellipse cx="40" cy="22" rx="5" ry="8" fill="#E8E0D0"/>
-    {/* Visage */}
-    <circle cx="26" cy="26" r="16" fill="#F0C89A"/>
-    {/* Yeux */}
-    <circle cx="20" cy="24" r="2.5" fill="#2A1F14"/>
-    <circle cx="32" cy="24" r="2.5" fill="#2A1F14"/>
-    <circle cx="21" cy="23.5" r="0.8" fill="#fff"/>
-    <circle cx="33" cy="23.5" r="0.8" fill="#fff"/>
-    {/* Sourcils */}
-    <path d="M17 21 Q20 19 23 21" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
-    <path d="M29 21 Q32 19 35 21" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
-    {/* Nez */}
-    <path d="M25 27 Q26 29 27 27" stroke="#C4956A" strokeWidth="1" fill="none"/>
-    {/* Sourire */}
-    <path d="M20 31 Q26 36 32 31" stroke="#A06838" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
-    {/* Lunettes */}
-    <circle cx="20" cy="24" r="5" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
-    <circle cx="32" cy="24" r="5" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
-    <path d="M25 24 L27 24" stroke="#8C7B6C" strokeWidth="1"/>
-    {/* Moustache */}
-    <path d="M21 30 Q26 32 31 30" stroke="#B0A090" strokeWidth="1.5" fill="none"/>
-  </svg>
+  <img src="/images/albert.png" alt="Albert" width={size} height={size}
+    style={{ borderRadius:"50%", flexShrink:0, objectFit:"cover" }}/>
 );
 
 function AlbertChat({ isMobile, studioName, onNeedsHuman }) {

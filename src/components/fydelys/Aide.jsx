@@ -855,10 +855,12 @@ function AideIllustration({ type, color = "#3A6E90" }) {
   return null;
 }
 
-const AlbertAvatar = ({ size = 52 }) => (
-  <img src="/images/albert.png" alt="Albert" width={size} height={size}
-    style={{ borderRadius:"50%", flexShrink:0, objectFit:"cover" }}/>
-);
+const AlbertAvatar = ({ size = 64 }) => {
+  const [err, setErr] = React.useState(false);
+  if (err) return <div style={{ width:size, height:size, borderRadius:"50%", background:"#F5D5A8", display:"flex", alignItems:"center", justifyContent:"center", fontSize:size*0.4, flexShrink:0 }}>🤓</div>;
+  return <img src="/images/albert-sm.png" alt="Albert" width={size} height={size} onError={()=>setErr(true)}
+    style={{ borderRadius:"50%", flexShrink:0, objectFit:"cover" }}/>;
+};
 
 function AlbertChat({ isMobile, studioName, onNeedsHuman }) {
   const [messages, setMessages] = React.useState([]);
@@ -930,7 +932,7 @@ function AlbertChat({ isMobile, studioName, onNeedsHuman }) {
   return (
     <div style={{ background:"linear-gradient(135deg,#2A1F14 0%,#5C3D20 100%)", borderRadius:16, padding:isMobile?"16px":"20px 24px", marginBottom:24, color:"#fff" }}>
       <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:expanded?16:0 }}>
-        <AlbertAvatar size={52}/>
+        <AlbertAvatar size={64}/>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:17, fontWeight:800 }}>Je suis Albert</div>
           <div style={{ fontSize:13, color:"rgba(255,255,255,.6)", marginTop:2 }}>Votre assistant Fydelys — posez-moi une question !</div>

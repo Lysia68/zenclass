@@ -93,7 +93,7 @@ function Dashboard({ isMobile }) {
     Promise.all([
       sb.from("sessions").select("id,discipline_id,teacher,room,duration_min,spots,session_date,session_time,status").eq("studio_id", studioId),
       sb.from("members").select("id,first_name,last_name,email,phone,status,joined_at,subscription_id,subscriptions(name)").eq("studio_id", studioId),
-      sb.from("member_payments").select("id,amount,status,payment_date").eq("studio_id", studioId),
+      sb.from("member_payments").select("id,amount,status,payment_date,payment_type,notes,members(first_name,last_name)").eq("studio_id", studioId),
       sb.from("disciplines").select("id,name,color,icon").eq("studio_id", studioId),
     ]).then(async ([sessRes, membRes, payRes, discRes]) => {
       const sessData = sessRes.data || [];
@@ -154,7 +154,7 @@ function Dashboard({ isMobile }) {
           avatar: (m.first_name?.[0]||"") + (m.last_name?.[0]||""),
           credits: 0,
         })));
-        setPayments(payData.map(p=>({...p, date:p.payment_date, status:p.status})));
+        setPayments(payData.map(p=>({...p, date:p.payment_date, status:p.status, member: p.members ? `${p.members.first_name||""} ${p.members.last_name||""}`.trim() : "", payment_type: p.payment_type||"" })));
         if (discData.length > 0) {
           setLocalDiscs(discData);
           setDiscs(discData);
@@ -307,42 +307,20 @@ function Dashboard({ isMobile }) {
                     <IcoEuro2 s={13} c={p.status==="payé"?C.ok:C.warn}/>
                   </div>
                   <div style={{ flex:1, minWidth:0 }}>
-                    <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.member||p.subscription||"Paiement"}</div>
-                    <div style={{ fontSize:11, color:C.textMuted }}>{p.date ? new Date(p.date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "—"}{p.payment_type ? ` · ${p.payment_type}` : ""}</div>
+                    <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.member || "—"}</div>
+                    <div style={{ fontSize:11, color:C.textMuted }}>{p.date ? new Date(p.date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "—"}{p.payment_type ? ` · ${p.payment_type}` : ""}{p.notes ? ` · ${p.notes}` : ""}</div>
                   </div>
                   <div style={{ textAlign:"right", flexShrink:0 }}>
-                    <div style={{ fontSize:14, fontWeight:800, color:p.status==="payé"?C.ok:C.warn }}>{parseFloat(p.amount||0).toFixed(0)} €</div>
+                    <div style={{ fontSize:14, fontWeight:800, color:p.status==="payé"?C.ok:C.warn }}>{parseFloat(p.amount||0).toFixed(2).replace(".",",")} €</div>
                     <div style={{ fontSize:10, fontWeight:600, color:p.status==="payé"?C.ok:C.warn }}>{p.status}</div>
                   </div>
                 </div>
               ))
             }
           </Card>
-          {inactiveMembers.length > 0 && (
-            <Card noPad>
-              <SectionHead><span style={{display:"flex",alignItems:"center",gap:6}}>😴 Membres inactifs <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:10,background:C.warnBg,color:C.warn}}>{inactiveMembers.length}</span></span></SectionHead>
-              <div style={{ padding:"0 2px" }}>
-                {inactiveMembers.map(m => (
-                  <div key={m.id} onClick={()=>window.dispatchEvent(new CustomEvent("fydelys:openMember",{detail:m.id}))}
-                    style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 14px", borderBottom:`1px solid ${C.borderSoft}`, cursor:"pointer" }}
-                    onMouseEnter={e=>e.currentTarget.style.background=C.bg}
-                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-                    <div style={{ width:28, height:28, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:C.accent, flexShrink:0 }}>
-                      {(m.first_name||m.firstName||"?")[0]}{(m.last_name||m.lastName||"")[0]}
-                    </div>
-                    <div style={{ flex:1, minWidth:0 }}>
-                      <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.first_name||m.firstName} {m.last_name||m.lastName}</div>
-                      <div style={{ fontSize:11, color:C.textMuted }}>{m.email}</div>
-                    </div>
-                    <span style={{ fontSize:11, color:C.warn, fontWeight:600, flexShrink:0 }}>30j+</span>
-                  </div>
-                ))}
-              </div>
-            </Card>
-          )}
         </div>
 
-        {/* Alertes + Derniers inscrits — côte à côte desktop, empilé mobile */}
+        {/* Alertes + Membres inactifs + Derniers inscrits */}
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:isMobile?12:16 }}>
           {alerts.length > 0 && (
             <Card noPad>
@@ -379,10 +357,32 @@ function Dashboard({ isMobile }) {
             {loading
               ? <EmptyCard label="Chargement…"/>
               : recentMembers.length === 0
-                ? <EmptyCard label="Aucun adhérent pour le moment"/>
+                ? <EmptyCard label="Aucun membre pour le moment"/>
                 : recentMembers.map(m=><MemberRow key={m.id} m={m} onSelect={()=>{}} selected={false}/>)
             }
           </Card>
+          {inactiveMembers.length > 0 && (
+            <Card noPad>
+              <SectionHead><span style={{display:"flex",alignItems:"center",gap:6}}>😴 Sans réservation depuis 30j <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:10,background:C.warnBg,color:C.warn}}>{inactiveMembers.length}</span></span></SectionHead>
+              <div style={{ padding:"0 2px" }}>
+                {inactiveMembers.map(m => (
+                  <div key={m.id} onClick={()=>window.dispatchEvent(new CustomEvent("fydelys:openMember",{detail:m.id}))}
+                    style={{ display:"flex", alignItems:"center", gap:10, padding:"8px 14px", borderBottom:`1px solid ${C.borderSoft}`, cursor:"pointer" }}
+                    onMouseEnter={e=>e.currentTarget.style.background=C.bg}
+                    onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
+                    <div style={{ width:28, height:28, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:11, fontWeight:700, color:C.accent, flexShrink:0 }}>
+                      {(m.first_name||m.firstName||"?")[0]}{(m.last_name||m.lastName||"")[0]}
+                    </div>
+                    <div style={{ flex:1, minWidth:0 }}>
+                      <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{m.first_name||m.firstName} {m.last_name||m.lastName}</div>
+                      <div style={{ fontSize:11, color:C.textMuted }}>{m.email}</div>
+                    </div>
+                    <span style={{ fontSize:11, color:C.warn, fontWeight:600, flexShrink:0 }}>30j+</span>
+                  </div>
+                ))}
+              </div>
+            </Card>
+          )}
         </div>
       </div>
     </div>

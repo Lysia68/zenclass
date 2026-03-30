@@ -69,6 +69,7 @@ function Dashboard({ isMobile }) {
   const [payments, setPayments] = useState([]);
   const [isDemo, setIsDemo] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [recentBookings, setRecentBookings] = useState([]);
   const [publicPageEnabled, setPublicPageEnabled] = useState(null); // null=loading
   const [closures, setClosures] = useState([]);
 
@@ -89,6 +90,26 @@ function Dashboard({ isMobile }) {
     // Charger les fermetures
     sb.from("studio_closures").select("*").eq("studio_id", studioId).gte("date_end", today).order("date_start")
       .then(({ data }) => setClosures(data || []));
+    // Charger les dernières réservations (triées par created_at)
+    sb.from("bookings")
+      .select("id, created_at, status, member_id, guest_name, sessions!inner(session_date, session_time, discipline_id, disciplines(name, icon, color)), members!bookings_member_id_fkey(first_name, last_name)")
+      .eq("sessions.studio_id", studioId)
+      .eq("status", "confirmed")
+      .order("created_at", { ascending: false })
+      .limit(5)
+      .then(({ data }) => {
+        setRecentBookings((data || []).map(b => ({
+          name: b.guest_name ? `${b.guest_name} (invité)` : b.members ? `${b.members.first_name||""} ${b.members.last_name||""}`.trim() : "—",
+          discName: b.sessions?.disciplines?.name || "Séance",
+          discIcon: b.sessions?.disciplines?.icon || "",
+          discColor: b.sessions?.disciplines?.color || "#C4956A",
+          date: b.sessions?.session_date || "",
+          time: b.sessions?.session_time?.slice(0,5) || "",
+          memberId: b.member_id,
+          createdAt: b.created_at,
+        })));
+      });
+
 
     Promise.all([
       sb.from("sessions").select("id,discipline_id,teacher,room,duration_min,spots,session_date,session_time,status").eq("studio_id", studioId),
@@ -175,8 +196,9 @@ function Dashboard({ isMobile }) {
   const monthStr = todayStr.slice(0,7);
   const activeMembers = members.filter(m=>m.status==="active"||m.status==="actif"||m.status==="Actif").length;
   const monthSessions = sessions.filter(s=>s.date?.startsWith(monthStr)).length;
-  const totalBooked = sessions.reduce((acc,s)=>{ const bks=bookings[s.id]||[]; return acc+(bks.length?bks.filter(b=>b.st==="confirmed").length:s.booked||0); },0);
-  const totalCap = sessions.reduce((acc,s)=>acc+(s.spots||0),0);
+  const monthSessionsList = sessions.filter(s=>s.date?.startsWith(monthStr));
+  const totalBooked = monthSessionsList.reduce((acc,s)=>{ const bks=bookings[s.id]||[]; return acc+(bks.length?bks.filter(b=>b.st==="confirmed").length:s.booked||0); },0);
+  const totalCap = monthSessionsList.reduce((acc,s)=>acc+(s.spots||0),0);
   const fillRate = totalCap>0 ? Math.round(totalBooked/totalCap*100) : 0;
   const monthRevenue = payments.filter(p=>p.date?.startsWith(monthStr)&&(p.status==="payé"||p.status==="paid")).reduce((s,p)=>s+(p.amount||0),0);
 
@@ -257,33 +279,6 @@ function Dashboard({ isMobile }) {
     return db2.localeCompare(da);
   }).slice(0,3);
 
-  // Dernières réservations (inscrits à une séance)
-  const recentBookings = (() => {
-    const allDiscs = discs.length ? discs : localDiscs;
-    const list = [];
-    sessions.forEach(s => {
-      const disc = allDiscs.find(d => String(d.id) === String(s.disciplineId));
-      (bookings[s.id]||[]).forEach(b => {
-        if (b.st === "confirmed") {
-          list.push({
-            name: b.name || `${b.fn||""} ${b.ln||""}`.trim() || "—",
-            discName: disc?.name || "Séance",
-            discIcon: disc?.icon || "",
-            discColor: disc?.color || C.accent,
-            date: s.date,
-            time: s.time,
-            memberId: b.id,
-          });
-        }
-      });
-    });
-    // Trier par date de séance décroissante
-    return list.sort((a,b) => {
-      if (a.date !== b.date) return b.date.localeCompare(a.date);
-      return (b.time||"").localeCompare(a.time||"");
-    }).slice(0, 5);
-  })();
-
   const EmptyCard = ({label}) => (
     <div style={{padding:"28px 16px",textAlign:"center",color:C.textMuted,fontSize:14,fontStyle:"italic"}}>
       {label}
@@ -361,7 +356,7 @@ function Dashboard({ isMobile }) {
                   <div style={{ width:28, height:28, borderRadius:8, background:`${rb.discColor}18`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>{rb.discIcon}</div>
                   <div style={{ flex:1, minWidth:0 }}>
                     <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{rb.name}</div>
-                    <div style={{ fontSize:11, color:C.textMuted }}>{rb.discName} · {new Date(rb.date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"})} · {rb.time}</div>
+                    <div style={{ fontSize:11, color:C.textMuted }}>{rb.discName} · {new Date(rb.date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"})} · {rb.time}{rb.createdAt ? ` · ${(() => { const d=Math.floor((Date.now()-new Date(rb.createdAt).getTime())/60000); return d<60?`il y a ${d}min`:d<1440?`il y a ${Math.floor(d/60)}h`:`il y a ${Math.floor(d/1440)}j`; })()}` : ""}</div>
                   </div>
                 </div>
               ))

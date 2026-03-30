@@ -35,6 +35,7 @@ export async function POST(req: NextRequest) {
 
     let updateErr = null
     let targetId: string | null = null
+    let wasNew = false
 
     // 1. Si memberId fourni (édition admin d'un autre membre) → update direct
     if (memberId) {
@@ -43,22 +44,25 @@ export async function POST(req: NextRequest) {
       updateErr = error
     } else {
       // 2. Chercher le membre par auth_user_id (self-edit adhérent)
-      updateData.status = "actif"
       updateData.auth_user_id = user.id
 
       const { data: byUid } = await db.from("members")
-        .select("id").eq("studio_id", studioId).eq("auth_user_id", user.id).maybeSingle()
+        .select("id, status").eq("studio_id", studioId).eq("auth_user_id", user.id).maybeSingle()
 
       if (byUid) {
         targetId = byUid.id
+        wasNew = byUid.status === "nouveau"
+        if (wasNew) updateData.status = "actif"
         const { error } = await db.from("members").update(updateData).eq("id", byUid.id)
         updateErr = error
       } else {
         // 3. Fallback par email
         const { data: byEmail } = await db.from("members")
-          .select("id").eq("studio_id", studioId).eq("email", user.email!).maybeSingle()
+          .select("id, status").eq("studio_id", studioId).eq("email", user.email!).maybeSingle()
         if (byEmail) {
           targetId = byEmail.id
+          wasNew = byEmail.status === "nouveau"
+          if (wasNew) updateData.status = "actif"
           const { error } = await db.from("members").update(updateData).eq("id", byEmail.id)
           updateErr = error
         } else {
@@ -80,8 +84,8 @@ export async function POST(req: NextRequest) {
 
     console.log("[member-profile] Updated for user:", user.id, "studio:", studioId)
 
-    // Envoyer emails de bienvenue (asynchrone, non bloquant)
-    if (targetId) {
+    // Envoyer email de bienvenue uniquement au premier remplissage (nouveau → actif)
+    if (targetId && wasNew) {
       fetch(`${req.nextUrl.origin}/api/notify-new-member`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },

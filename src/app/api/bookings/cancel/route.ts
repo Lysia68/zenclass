@@ -37,6 +37,9 @@ export async function POST(req: NextRequest) {
       // Promouvoir le 1er en waitlist
       const promoted = await promoteWaitlist(db, booking.session_id)
 
+      // Email d'annulation au membre + admin (fire-and-forget)
+      sendCancellationEmails(db, booking.session_id, booking.member_id, "admin").catch(() => {})
+
       return NextResponse.json({ ok: true, promoted: promoted?.memberName || null })
     }
 
@@ -52,6 +55,9 @@ export async function POST(req: NextRequest) {
       await db.from("bookings").update({ status: "cancelled", cancelled_by: "membre" }).eq("id", booking.id)
       await restoreCredit(db, memberId)
       const promoted = await promoteWaitlist(db, sessionId)
+
+      // Email d'annulation au membre + admin (fire-and-forget)
+      sendCancellationEmails(db, sessionId, memberId, "membre").catch(() => {})
 
       return NextResponse.json({ ok: true, promoted: promoted?.memberName || null })
     }
@@ -175,5 +181,85 @@ function buildPromotionEmail({ studioName, discName, discIcon, sessDate, sessTim
   </td></tr>
 </table>
 </td></tr></table>
+</body></html>`
+}
+
+/** Envoie un email d'annulation au membre + à l'admin */
+async function sendCancellationEmails(db: any, sessionId: string, memberId: string, cancelledBy: "admin" | "membre") {
+  const [{ data: member }, { data: sess }] = await Promise.all([
+    db.from("members").select("first_name, last_name, email, studio_id").eq("id", memberId).single(),
+    db.from("sessions").select("session_date, session_time, teacher, studio_id, disciplines(name, icon)").eq("id", sessionId).single(),
+  ])
+  if (!member || !sess) return
+
+  const { data: studio } = await db.from("studios").select("name, slug, email").eq("id", member.studio_id).single()
+  if (!studio) return
+
+  const disc = (sess as any).disciplines
+  const discName = disc?.name || "Séance"
+  const discIcon = disc?.icon || ""
+  const sessDate = new Date(sess.session_date + "T12:00:00").toLocaleDateString("fr-FR", { weekday: "long", day: "numeric", month: "long" })
+  const sessTime = sess.session_time?.slice(0, 5) || ""
+  const memberName = `${member.first_name || ""} ${member.last_name || ""}`.trim()
+  const initiator = cancelledBy === "admin" ? "le studio" : memberName
+
+  // Email au membre
+  if (member.email) {
+    await sendEmail({
+      to: member.email,
+      subject: `Annulation — ${discName} ${sessDate} chez ${studio.name}`,
+      html: buildCancellationEmail({ studio, discName, discIcon, sessDate, sessTime, teacher: sess.teacher, memberName, cancelledBy, isMember: true }),
+      fromName: studio.name,
+    })
+  }
+
+  // Email à l'admin
+  if (studio.email) {
+    await sendEmail({
+      to: studio.email,
+      subject: `Annulation — ${memberName} · ${discName} ${sessDate}`,
+      html: buildCancellationEmail({ studio, discName, discIcon, sessDate, sessTime, teacher: sess.teacher, memberName, cancelledBy, isMember: false }),
+      fromName: studio.name,
+    })
+  }
+}
+
+function buildCancellationEmail({ studio, discName, discIcon, sessDate, sessTime, teacher, memberName, cancelledBy, isMember }: any) {
+  const initiator = cancelledBy === "admin" ? "le studio" : memberName
+  const headerText = isMember
+    ? `Votre réservation a été annulée${cancelledBy === "admin" ? " par le studio" : ""}.`
+    : `${memberName} a annulé sa réservation${cancelledBy === "admin" ? " (annulé par l'admin)" : ""}.`
+
+  return `<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"></head>
+<body style="margin:0;padding:0;background:#F4EFE8;font-family:'Helvetica Neue',Arial,sans-serif;">
+  <table width="100%" cellpadding="0" cellspacing="0" style="background:#F4EFE8;padding:40px 16px;">
+    <tr><td align="center">
+      <table width="100%" style="max-width:520px;background:#FFFFFF;border-radius:16px;overflow:hidden;border:1px solid #DDD5C8;box-shadow:0 4px 24px rgba(42,31,20,.08);">
+        <tr><td style="background:#7C3030;padding:28px 32px;text-align:center;">
+          <div style="font-size:24px;font-weight:800;color:#fff;letter-spacing:-0.5px;">${studio.name}</div>
+          <div style="font-size:11px;color:rgba(255,255,255,.6);margin-top:6px;text-transform:uppercase;letter-spacing:1.5px;">Reservation annulee</div>
+        </td></tr>
+        <tr><td style="padding:32px 32px 8px;">
+          <p style="font-size:16px;color:#2A1F14;font-weight:700;margin:0 0 12px;">${isMember ? `Bonjour ${memberName.split(" ")[0]}` : "Notification d'annulation"}</p>
+          <p style="font-size:14px;color:#5C4A38;line-height:1.7;margin:0 0 24px;">${headerText}</p>
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#F8F2EA;border-radius:12px;border:1px solid #DDD5C8;margin-bottom:24px;">
+            <tr><td style="padding:20px 24px;">
+              <div style="font-size:20px;margin-bottom:10px;">${discIcon} <strong style="color:#2A1F14;">${discName}</strong></div>
+              <table width="100%" cellpadding="0" cellspacing="0">
+                <tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;width:40%;">Date</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${sessDate}</td></tr>
+                ${sessTime ? `<tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;">Heure</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${sessTime}</td></tr>` : ""}
+                ${teacher ? `<tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;">Coach</td><td style="font-size:14px;color:#2A1F14;font-weight:700;">${teacher}</td></tr>` : ""}
+                <tr><td style="padding:4px 0;font-size:13px;color:#8C7B6C;">Annulé par</td><td style="font-size:14px;color:#7C3030;font-weight:700;">${initiator}</td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </td></tr>
+        <tr><td style="padding:16px 32px 24px;border-top:1px solid #EDE4D8;text-align:center;">
+          <p style="font-size:11px;color:#B0A090;margin:0;">${studio.name} · Gere avec <a href="https://fydelys.fr" style="color:#A06838;text-decoration:none;">Fydelys</a></p>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table>
 </body></html>`
 }

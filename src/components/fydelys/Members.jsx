@@ -36,11 +36,11 @@ function MemberForm({ value, onChange, errors={}, isMobile }) {
     <div style={{ display:"flex", flexDirection:"column", gap:18 }}>
       <div>
         {sec("👤","Identité")}
-        <div style={cols(3)}>
+        <div style={cols(2)}>
           <div>{lbl("Prénom",true)}<input value={value.firstName} onChange={e=>onChange({...value,firstName:formatName(e.target.value)})} placeholder="Prénom" style={inp(errors.firstName)}/>{err("firstName")}</div>
           <div>{lbl("Nom",true)}<input value={value.lastName} onChange={e=>onChange({...value,lastName:e.target.value.toUpperCase()})} placeholder="Nom" style={inp(errors.lastName)}/>{err("lastName")}</div>
-          <div>{lbl("Date de naissance",true)}<BirthDatePicker value={value.birthDate} onChange={v=>onChange({...value,birthDate:v})} error={errors.birthDate}/>{err("birthDate")}</div>
         </div>
+        <div>{lbl("Date de naissance")}<BirthDatePicker key={value.birthDate||"empty"} value={value.birthDate} onChange={v=>onChange({...value,birthDate:v})} error={errors.birthDate}/>{err("birthDate")}</div>
       </div>
       <div>
         {sec("📬","Contact")}

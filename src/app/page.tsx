@@ -1,65 +1,12 @@
 "use client"
 import { useEffect, useRef, useState } from "react"
 
-function ContactForm() {
-  const [form, setForm] = useState({ firstName:"", lastName:"", studio:"", phone:"", email:"", activity:"", message:"" });
-  const [sending, setSending] = useState(false);
-  const [sent, setSent] = useState(false);
-  const inp = { width:"100%", padding:"11px 14px", border:"1.5px solid #DDD5C8", borderRadius:10, fontSize:14, outline:"none", boxSizing:"border-box" as const, color:"#2A1F14", background:"#FDFAF7", fontFamily:"inherit" };
-  const lbl = { fontSize:11, fontWeight:700 as const, color:"#8C7B6C", textTransform:"uppercase" as const, letterSpacing:0.8, display:"block" as const, marginBottom:5 };
-
-  const handleSend = async () => {
-    if (!form.firstName || !form.email || !form.message) return;
-    setSending(true);
-    try {
-      await fetch("/api/contact", {
-        method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ name:`${form.firstName} ${form.lastName}`.trim(), email:form.email, studio:form.studio, phone:form.phone, activity:form.activity, subject:`Demande de renseignement — ${form.studio||form.firstName}`, message:form.message }),
-      });
-      setSent(true);
-    } catch {}
-    setSending(false);
-  };
-
-  if (sent) return (
-    <div style={{textAlign:"center",padding:32,background:"#F0FAF2",borderRadius:14,border:"1.5px solid #A8D5B0"}}>
-      <div style={{fontSize:36,marginBottom:12}}>✅</div>
-      <div style={{fontSize:18,fontWeight:700,color:"#2A6638",marginBottom:8}}>Message envoyé !</div>
-      <div style={{fontSize:14,color:"#4E8A58"}}>Nous vous répondrons sous 24h.</div>
-    </div>
-  );
-
-  return (
-    <div style={{background:"#fff",borderRadius:16,border:"1.5px solid #DDD5C8",padding:24,boxShadow:"0 4px 24px rgba(42,31,20,.06)"}}>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        <div><label style={lbl}>Prénom *</label><input value={form.firstName} onChange={e=>setForm(f=>({...f,firstName:e.target.value}))} style={inp} placeholder="Jean"/></div>
-        <div><label style={lbl}>Nom</label><input value={form.lastName} onChange={e=>setForm(f=>({...f,lastName:e.target.value}))} style={inp} placeholder="Dupont"/></div>
-      </div>
-      <div style={{marginBottom:14}}><label style={lbl}>Nom du studio</label><input value={form.studio} onChange={e=>setForm(f=>({...f,studio:e.target.value}))} style={inp} placeholder="Mon Studio Yoga"/></div>
-      <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:14,marginBottom:14}}>
-        <div><label style={lbl}>Email *</label><input type="email" value={form.email} onChange={e=>setForm(f=>({...f,email:e.target.value}))} style={inp} placeholder="jean@studio.fr"/></div>
-        <div><label style={lbl}>Téléphone</label><input type="tel" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} style={inp} placeholder="06 12 34 56 78"/></div>
-      </div>
-      <div style={{marginBottom:14}}><label style={lbl}>Activité</label>
-        <select value={form.activity} onChange={e=>setForm(f=>({...f,activity:e.target.value}))} style={{...inp,appearance:"none" as any}}>
-          <option value="">— Choisir —</option>
-          {["Yoga","Pilates","Méditation","Danse","Fitness","Arts martiaux","Bien-être","Autre"].map(a=><option key={a}>{a}</option>)}
-        </select>
-      </div>
-      <div style={{marginBottom:18}}><label style={lbl}>Message *</label><textarea value={form.message} onChange={e=>setForm(f=>({...f,message:e.target.value}))} rows={4} style={{...inp,resize:"vertical" as any}} placeholder="Décrivez votre besoin..."/></div>
-      <button onClick={handleSend} disabled={sending || !form.firstName || !form.email || !form.message}
-        style={{width:"100%",padding:"14px",borderRadius:10,border:"none",background:sending?"#DDD5C8":"linear-gradient(145deg,#B88050,#9A6030)",color:"#fff",fontSize:15,fontWeight:700,cursor:sending?"wait":"pointer"}}>
-        {sending ? "Envoi..." : "Envoyer ma demande"}
-      </button>
-    </div>
-  );
-}
 
 
 
 function FloatingContact() {
   const [open, setOpen] = useState(false);
-  const [form, setForm] = useState({ firstName:"", lastName:"", email:"", phone:"", studio:"", message:"" });
+  const [form, setForm] = useState({ firstName:"", lastName:"", email:"", phone:"", studio:"", activity:"", message:"" });
   const [sending, setSending] = useState(false);
   const [sent, setSent] = useState(false);
   const inp = { width:"100%", padding:"9px 12px", border:"1.5px solid #DDD5C8", borderRadius:8, fontSize:13, outline:"none", boxSizing:"border-box" as const, color:"#2A1F14", background:"#FDFAF7", fontFamily:"inherit" };
@@ -71,7 +18,7 @@ function FloatingContact() {
     try {
       await fetch("/api/contact", {
         method:"POST", headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({ name:`${form.firstName} ${form.lastName}`.trim(), email:form.email, studio:form.studio, phone:form.phone, subject:`Contact landing — ${form.studio||form.firstName}`, message:form.message }),
+        body: JSON.stringify({ name:`${form.firstName} ${form.lastName}`.trim(), email:form.email, studio:form.studio, phone:form.phone, activity:form.activity, subject:`Contact landing — ${form.studio||form.firstName}`, message:form.message }),
       });
       setSent(true);
     } catch {}
@@ -81,7 +28,7 @@ function FloatingContact() {
   return (
     <>
       {/* Bulle */}
-      <button onClick={()=>setOpen(o=>!o)}
+      <button data-floating-contact onClick={()=>setOpen(o=>!o)}
         style={{ position:"fixed", bottom:24, right:24, zIndex:9000, width:56, height:56, borderRadius:"50%",
           background:"linear-gradient(145deg,#B88050,#9A6030)", border:"none", cursor:"pointer",
           boxShadow:"0 4px 20px rgba(42,31,20,.3)", display:"flex", alignItems:"center", justifyContent:"center",
@@ -120,7 +67,7 @@ function FloatingContact() {
                 <div style={{ fontSize:32, marginBottom:10 }}>✅</div>
                 <div style={{ fontSize:15, fontWeight:700, color:"#2A6638", marginBottom:6 }}>Message envoyé !</div>
                 <div style={{ fontSize:13, color:"#4E8A58" }}>Nous vous répondrons rapidement.</div>
-                <button onClick={()=>{setSent(false);setForm({firstName:"",lastName:"",email:"",phone:"",studio:"",message:""});}}
+                <button onClick={()=>{setSent(false);setForm({firstName:"",lastName:"",email:"",phone:"",studio:"",activity:"",message:""});}}
                   style={{ marginTop:14, padding:"6px 16px", borderRadius:8, border:"1.5px solid #A8D5B0", background:"transparent", color:"#4E8A58", fontSize:12, fontWeight:600, cursor:"pointer" }}>
                   Nouveau message
                 </button>
@@ -135,6 +82,12 @@ function FloatingContact() {
                 <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:8 }}>
                   <div><label style={lbl}>Téléphone</label><input type="tel" value={form.phone} onChange={e=>setForm(f=>({...f,phone:e.target.value}))} style={inp} placeholder="06 12 34 56 78"/></div>
                   <div><label style={lbl}>Studio</label><input value={form.studio} onChange={e=>setForm(f=>({...f,studio:e.target.value}))} style={inp} placeholder="Mon Studio"/></div>
+                </div>
+                <div><label style={lbl}>Activité</label>
+                  <select value={form.activity} onChange={e=>setForm(f=>({...f,activity:e.target.value}))} style={{...inp,appearance:"none" as any}}>
+                    <option value="">— Choisir —</option>
+                    {["Yoga","Pilates","Méditation","Danse","Fitness","Arts martiaux","Bien-être","Autre"].map(a=><option key={a}>{a}</option>)}
+                  </select>
                 </div>
                 <div><label style={lbl}>Message *</label><textarea value={form.message} onChange={e=>setForm(f=>({...f,message:e.target.value}))} rows={3} style={{...inp,resize:"vertical" as any}} placeholder="Votre question..."/></div>
                 <button onClick={handleSend} disabled={sending || !form.firstName || !form.email || !form.message}
@@ -830,19 +783,6 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── CONTACT ── */}
-      <section id="contact" style={{padding:"64px 0"}}>
-        <div style={{maxWidth:600,margin:"0 auto",padding:"0 20px"}}>
-          <h2 style={{fontFamily:"var(--D)",fontSize:"clamp(28px,4vw,40px)",fontWeight:700,color:"var(--dark)",textAlign:"center",marginBottom:8,letterSpacing:"-0.5px"}}>
-            Contactez-nous
-          </h2>
-          <p style={{textAlign:"center",color:"var(--muted)",fontSize:15,marginBottom:32}}>
-            Une question, une demande de démo ? Remplissez le formulaire ci-dessous.
-          </p>
-          <ContactForm/>
-        </div>
-      </section>
-
       {/* ── FOOTER ── */}
       <footer>
         <div className="footer-top">
@@ -871,7 +811,7 @@ export default function LandingPage() {
           <div>
             <div className="footer-h">Support</div>
             <div className="footer-links">
-              <a href="#contact" className="footer-link">Contact</a>
+              <a href="#" onClick={e=>{e.preventDefault();document.querySelector<HTMLButtonElement>('[data-floating-contact]')?.click();}} className="footer-link">Contact</a>
               <a href="mailto:support@fydelys.fr" className="footer-link">Assistance</a>
             </div>
           </div>

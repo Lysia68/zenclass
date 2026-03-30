@@ -855,15 +855,46 @@ function AideIllustration({ type, color = "#3A6E90" }) {
   return null;
 }
 
-function AlbertChat({ isMobile, studioName }) {
+const AlbertAvatar = ({ size = 52 }) => (
+  <svg width={size} height={size} viewBox="0 0 52 52" style={{ borderRadius:"50%", flexShrink:0 }}>
+    <circle cx="26" cy="26" r="26" fill="#F5D5A8"/>
+    {/* Cheveux blancs */}
+    <ellipse cx="26" cy="16" rx="18" ry="12" fill="#E8E0D0"/>
+    <ellipse cx="12" cy="22" rx="5" ry="8" fill="#E8E0D0"/>
+    <ellipse cx="40" cy="22" rx="5" ry="8" fill="#E8E0D0"/>
+    {/* Visage */}
+    <circle cx="26" cy="26" r="16" fill="#F0C89A"/>
+    {/* Yeux */}
+    <circle cx="20" cy="24" r="2.5" fill="#2A1F14"/>
+    <circle cx="32" cy="24" r="2.5" fill="#2A1F14"/>
+    <circle cx="21" cy="23.5" r="0.8" fill="#fff"/>
+    <circle cx="33" cy="23.5" r="0.8" fill="#fff"/>
+    {/* Sourcils */}
+    <path d="M17 21 Q20 19 23 21" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
+    <path d="M29 21 Q32 19 35 21" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
+    {/* Nez */}
+    <path d="M25 27 Q26 29 27 27" stroke="#C4956A" strokeWidth="1" fill="none"/>
+    {/* Sourire */}
+    <path d="M20 31 Q26 36 32 31" stroke="#A06838" strokeWidth="1.5" fill="none" strokeLinecap="round"/>
+    {/* Lunettes */}
+    <circle cx="20" cy="24" r="5" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
+    <circle cx="32" cy="24" r="5" stroke="#8C7B6C" strokeWidth="1.2" fill="none"/>
+    <path d="M25 24 L27 24" stroke="#8C7B6C" strokeWidth="1"/>
+    {/* Moustache */}
+    <path d="M21 30 Q26 32 31 30" stroke="#B0A090" strokeWidth="1.5" fill="none"/>
+  </svg>
+);
+
+function AlbertChat({ isMobile, studioName, onNeedsHuman }) {
   const [messages, setMessages] = React.useState([]);
   const [input, setInput] = React.useState("");
   const [loading, setLoading] = React.useState(false);
   const [expanded, setExpanded] = React.useState(false);
   const messagesEnd = React.useRef(null);
+  const chatRef = React.useRef(null);
 
   React.useEffect(() => {
-    messagesEnd.current?.scrollIntoView({ behavior: "smooth" });
+    if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
   }, [messages]);
 
   const FAQ = [
@@ -911,10 +942,12 @@ function AlbertChat({ isMobile, studioName }) {
       if (data.answer) {
         setMessages(prev => [...prev, { role: "albert", text: data.answer }]);
       } else {
-        setMessages(prev => [...prev, { role: "albert", text: "Hmm, je ne suis pas sûr de comprendre. Pouvez-vous reformuler ? Si le problème persiste, utilisez le formulaire de contact ci-dessous." }]);
+        setMessages(prev => [...prev, { role: "albert", text: "Hmm, je ne suis pas sûr de pouvoir vous aider sur ce point. Je vous mets en relation avec le support.", showContact: true }]);
+        onNeedsHuman && onNeedsHuman();
       }
     } catch {
-      setMessages(prev => [...prev, { role: "albert", text: "Oups, une erreur réseau. Réessayez dans quelques instants." }]);
+      setMessages(prev => [...prev, { role: "albert", text: "Oups, une erreur réseau. Réessayez dans quelques instants ou contactez le support.", showContact: true }]);
+      onNeedsHuman && onNeedsHuman();
     }
     setLoading(false);
   };
@@ -922,9 +955,7 @@ function AlbertChat({ isMobile, studioName }) {
   return (
     <div style={{ background:"linear-gradient(135deg,#2A1F14 0%,#5C3D20 100%)", borderRadius:16, padding:isMobile?"16px":"20px 24px", marginBottom:24, color:"#fff" }}>
       <div style={{ display:"flex", alignItems:"center", gap:14, marginBottom:expanded?16:0 }}>
-        <div style={{ width:52, height:52, borderRadius:"50%", background:"#F5D5A8", border:"2px solid #DFC0A0", display:"flex", alignItems:"center", justifyContent:"center", fontSize:28, flexShrink:0 }}>
-          🧓
-        </div>
+        <AlbertAvatar size={52}/>
         <div style={{ flex:1 }}>
           <div style={{ fontSize:17, fontWeight:800 }}>Je suis Albert</div>
           <div style={{ fontSize:13, color:"rgba(255,255,255,.6)", marginTop:2 }}>Votre assistant Fydelys — posez-moi une question !</div>
@@ -933,10 +964,10 @@ function AlbertChat({ isMobile, studioName }) {
 
       {/* Messages */}
       {expanded && messages.length > 0 && (
-        <div style={{ maxHeight:300, overflowY:"auto", marginBottom:12, padding:"12px 0", borderTop:"1px solid rgba(255,255,255,.1)" }}>
+        <div ref={chatRef} style={{ maxHeight:300, overflowY:"auto", marginBottom:12, padding:"12px 0", borderTop:"1px solid rgba(255,255,255,.1)" }}>
           {messages.map((m, i) => (
             <div key={i} style={{ display:"flex", gap:10, marginBottom:10, justifyContent:m.role==="user"?"flex-end":"flex-start" }}>
-              {m.role === "albert" && <div style={{ width:28, height:28, borderRadius:"50%", background:"#F5D5A8", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🧓</div>}
+              {m.role === "albert" && <AlbertAvatar size={28}/>}
               <div style={{
                 maxWidth:"80%", padding:"10px 14px", borderRadius:12,
                 background: m.role === "user" ? "rgba(255,255,255,.15)" : "rgba(245,213,168,.15)",
@@ -950,7 +981,7 @@ function AlbertChat({ isMobile, studioName }) {
           ))}
           {loading && (
             <div style={{ display:"flex", gap:10, marginBottom:10 }}>
-              <div style={{ width:28, height:28, borderRadius:"50%", background:"#F5D5A8", display:"flex", alignItems:"center", justifyContent:"center", fontSize:14, flexShrink:0 }}>🧓</div>
+              <AlbertAvatar size={28}/>
               <div style={{ padding:"10px 14px", borderRadius:12, background:"rgba(245,213,168,.15)", color:"rgba(255,255,255,.5)", fontSize:13 }}>Albert réfléchit...</div>
             </div>
           )}
@@ -961,7 +992,7 @@ function AlbertChat({ isMobile, studioName }) {
       {/* Input */}
       <div style={{ display:"flex", gap:8, marginTop:expanded?0:12 }}>
         <input value={input} onChange={e=>setInput(e.target.value)}
-          onKeyDown={e=>{ if(e.key==="Enter") send(); }}
+          onKeyDown={e=>{ if(e.key==="Enter"){ e.preventDefault(); send(); } }}
           placeholder="Ex : Comment créer une séance récurrente ?"
           style={{ flex:1, padding:"10px 14px", borderRadius:10, border:"1.5px solid rgba(255,255,255,.2)", background:"rgba(255,255,255,.1)", color:"#fff", fontSize:14, outline:"none", fontFamily:"inherit" }}/>
         <button onClick={send} disabled={loading || !input.trim()}
@@ -981,6 +1012,7 @@ function AidePage({ isMobile }) {
   const [sending, setSending] = React.useState(false);
   const [sent, setSent] = React.useState(false);
   const [formError, setFormError] = React.useState("");
+  const [showContact, setShowContact] = React.useState(false);
 
   // Sync si les données du contexte arrivent après le montage
   React.useEffect(() => {
@@ -1188,10 +1220,10 @@ function AidePage({ isMobile }) {
       </div>
 
       {/* Albert — Assistant IA */}
-      <AlbertChat isMobile={isMobile} studioName={studioName}/>
+      <AlbertChat isMobile={isMobile} studioName={studioName} onNeedsHuman={()=>setShowContact(true)}/>
 
-      {/* Formulaire de contact */}
-      <div style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "20px 20px", marginBottom: 24 }}>
+      {/* Formulaire de contact — visible uniquement si Albert ne peut pas aider */}
+      {showContact && <div style={{ background: C.surface, border: `1.5px solid ${C.border}`, borderRadius: 14, padding: "20px 20px", marginBottom: 24 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
           <div style={{ width: 36, height: 36, borderRadius: 10, background: `${C.accent}18`, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>💬</div>
           <div>
@@ -1252,7 +1284,7 @@ function AidePage({ isMobile }) {
             </button>
           </div>
         )}
-      </div>
+      </div>}
 
       {/* Sections FAQ accordéon */}
       <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>

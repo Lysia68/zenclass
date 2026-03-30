@@ -275,19 +275,7 @@ function Dashboard({ isMobile }) {
           <KpiCard icon={<IcoEuro2 s={isMobile?16:18} c={C.accent}/>}   label="CA du mois"        value={monthRevenue>0?monthRevenue.toLocaleString("fr-FR")+" €":"—"} delta={null} accentColor={C.accent} isMobile={isMobile}/>
         </div>
 
-        {/* Séances du jour — pleine largeur */}
-        <Card noPad style={{marginBottom:isMobile?12:16}}>
-          <SectionHead action={<Pill>{todayLabel}</Pill>}>Séances du jour</SectionHead>
-          {loading
-            ? <div style={{padding:"28px",textAlign:"center",color:C.textMuted,fontSize:14}}>Chargement…</div>
-            : todaySessions.length === 0
-              ? <EmptyCard label="Aucune séance programmée aujourd'hui"/>
-              : todaySessions.map(s=>(
-                <DashboardSessionCard key={s.id} sess={s} expandedId={expandedId} bookings={bookings} onToggle={handleToggle} onChangeStatus={handleChangeStatus} isDemo={isDemo} discs={discs}/>
-              ))}
-        </Card>
-
-        {/* Prochaine séance + Membres inactifs */}
+        {/* Prochaine séance + Derniers paiements */}
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr":"1fr 1fr", gap:isMobile?12:16, marginBottom:isMobile?12:16 }}>
           {nextSession && (
             <Card style={{ borderLeft:`3px solid ${nextSession.discColor}` }}>
@@ -309,6 +297,27 @@ function Dashboard({ isMobile }) {
               </div>
             </Card>
           )}
+          <Card noPad>
+            <SectionHead><span style={{display:"flex",alignItems:"center",gap:6}}><IcoEuro2 s={15} c={C.accent}/>Derniers paiements</span></SectionHead>
+            {payments.length === 0
+              ? <EmptyCard label="Aucun paiement enregistré"/>
+              : [...payments].sort((a,b)=>(b.date||"").localeCompare(a.date||"")).slice(0,5).map((p,i) => (
+                <div key={i} style={{ display:"flex", alignItems:"center", gap:10, padding:"9px 16px", borderBottom:`1px solid ${C.borderSoft}` }}>
+                  <div style={{ width:28, height:28, borderRadius:"50%", background:p.status==="payé"?C.okBg:C.warnBg, display:"flex", alignItems:"center", justifyContent:"center", flexShrink:0 }}>
+                    <IcoEuro2 s={13} c={p.status==="payé"?C.ok:C.warn}/>
+                  </div>
+                  <div style={{ flex:1, minWidth:0 }}>
+                    <div style={{ fontSize:13, fontWeight:600, color:C.text, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{p.member||p.subscription||"Paiement"}</div>
+                    <div style={{ fontSize:11, color:C.textMuted }}>{p.date ? new Date(p.date+"T12:00:00").toLocaleDateString("fr-FR",{day:"numeric",month:"short"}) : "—"}{p.payment_type ? ` · ${p.payment_type}` : ""}</div>
+                  </div>
+                  <div style={{ textAlign:"right", flexShrink:0 }}>
+                    <div style={{ fontSize:14, fontWeight:800, color:p.status==="payé"?C.ok:C.warn }}>{parseFloat(p.amount||0).toFixed(0)} €</div>
+                    <div style={{ fontSize:10, fontWeight:600, color:p.status==="payé"?C.ok:C.warn }}>{p.status}</div>
+                  </div>
+                </div>
+              ))
+            }
+          </Card>
           {inactiveMembers.length > 0 && (
             <Card noPad>
               <SectionHead><span style={{display:"flex",alignItems:"center",gap:6}}>😴 Membres inactifs <span style={{fontSize:11,fontWeight:700,padding:"1px 7px",borderRadius:10,background:C.warnBg,color:C.warn}}>{inactiveMembers.length}</span></span></SectionHead>

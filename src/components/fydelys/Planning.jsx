@@ -255,7 +255,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
       <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }`}</style>
       {isExp && (
         <PlanningAccordion sess={sess} sessId={sess.id} bookings={bookings}
-          onChangeStatus={onChangeStatus} onAddBooking={onAddBooking} onSendReminder={onSendReminder} onDeleteBooking={onDeleteBooking} />
+          onChangeStatus={onChangeStatus} onAddBooking={onAddBooking} onSendReminder={onSendReminder} onDeleteBooking={onDeleteBooking} isMobile={isMobile} />
       )}
     </div>
   );

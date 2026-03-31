@@ -144,7 +144,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
     upcoming: { color:"#7C9EC8", bg:"#EEF4FA" },
     full:     { color:"#A85030", bg:"#FFF0F0"  },
     ongoing:  { color:C.ok,     bg:C.okBg    },
-    past:     { color:"#6B5A47", bg:"#E8DDD0" },
+    past:     { color:"#6B5A47", bg:"#F4EFE8" },
     cancelled:{ color:C.warn,   bg:"#FFF5F5"  },
     closed:   { color:"#856404", bg:"#FFF3CD"  },
   }[displayStatus];
@@ -236,7 +236,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
               </span>
               {waitlisted > 0 && (
                 <span style={{ fontSize:11, fontWeight:700, padding:"1px 7px", borderRadius:10, background:"#FEF3C7", color:"#92400E" }}>
-                  {waitlisted} en attente
+                  <span style={{ display:"inline-block", animation:"hourglass 2s ease-in-out infinite" }}>⏳</span> {waitlisted} en attente
                 </span>
               )}
             </span>
@@ -263,9 +263,10 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
               )}
               {pending > 0 && (
                 <span style={{ fontSize:11, fontWeight:700, padding:"1px 7px", borderRadius:10, background:"#FEF3C7", color:"#92400E" }}>
-                  ⏳ {pending} en attente
+                  <span style={{ display:"inline-block", animation:"hourglass 2s ease-in-out infinite" }}>⏳</span> {pending} en attente
                 </span>
               )}
+              <style>{`@keyframes hourglass { 0%,100% { transform:rotate(0deg); } 50% { transform:rotate(180deg); } }`}</style>
             </span>
           );
         })()}

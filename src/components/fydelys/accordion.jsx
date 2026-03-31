@@ -13,56 +13,56 @@ export function stStyle(s) {
   return { color:C.warn, background:C.warnBg };
 }
 
-function AttendanceRow({ b, onMark }) {
+function AttendanceRow({ b, onMark, isMobile }) {
   const [loading, setLoading] = useState(false);
   async function mark(val) { setLoading(true); await onMark(b.id, val); setLoading(false); }
   const isPresent = b.attended === true;
   const isAbsent  = b.attended === false;
   const isPending = b.attended === null || b.attended === undefined;
   return (
-    <div style={{ padding:"10px 13px", borderBottom:`1px solid ${C.borderSoft}`, display:"flex", alignItems:"center", gap:9, opacity:loading?.6:1, transition:"background .1s" }}
+    <div style={{ padding:"10px 13px", borderBottom:`1px solid ${C.borderSoft}`, opacity:loading?.6:1, transition:"background .1s" }}
       onMouseEnter={e=>e.currentTarget.style.background="#F5F0EA"}
       onMouseLeave={e=>e.currentTarget.style.background="transparent"}>
-      <div style={{ width:30, height:30, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:C.accent, flexShrink:0 }}>
-        {b.name?.[0]?.toUpperCase() || "?"}
-      </div>
-      <div style={{ flex:1, minWidth:0 }}>
-        <div style={{ fontSize:14, fontWeight:700, color:C.text, whiteSpace:"nowrap", overflow:"hidden", textOverflow:"ellipsis" }}>{b.name || "—"}</div>
-        <div style={{ fontSize:12, color:C.textMuted }}>{b.email}</div>
-      </div>
-      {isPresent && <span style={{ fontSize:12, fontWeight:700, padding:"2px 9px", borderRadius:20, color:C.ok,      background:C.okBg,    whiteSpace:"nowrap" }}>✓ Présent</span>}
-      {isAbsent  && <span style={{ fontSize:12, fontWeight:700, padding:"2px 9px", borderRadius:20, color:C.warn,    background:C.warnBg,  whiteSpace:"nowrap" }}>✗ Absent</span>}
-      {isPending && <span style={{ fontSize:12, fontWeight:600, padding:"2px 9px", borderRadius:20, color:C.accent, background:C.accentBg, whiteSpace:"nowrap" }}><span style={{ display:"inline-block", animation:"hourglass 2s ease-in-out infinite" }}>⏳</span> En attente</span>}
-      <style>{`@keyframes hourglass { 0%,100% { transform:rotate(0deg); } 50% { transform:rotate(180deg); } }`}</style>
-      <div style={{ display:"flex", gap:5, flexShrink:0, flexWrap:"wrap", justifyContent:"flex-end", maxWidth:160 }}>
-        {isPresent ? (
-          <button onClick={()=>mark(null)} disabled={loading} title="Annuler présence"
-            style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid ${C.border}`, color:C.textSoft, background:C.surface, cursor:"pointer", whiteSpace:"nowrap" }}>
-            <IcoUndo s={12} c={C.textSoft}/> Corriger
-          </button>
-        ) : isAbsent ? (
-          <>
-            <button onClick={()=>mark(true)} disabled={loading}
-              style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #B8DFC4`, color:C.ok, background:C.okBg, cursor:"pointer", whiteSpace:"nowrap" }}>
-              <IcoCheck s={12} c={C.ok}/> Présent
+      <div style={{ display:"flex", alignItems:"center", gap:9 }}>
+        <div style={{ width:30, height:30, borderRadius:"50%", background:C.accentBg, border:`1px solid #DFC0A0`, display:"flex", alignItems:"center", justifyContent:"center", fontSize:12, fontWeight:700, color:C.accent, flexShrink:0 }}>
+          {b.name?.[0]?.toUpperCase() || "?"}
+        </div>
+        <div style={{ flex:1, minWidth:0 }}>
+          <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{b.name || "—"}</div>
+        </div>
+        {isPresent && <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:20, color:C.ok, background:C.okBg, whiteSpace:"nowrap", flexShrink:0 }}>✓ Présent</span>}
+        {isAbsent  && <span style={{ fontSize:11, fontWeight:700, padding:"2px 8px", borderRadius:20, color:C.warn, background:C.warnBg, whiteSpace:"nowrap", flexShrink:0 }}>✗ Absent</span>}
+        {isPending && <span style={{ fontSize:11, fontWeight:600, padding:"2px 8px", borderRadius:20, color:C.accent, background:C.accentBg, whiteSpace:"nowrap", flexShrink:0 }}>⏳ En attente</span>}
+        <div style={{ display:"flex", gap:5, flexShrink:0 }}>
+          {isPresent ? (
+            <button onClick={()=>mark(null)} disabled={loading}
+              style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid ${C.border}`, color:C.textSoft, background:C.surface, cursor:"pointer", whiteSpace:"nowrap" }}>
+              <IcoUndo s={12} c={C.textSoft}/> Corriger
             </button>
-            <button onClick={()=>mark(null)} disabled={loading} title="Réinitialiser"
-              style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 8px", borderRadius:7, fontWeight:600, border:`1px solid ${C.border}`, color:C.textSoft, background:C.surface, cursor:"pointer" }}>
-              <IcoUndo s={12} c={C.textSoft}/>
-            </button>
-          </>
-        ) : (
-          <>
-            <button onClick={()=>mark(true)} disabled={loading}
-              style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #B8DFC4`, color:C.ok, background:C.okBg, cursor:"pointer", whiteSpace:"nowrap" }}>
-              <IcoCheck s={12} c={C.ok}/> Présent
-            </button>
-            <button onClick={()=>mark(false)} disabled={loading}
-              style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #EFC8BC`, color:C.warn, background:C.warnBg, cursor:"pointer", whiteSpace:"nowrap" }}>
-              <IcoX s={12} c={C.warn}/> Absent
-            </button>
-          </>
-        )}
+          ) : isAbsent ? (
+            <>
+              <button onClick={()=>mark(true)} disabled={loading}
+                style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #B8DFC4`, color:C.ok, background:C.okBg, cursor:"pointer", whiteSpace:"nowrap" }}>
+                <IcoCheck s={12} c={C.ok}/> Présent
+              </button>
+              <button onClick={()=>mark(null)} disabled={loading}
+                style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 8px", borderRadius:7, fontWeight:600, border:`1px solid ${C.border}`, color:C.textSoft, background:C.surface, cursor:"pointer" }}>
+                <IcoUndo s={12} c={C.textSoft}/>
+              </button>
+            </>
+          ) : (
+            <>
+              <button onClick={()=>mark(true)} disabled={loading}
+                style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #B8DFC4`, color:C.ok, background:C.okBg, cursor:"pointer", whiteSpace:"nowrap" }}>
+                <IcoCheck s={12} c={C.ok}/> Présent
+              </button>
+              <button onClick={()=>mark(false)} disabled={loading}
+                style={{ display:"flex", alignItems:"center", gap:4, fontSize:12, padding:"4px 10px", borderRadius:7, fontWeight:600, border:`1px solid #EFC8BC`, color:C.warn, background:C.warnBg, cursor:"pointer", whiteSpace:"nowrap" }}>
+                <IcoX s={12} c={C.warn}/> Absent
+              </button>
+            </>
+          )}
+        </div>
       </div>
     </div>
   );
@@ -245,7 +245,7 @@ export function PlanningAccordion({ sess, sessId, bookings, onChangeStatus, onAd
           {conf.length===0
             ? <div style={{ padding:"20px", textAlign:"center", color:C.textMuted, fontSize:14 }}>Aucun membre confirmé</div>
             : conf.map(b => (
-                <AttendanceRow key={b.id} b={{ ...b, attended: attended[b.id] }} onMark={handleMark}/>
+                <AttendanceRow key={b.id} b={{ ...b, attended: attended[b.id] }} onMark={handleMark} isMobile={isMobile}/>
               ))
           }
         </>

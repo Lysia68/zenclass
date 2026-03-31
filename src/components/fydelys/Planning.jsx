@@ -144,7 +144,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
     upcoming: { color:"#7C9EC8", bg:"#EEF4FA" },
     full:     { color:"#A85030", bg:"#FFF0F0"  },
     ongoing:  { color:C.ok,     bg:C.okBg    },
-    past:     { color:"#6B5A47", bg:"#FDFAF7" },
+    past:     { color:"#6B5A47", bg:"#EEF4FA" },
     cancelled:{ color:C.warn,   bg:"#FFF5F5"  },
     closed:   { color:"#856404", bg:"#FFF3CD"  },
   }[displayStatus];
@@ -389,6 +389,7 @@ function BookingModal({ sessId, sessions, studioId, bookings, setBookings, setSe
       body: JSON.stringify({ sessionId: sessId, memberId: member.id, studioId, force: true }),
     });
     const data = await res.json();
+    console.log("[BookingModal] confirm result:", res.status, data);
     setConfirming(false);
     if (data.already) { setDone("already"); return; }
     if (data.ok) {
@@ -398,7 +399,8 @@ function BookingModal({ sessId, sessions, studioId, bookings, setBookings, setSe
       setBookings(prev => ({ ...prev, [sessId]: [...(prev[sessId] || []), nb] }));
       setSessions(prev => prev.map(s => s.id === sessId ? { ...s, booked: s.booked + (data.status === "confirmed" ? 1 : 0) } : s));
       onClose();
-    } else if (!data.already) {
+    } else {
+      console.error("[BookingModal] error:", data);
       setDone(`Erreur : ${data.error || "inscription échouée"}`);
     }
     setSelected([]);
@@ -425,7 +427,7 @@ function BookingModal({ sessId, sessions, studioId, bookings, setBookings, setSe
         email: "", phone: "", isGuest: true, hostMemberId: hostId };
       setBookings(prev => ({ ...prev, [sessId]: [...(prev[sessId] || []), nb] }));
       setSessions(prev => prev.map(s => s.id === sessId ? { ...s, booked: s.booked + (data.status === "confirmed" ? 1 : 0) } : s));
-      setDone(data.status);
+      onClose();
     }
   }
 

@@ -448,6 +448,7 @@ function Settings({ isMobile, onImpersonate }) {
     { key:"rooms",    label:"Salles",       icon:<IcoDoor s={14} c="currentColor"/> },
     ...(isAdmin && planName?.toLowerCase() !== "essentiel" ? [{ key:"payments", label:"Paiements", icon:<IcoEuro2 s={14} c="currentColor"/> }] : []),
     { key:"account",  label:"Mon compte",  icon:<IcoHome2 s={14} c="currentColor"/> },
+    ...(isMobile ? [{ key:"aide", label:"Aide", icon:<IcoAlert2 s={14} c="currentColor"/> }] : []),
   ].filter(Boolean);
 
   // ── Preview role switcher (superadmin seulement) ────────────────────────
@@ -2015,7 +2016,7 @@ function Settings({ isMobile, onImpersonate }) {
       <RoleSwitcher/>
       <div style={{ display:"flex", gap:4, marginBottom:20, flexWrap:"wrap" }}>
         {tabs.map(t=>(
-          <button key={t.key} onClick={()=>setTab(t.key)}
+          <button key={t.key} onClick={()=>{ if(t.key==="aide"){ window.dispatchEvent(new CustomEvent("fydelys:nav",{detail:"aide"})); return; } setTab(t.key); }}
             style={{ display:"flex", alignItems:"center", gap:6, padding:"7px 14px", borderRadius:10, border:`1.5px solid ${tab===t.key?C.accent:C.border}`, background:tab===t.key?C.accentBg:C.surface, color:tab===t.key?C.accentDark:C.textMid, fontSize:13, fontWeight:tab===t.key?700:500, cursor:"pointer", transition:"all .15s" }}>
             {t.icon}{t.label}
           </button>

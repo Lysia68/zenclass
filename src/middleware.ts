@@ -71,6 +71,13 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(callbackUrl)
   }
 
+  // Helper pour créer un redirect qui préserve les cookies rafraîchis
+  const safeRedirect = (url: string | URL) => {
+    const res = NextResponse.redirect(url instanceof URL ? url : new URL(url, request.url))
+    supabaseResponse.cookies.getAll().forEach(c => res.cookies.set(c.name, c.value))
+    return res
+  }
+
   let user = null
   try {
     const { data } = await supabase.auth.getUser()
@@ -87,7 +94,7 @@ export async function middleware(request: NextRequest) {
   if (!user && isProtected) {
     // Sur fydelys.fr → redirect /login, sur tenant → redirect /
     const loginUrl = isApp ? "/login" : "/"
-    return NextResponse.redirect(new URL(loginUrl, request.url))
+    return safeRedirect(new URL(loginUrl, request.url))
   }
 
   // SuperAdmin sur domaine tenant → rediriger vers fydelys.fr
@@ -95,7 +102,7 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles").select("role, studio_id").eq("id", user.id).single()
     if (profile?.role === "superadmin") {
-      return NextResponse.redirect(new URL(`https://fydelys.fr/dashboard`, request.url))
+      return safeRedirect(new URL(`https://fydelys.fr/dashboard`, request.url))
     }
 
     // Bloquer les adhérents suspendus ou supprimés
@@ -105,7 +112,7 @@ export async function middleware(request: NextRequest) {
       if (memberCheck?.deleted_at || memberCheck?.status === "suspendu") {
         const errType = memberCheck?.deleted_at ? "compte_supprime" : "compte_suspendu"
         await supabase.auth.signOut()
-        return NextResponse.redirect(new URL(`/login?error=${errType}`, request.url))
+        return safeRedirect(new URL(`/login?error=${errType}`, request.url))
       }
     }
 
@@ -127,7 +134,7 @@ export async function middleware(request: NextRequest) {
         if (isBlocked) {
           const billingUrl = new URL("/billing", request.url)
           billingUrl.searchParams.set("reason", trialExpired ? "trial_expired" : billing_status)
-          return NextResponse.redirect(billingUrl)
+          return safeRedirect(billingUrl)
         }
       }
     }
@@ -138,7 +145,7 @@ export async function middleware(request: NextRequest) {
   // Sauf si ?preview=1 (aperçu site vitrine depuis Settings)
   const isPreview = searchParams.get("preview") === "1"
   if (user && pathname === "/" && isTenant && !isPreview) {
-    return NextResponse.redirect(new URL("/dashboard", request.url))
+    return safeRedirect(new URL("/dashboard", request.url))
   }
   // Sur fydelys.fr : si connecté et va sur /login → redirect /dashboard
   // Sauf si ?force=1 (clic volontaire sur "Connexion" depuis la landing)
@@ -147,13 +154,13 @@ export async function middleware(request: NextRequest) {
     const { data: profile } = await supabase
       .from("profiles").select("role, studio_id").eq("id", user.id).single()
     if (profile?.role === "superadmin") {
-      return NextResponse.redirect(new URL("/dashboard", request.url))
+      return safeRedirect(new URL("/dashboard", request.url))
     }
     if (profile?.role === "admin" && profile.studio_id) {
       const { data: studio } = await supabase
         .from("studios").select("slug").eq("id", profile.studio_id).single()
       if (studio?.slug) {
-        return NextResponse.redirect(new URL("https://" + studio.slug + ".fydelys.fr/dashboard"))
+        return safeRedirect(new URL("https://" + studio.slug + ".fydelys.fr/dashboard"))
       }
     }
   }
@@ -166,7 +173,7 @@ export async function middleware(request: NextRequest) {
       const { data: studio } = await supabase
         .from("studios").select("slug").eq("id", profile.studio_id).single()
       if (studio?.slug) {
-        return NextResponse.redirect(new URL("https://" + studio.slug + ".fydelys.fr/dashboard"))
+        return safeRedirect(new URL("https://" + studio.slug + ".fydelys.fr/dashboard"))
       }
     }
     // superadmin reste sur fydelys.fr/dashboard → ok

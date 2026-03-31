@@ -109,7 +109,7 @@ export async function POST(req: NextRequest) {
       } else if (creditsOk) {
         // A des crédits → OK
       } else {
-        return NextResponse.json({ error: "Pack ou crédit requis pour réserver" }, { status: 402 })
+        return NextResponse.json({ error: "Abonnement ou crédit requis pour réserver" }, { status: 402 })
       }
     }
 

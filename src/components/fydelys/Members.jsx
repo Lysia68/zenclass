@@ -359,7 +359,7 @@ function Members({ isMobile, onImpersonate, openMemberId, onMemberOpened }) {
       setMembers(prev=>prev.map(m => m.id===modal.member.id ? {...m, subscriptionId:subId||null, subscription:newSub} : m));
       setSelected(prev=>prev?.id===modal.member.id ? {...prev, subscriptionId:subId||null, subscription:newSub} : prev);
       setModal(null);
-      showToast("Pack mise à jour ✓");
+      showToast("Abonnement mis à jour ✓");
     } else { showToast("Erreur lors de la sauvegarde",false); setModal(prev => ({...prev, saving:false})); }
   };
 
@@ -367,18 +367,18 @@ function Members({ isMobile, onImpersonate, openMemberId, onMemberOpened }) {
     const subId = modal.subId ?? (modal.member.subscriptionId || "");
     const payMode = modal.paymentMode ?? "";
     return <Modal>
-      <ModalHeader title={`Pack — ${modal.member.firstName} ${modal.member.lastName}`} onClose={()=>setModal(null)}/>
+      <ModalHeader title={`Abonnement — ${modal.member.firstName} ${modal.member.lastName}`} onClose={()=>setModal(null)}/>
       <div style={{marginBottom:16}}>
-        <div style={{fontSize:12,color:C.textMuted,fontWeight:600,marginBottom:8,textTransform:"uppercase"}}>Pack actuel</div>
+        <div style={{fontSize:12,color:C.textMuted,fontWeight:600,marginBottom:8,textTransform:"uppercase"}}>Abonnement actuel</div>
         <div style={{padding:"10px 14px",background:C.accentBg,borderRadius:8,fontSize:15,fontWeight:700,color:C.accentDark}}>
           {modal.member.subscription||"—"}
         </div>
       </div>
       <div style={{marginBottom:14}}>
-        <FieldLabel>Nouvelle pack</FieldLabel>
+        <FieldLabel>Nouvel abonnement</FieldLabel>
         <select value={subId} onChange={e=>setModal(prev=>({...prev, subId:e.target.value}))}
           style={{width:"100%",padding:"9px 12px",border:`1.5px solid ${C.border}`,borderRadius:8,fontSize:13,color:C.text,background:C.surfaceWarm,outline:"none"}}>
-          <option value="">— Aucune pack —</option>
+          <option value="">— Aucun abonnement —</option>
           {subscriptionsList.map(s=><option key={s.id} value={s.id}>{s.name}{s.price ? ` — ${s.price} €` : ""}</option>)}
         </select>
       </div>
@@ -652,7 +652,7 @@ function Members({ isMobile, onImpersonate, openMemberId, onMemberOpened }) {
                   else showToast("Erreur lors de l'envoi", false);
                 } catch { showToast("Erreur réseau", false); }
               })}
-              {actionBtn(<><IcoTag2 s={13} c={C.textMid}/> Abo / Crédits</>, ()=>setModal({type:"subscription",member:m}))}
+              {actionBtn(<><IcoTag2 s={13} c={C.textMid}/> Abonnement</>, ()=>setModal({type:"subscription",member:m}))}
               {actionBtn(<><IcoCalendar2 s={13} c={C.textMid}/> Historique</>, ()=>setModal({type:"history",member:m}))}
               {actionBtn(<>🎁 Offrir séances</>, ()=>setModal({type:"gift",member:m}))}
               {actionBtn(<><IcoX s={13} c="#A85030"/> Supprimer</>, ()=>deleteMember(m.id))}

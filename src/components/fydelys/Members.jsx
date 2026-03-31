@@ -601,49 +601,27 @@ function Members({ isMobile, onImpersonate, openMemberId, onMemberOpened }) {
               {actionBtn(<><IcoTag2 s={13} c={C.textMid}/> Abo / Crédits</>, ()=>setModal({type:"subscription",member:m}))}
               {actionBtn(<><IcoCalendar2 s={13} c={C.textMid}/> Historique</>, ()=>setModal({type:"history",member:m}))}
               {actionBtn(<>🎁 Offrir séances</>, ()=>setModal({type:"gift",member:m}))}
-              {m.status !== "suspendu"
-                ? actionBtn(<>⏸ Suspendre</>, ()=>{
-                    setConfirmModal({
-                      title: "Suspendre le membre",
-                      message: `Suspendre ${m.firstName} ${m.lastName} ? Le membre ne pourra plus se connecter.`,
-                      danger: true,
-                      onConfirm: async () => {
-                        await createClient().from("members").update({status:"suspendu"}).eq("id",m.id);
-                        setMembers(prev=>prev.map(x=>x.id===m.id?{...x,status:"suspendu"}:x));
-                        setSelected(prev=>prev?{...prev,status:"suspendu"}:prev);
-                        showToast("Membre suspendu");
-                        setConfirmModal(null);
-                      },
-                    });
-                  })
-                : actionBtn(<>▶ Réactiver</>, async()=>{
-                    await createClient().from("members").update({status:"actif"}).eq("id",m.id);
-                    setMembers(prev=>prev.map(x=>x.id===m.id?{...x,status:"actif"}:x));
-                    setSelected(prev=>prev?{...prev,status:"actif"}:prev);
-                    showToast("Membre réactivé");
-                  })
-              }
               {actionBtn(<><IcoX s={13} c="#A85030"/> Supprimer</>, ()=>deleteMember(m.id))}
               {isFrozen
                 ? actionBtn(<>&#10052; Dégeler</>, async()=>{
-                    await createClient().from("members").update({frozen_until:null}).eq("id",m.id);
-                    setMembers(prev=>prev.map(x=>x.id===m.id?{...x,frozenUntil:null}:x));
-                    setSelected(prev=>prev?{...prev,frozenUntil:null}:prev);
-                    setToast({msg:"Pack dégelé",ok:true}); setTimeout(()=>setToast(null),3000);
+                    await createClient().from("members").update({frozen_until:null, status:"actif"}).eq("id",m.id);
+                    setMembers(prev=>prev.map(x=>x.id===m.id?{...x,frozenUntil:null,status:"actif"}:x));
+                    setSelected(prev=>prev?{...prev,frozenUntil:null,status:"actif"}:prev);
+                    showToast("Membre dégelé");
                   })
                 : actionBtn(<>&#10052; Geler</>, ()=>{
                     setConfirmModal({
-                      title: "Geler la pack",
-                      message: `Geler la pack de ${m.firstName} ${m.lastName} jusqu'à quelle date ?`,
-                      inputLabel: "Date de fin (AAAA-MM-JJ)",
+                      title: "Geler le compte",
+                      message: `Geler le compte de ${m.firstName} ${m.lastName} ? Le membre ne pourra plus réserver ni se connecter.`,
+                      inputLabel: "Jusqu'au",
                       inputDefault: new Date(Date.now()+30*86400000).toISOString().slice(0,10),
                       onConfirm: async (val) => {
                         const until = val?.trim();
                         if (!until || !/^\d{4}-\d{2}-\d{2}$/.test(until)) return;
-                        await createClient().from("members").update({frozen_until:until}).eq("id",m.id);
-                        setMembers(prev=>prev.map(x=>x.id===m.id?{...x,frozenUntil:until}:x));
-                        setSelected(prev=>prev?{...prev,frozenUntil:until}:prev);
-                        setToast({msg:`Gelé jusqu'au ${new Date(until).toLocaleDateString("fr-FR")}`,ok:true}); setTimeout(()=>setToast(null),3000);
+                        await createClient().from("members").update({frozen_until:until, status:"suspendu"}).eq("id",m.id);
+                        setMembers(prev=>prev.map(x=>x.id===m.id?{...x,frozenUntil:until,status:"suspendu"}:x));
+                        setSelected(prev=>prev?{...prev,frozenUntil:until,status:"suspendu"}:prev);
+                        showToast(`Gelé jusqu'au ${new Date(until).toLocaleDateString("fr-FR")}`);
                         setConfirmModal(null);
                       },
                     });

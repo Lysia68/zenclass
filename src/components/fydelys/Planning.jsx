@@ -144,7 +144,7 @@ function PlanningSessionCard({ sess, expandedId, bookings, discs, onToggle, onCh
     upcoming: { color:"#7C9EC8", bg:"#EEF4FA" },
     full:     { color:"#A85030", bg:"#FFF0F0"  },
     ongoing:  { color:C.ok,     bg:C.okBg    },
-    past:     { color:"#6B5A47", bg:"#F5F0EA" },
+    past:     { color:"#6B5A47", bg:"#FDFAF7" },
     cancelled:{ color:C.warn,   bg:"#FFF5F5"  },
     closed:   { color:"#856404", bg:"#FFF3CD"  },
   }[displayStatus];

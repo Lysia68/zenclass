@@ -53,7 +53,7 @@ export function Historique({ isMobile }) {
     let query = createClient().from("sessions")
       .select("id, session_date, session_time, duration_min, teacher, room, level, spots, status, discipline_id, disciplines(name, icon, color)")
       .eq("studio_id", studioId)
-      .lt("session_date", today)
+      .lte("session_date", today)
       .gte("session_date", dateFrom)
       .lte("session_date", dateTo)
       .order("session_date", { ascending: false })

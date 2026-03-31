@@ -123,7 +123,10 @@ export async function POST(req: NextRequest) {
     // Créer la réservation
     const { data: booking, error: bookErr } = await db.from("bookings")
       .insert({ session_id: sessionId, member_id: memberId, status }).select().single()
-    if (bookErr || !booking) return NextResponse.json({ error: bookErr?.message }, { status: 500 })
+    if (bookErr || !booking) {
+      console.error("[bookings POST] insert error:", bookErr?.message, bookErr?.details, bookErr?.hint, { sessionId, memberId, status })
+      return NextResponse.json({ error: bookErr?.message }, { status: 500 })
+    }
 
     // Crédits déduits à la validation des présences (accordion.jsx), pas à la réservation
 

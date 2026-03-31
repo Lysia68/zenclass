@@ -1545,7 +1545,7 @@ function Planning({ isMobile }) {
           return (
             <div key={item.date}
               ref={isToday ? todayRef : null}
-              style={{ marginBottom: 22, opacity: isPast ? 0.45 : 1, transition: "opacity .2s" }}>
+              style={{ marginBottom: 22 }}>
               <DateLabel date={item.date} />
               {filtered.filter(s => s.date === item.date).map(s => (
                 <PlanningSessionCard key={s.id} sess={s} expandedId={expandedId} bookings={bookings} discs={effectiveDiscs} closures={closures} isMobile={isMobile} onConfirm={openConfirm} roomsList={roomsList}

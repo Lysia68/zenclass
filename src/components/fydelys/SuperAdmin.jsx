@@ -412,11 +412,12 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
     // Utiliser l'API service role pour contourner la RLS sur profiles
     fetch("/api/sa/studios")
       .then(r => r.json())
-      .then(({ studios: studiosData, profiles: profilesData, error }) => {
+      .then(({ studios: studiosData, profiles: profilesData, memberCounts: memberCountsData, error }) => {
       if (error) { console.error("Studios load error:", error); setLoading(false); return; }
       const mois = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
       const profileMap = {};
       (profilesData || []).forEach((p) => { if (p.studio_id) profileMap[p.studio_id] = p; });
+      const memCounts = memberCountsData || {};
 
       const mapped = (studiosData || []).map((s) => {
         const admin = profileMap[s.id];
@@ -440,7 +441,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
           paymentMode:    s.payment_mode || "none",
           billingStatus:  s.billing_status || "trialing",
           trialEndsAt:    s.trial_ends_at || null,
-          members:        0,
+          members:        memCounts[s.id] || 0,
           revenue:        0,
           growth:         0,
         };

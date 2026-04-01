@@ -553,7 +553,9 @@ function Settings({ isMobile, onImpersonate }) {
             <div style={{ gridColumn:isMobile?"1":"1 / -1" }}>
               <SI label="Nom du studio" fkey="name" placeholder="Mon Studio Yoga"/>
             </div>
-            <SI label="Adresse" fkey="address" placeholder="12 rue de la Paix"/>
+            <div style={{ gridColumn:"1 / -1" }}>
+              <SI label="Adresse" fkey="address" placeholder="12 rue de la Paix"/>
+            </div>
             <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}>
               <div>
                 <FieldLabel>Ville</FieldLabel>

@@ -26,25 +26,28 @@ const MEMBERS_DEMO = [
   { id:"dm12",firstName:"Paul",     lastName:"Michel",    email:"paul.michel@gmail.com",      phone:"07 23 45 67 89", status:"suspendu", subscription:"Mensuel illimité",  credits:null, joinedAt:"2025-06-15", notes:"Impayé février" },
 ];
 
+// Dates dynamiques relatives à aujourd'hui
+const _d = (offset) => { const d = new Date(); d.setDate(d.getDate() + offset); return d.toISOString().slice(0,10); };
+
 const SESSIONS_DEMO = [
-  // Lundi 9 mars
-  { id:"ds1",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-09", time:"09:00", duration:60,  spots:12, status:"scheduled" },
-  { id:"ds2",  disciplineId:DISC_IDS.pilates,  discName:"Pilates",      discColor:"#6B9E7A", discIcon:"⚡", teacher:"Sophie MARTIN", room:"Studio B", level:"Intermédiaire", date:"2026-03-09", time:"17:30", duration:60,  spots:10, status:"scheduled" },
-  // Mardi 10 mars
-  { id:"ds3",  disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Sophie MARTIN", room:"Studio A", level:"Débutant",      date:"2026-03-10", time:"07:30", duration:30,  spots:15, status:"scheduled" },
-  { id:"ds4",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Avancé",        date:"2026-03-10", time:"19:00", duration:75,  spots:8,  status:"scheduled" },
-  // Mercredi 11 mars (aujourd'hui)
-  { id:"ds5",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-11", time:"09:00", duration:60,  spots:12, status:"scheduled" },
-  { id:"ds6",  disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-11", time:"18:30", duration:45,  spots:15, status:"scheduled" },
-  // Jeudi 12 mars
-  { id:"ds7",  disciplineId:DISC_IDS.pilates,  discName:"Pilates",      discColor:"#6B9E7A", discIcon:"⚡", teacher:"Sophie MARTIN", room:"Studio B", level:"Débutant",      date:"2026-03-12", time:"12:00", duration:45,  spots:10, status:"scheduled" },
-  { id:"ds8",  disciplineId:DISC_IDS.yin,     discName:"Yin Yoga",     discColor:"#AE7A7A", discIcon:"🌙", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-12", time:"19:00", duration:75,  spots:12, status:"scheduled" },
-  // Vendredi 13 mars
-  { id:"ds9",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-13", time:"09:00", duration:60,  spots:12, status:"scheduled" },
-  { id:"ds10", disciplineId:DISC_IDS.yin,     discName:"Yin Yoga",     discColor:"#AE7A7A", discIcon:"🌙", teacher:"Sophie MARTIN", room:"Studio A", level:"Débutant",      date:"2026-03-13", time:"18:00", duration:75,  spots:12, status:"cancelled" },
-  // Samedi 14 mars
-  { id:"ds11", disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-14", time:"10:00", duration:75,  spots:16, status:"scheduled" },
-  { id:"ds12", disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:"2026-03-15", time:"09:30", duration:45,  spots:15, status:"scheduled" },
+  // Aujourd'hui
+  { id:"ds1",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(0), time:"09:00", duration:60,  spots:12, status:"scheduled", booked:7 },
+  { id:"ds2",  disciplineId:DISC_IDS.pilates,  discName:"Pilates",      discColor:"#6B9E7A", discIcon:"⚡", teacher:"Sophie MARTIN", room:"Studio B", level:"Intermédiaire", date:_d(0), time:"17:30", duration:60,  spots:10, status:"scheduled", booked:4 },
+  // Demain
+  { id:"ds3",  disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Sophie MARTIN", room:"Studio A", level:"Débutant",      date:_d(1), time:"07:30", duration:30,  spots:15, status:"scheduled", booked:9 },
+  { id:"ds4",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Avancé",        date:_d(1), time:"19:00", duration:75,  spots:8,  status:"scheduled", booked:3 },
+  // +2 jours
+  { id:"ds5",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(2), time:"09:00", duration:60,  spots:12, status:"scheduled", booked:5 },
+  { id:"ds6",  disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(2), time:"18:30", duration:45,  spots:15, status:"scheduled", booked:11 },
+  // +3 jours
+  { id:"ds7",  disciplineId:DISC_IDS.pilates,  discName:"Pilates",      discColor:"#6B9E7A", discIcon:"⚡", teacher:"Sophie MARTIN", room:"Studio B", level:"Débutant",      date:_d(3), time:"12:00", duration:45,  spots:10, status:"scheduled", booked:6 },
+  { id:"ds8",  disciplineId:DISC_IDS.yin,     discName:"Yin Yoga",     discColor:"#AE7A7A", discIcon:"🌙", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(3), time:"19:00", duration:75,  spots:12, status:"scheduled", booked:8 },
+  // +4 jours
+  { id:"ds9",  disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(4), time:"09:00", duration:60,  spots:12, status:"scheduled", booked:2 },
+  { id:"ds10", disciplineId:DISC_IDS.yin,     discName:"Yin Yoga",     discColor:"#AE7A7A", discIcon:"🌙", teacher:"Sophie MARTIN", room:"Studio A", level:"Débutant",      date:_d(4), time:"18:00", duration:75,  spots:12, status:"cancelled", booked:0 },
+  // +5 jours
+  { id:"ds11", disciplineId:DISC_IDS.yoga,    discName:"Yoga Vinyasa", discColor:"#C4956A", discIcon:"🧘", teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(5), time:"10:00", duration:75,  spots:16, status:"scheduled", booked:10 },
+  { id:"ds12", disciplineId:DISC_IDS.medit,   discName:"Méditation",   discColor:"#6A8FAE", discIcon:"☯",  teacher:"Sophie MARTIN", room:"Studio A", level:"Tous niveaux",  date:_d(6), time:"09:30", duration:45,  spots:15, status:"scheduled", booked:7 },
 ];
 
 const BOOKINGS_DEMO = {
@@ -97,17 +100,17 @@ const SUBSCRIPTIONS_DEMO = [
 ];
 
 const PAYMENTS_DEMO = [
-  { id:"p1",  member:"Sophie Martin",  amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
-  { id:"p2",  member:"Emma Dubois",    amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
-  { id:"p3",  member:"Thomas Petit",   amount:229, date:"2026-01-08", type:"Carte",       status:"payé",    subscription:"Trimestriel"       },
-  { id:"p4",  member:"Léa Robert",     amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
-  { id:"p5",  member:"Julien Moreau",  amount:120, date:"2026-02-14", type:"Carte",       status:"impayé",  subscription:"Carnet 10 séances" },
-  { id:"p6",  member:"Marie Lefebvre", amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
-  { id:"p7",  member:"Camille Roux",   amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
-  { id:"p8",  member:"Nicolas Simon",  amount:229, date:"2026-01-05", type:"Virement",    status:"payé",    subscription:"Trimestriel"       },
-  { id:"p9",  member:"Inès Laurent",   amount:89,  date:"2026-03-01", type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
-  { id:"p10", member:"Paul Michel",    amount:89,  date:"2026-02-01", type:"Prélèvement", status:"impayé",  subscription:"Mensuel illimité"  },
-  { id:"p11", member:"Lucas Bernard",  amount:120, date:"2026-02-20", type:"Espèces",     status:"payé",    subscription:"Carnet 10 séances" },
+  { id:"p1",  member:"Sophie Martin",  amount:89,  date:_d(-1), type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p2",  member:"Emma Dubois",    amount:89,  date:_d(-1), type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p3",  member:"Thomas Petit",   amount:229, date:_d(-5), type:"Carte",       status:"payé",    subscription:"Trimestriel"       },
+  { id:"p4",  member:"Léa Robert",     amount:89,  date:_d(-1), type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p5",  member:"Julien Moreau",  amount:120, date:_d(-3), type:"Carte",       status:"impayé",  subscription:"Carnet 10 séances" },
+  { id:"p6",  member:"Marie Lefebvre", amount:89,  date:_d(-1), type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p7",  member:"Camille Roux",   amount:89,  date:_d(-2), type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p8",  member:"Nicolas Simon",  amount:229, date:_d(-10), type:"Virement",   status:"payé",    subscription:"Trimestriel"       },
+  { id:"p9",  member:"Inès Laurent",   amount:89,  date:_d(-1), type:"Prélèvement", status:"payé",    subscription:"Mensuel illimité"  },
+  { id:"p10", member:"Paul Michel",    amount:89,  date:_d(-7), type:"Prélèvement", status:"impayé",  subscription:"Mensuel illimité"  },
+  { id:"p11", member:"Lucas Bernard",  amount:120, date:_d(-4), type:"Espèces",     status:"payé",    subscription:"Carnet 10 séances" },
 ];
 // ══════════════════════════════════════════════════════════════════════════════
 const MEMBERS = MEMBERS_DEMO;

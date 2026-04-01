@@ -554,11 +554,34 @@ function Settings({ isMobile, onImpersonate }) {
               <SI label="Nom du studio" fkey="name" placeholder="Mon Studio Yoga"/>
             </div>
             <SI label="Adresse" fkey="address" placeholder="12 rue de la Paix"/>
-            <div style={{ display:"grid", gridTemplateColumns:"1fr auto", gap:12 }}>
-              <SI label="Ville" fkey="city" placeholder="Paris"/>
-              <SI label="Code postal" fkey="postal_code" placeholder="75001"/>
+            <div style={{ display:"grid", gridTemplateColumns:"2fr 1fr", gap:12 }}>
+              <div>
+                <FieldLabel>Ville</FieldLabel>
+                <input value={studioForm.city||""} disabled={!isAdmin} placeholder="Paris"
+                  onChange={e=>setStudioForm(f=>({...f,city:e.target.value.toUpperCase()}))}
+                  style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:isAdmin?C.surfaceWarm:"#F8F5F2" }}
+                  onFocus={e=>{ if(isAdmin) e.target.style.borderColor=C.accent; }} onBlur={e=>e.target.style.borderColor=C.border}/>
+              </div>
+              <div>
+                <FieldLabel>Code postal</FieldLabel>
+                <input value={studioForm.postal_code||""} disabled={!isAdmin} placeholder="75001" maxLength={5}
+                  onChange={e=>setStudioForm(f=>({...f,postal_code:e.target.value.replace(/\D/g,"").slice(0,5)}))}
+                  style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:isAdmin?C.surfaceWarm:"#F8F5F2" }}
+                  onFocus={e=>{ if(isAdmin) e.target.style.borderColor=C.accent; }} onBlur={e=>e.target.style.borderColor=C.border}/>
+              </div>
             </div>
-            <SI label="Téléphone" fkey="phone" type="tel" placeholder="06 00 00 00 00"/>
+            <div>
+              <FieldLabel>Téléphone</FieldLabel>
+              <input value={studioForm.phone||""} disabled={!isAdmin} placeholder="06 00 00 00 00" type="tel"
+                onChange={e=>{
+                  let v = e.target.value.replace(/[^\d+]/g,"");
+                  if (v.startsWith("+33")) v = "0" + v.slice(3);
+                  const d = v.replace(/\D/g,"").slice(0,10);
+                  setStudioForm(f=>({...f,phone:d.replace(/(\d{2})(?=\d)/g,"$1 ").trim()}));
+                }}
+                style={{ width:"100%", padding:"9px 12px", border:`1.5px solid ${C.border}`, borderRadius:8, fontSize:14, outline:"none", boxSizing:"border-box", color:C.text, background:isAdmin?C.surfaceWarm:"#F8F5F2" }}
+                onFocus={e=>{ if(isAdmin) e.target.style.borderColor=C.accent; }} onBlur={e=>e.target.style.borderColor=C.border}/>
+            </div>
             <SI label="Email de contact" fkey="email" type="email" placeholder="contact@studio.fr"/>
             <SI label="Site web" fkey="website" placeholder="https://monstudio.fr"/>
           </div>

@@ -123,12 +123,12 @@ function Dashboard({ isMobile }) {
       const discData = discRes.data || [];
 
       if (sessData.length === 0 && membData.length === 0) {
-        // Données démo
-        setSessions(SESSIONS_INIT);
-        setBookings(JSON.parse(JSON.stringify(BOOKINGS_INIT)));
-        setMembers(MEMBERS);
-        setPayments(PAYMENTS);
-        setIsDemo(true);
+        // Studio vide — pas de données démo, empty state
+        setSessions([]);
+        setBookings({});
+        setMembers([]);
+        setPayments([]);
+        setIsDemo(false);
       } else {
         const mappedSessions = sessData.map(s=>({
           id: s.id, disciplineId: s.discipline_id,
@@ -285,10 +285,45 @@ function Dashboard({ isMobile }) {
     </div>
   );
 
+  // Guide de démarrage quand le studio est vide
+  const isEmpty = !loading && sessions.length === 0 && members.length === 0;
+
   return (
     <div>
-      {isDemo && <DemoBanner/>}
       <div style={{ padding:p }}>
+        {isEmpty && (
+          <Card style={{ marginBottom:20, borderLeft:`3px solid ${C.accent}`, background:"#FDFAF5" }}>
+            <div style={{ display:"flex", alignItems:"flex-start", gap:14 }}>
+              <div style={{ fontSize:32, flexShrink:0 }}>🚀</div>
+              <div>
+                <div style={{ fontSize:16, fontWeight:800, color:C.text, marginBottom:6 }}>Bienvenue sur Fydelys !</div>
+                <div style={{ fontSize:13, color:C.textSoft, lineHeight:1.7, marginBottom:14 }}>
+                  Votre studio est prêt. Voici les prochaines étapes pour bien démarrer :
+                </div>
+                <div style={{ display:"flex", flexDirection:"column", gap:8 }}>
+                  {[
+                    { icon:"🧘", label:"Créer vos disciplines",     page:"disciplines", desc:"Yoga, Pilates, Méditation..." },
+                    { icon:"📅", label:"Planifier votre 1ère séance", page:"planning",    desc:"Séance unique ou récurrence" },
+                    { icon:"👥", label:"Ajouter vos membres",        page:"members",     desc:"Import ou ajout manuel" },
+                    { icon:"⚙",  label:"Configurer vos paramètres",  page:"settings",    desc:"Salles, paiements, SMS..." },
+                  ].map(s => (
+                    <div key={s.page} onClick={()=>window.dispatchEvent(new CustomEvent("fydelys:nav",{detail:s.page}))}
+                      style={{ display:"flex", alignItems:"center", gap:10, padding:"10px 14px", borderRadius:10, border:`1px solid ${C.border}`, background:C.surface, cursor:"pointer", transition:"background .1s" }}
+                      onMouseEnter={e=>e.currentTarget.style.background=C.accentBg}
+                      onMouseLeave={e=>e.currentTarget.style.background=C.surface}>
+                      <span style={{ fontSize:20 }}>{s.icon}</span>
+                      <div style={{ flex:1 }}>
+                        <div style={{ fontSize:14, fontWeight:700, color:C.text }}>{s.label}</div>
+                        <div style={{ fontSize:12, color:C.textMuted }}>{s.desc}</div>
+                      </div>
+                      <span style={{ fontSize:12, color:C.accent, fontWeight:600 }}>→</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </Card>
+        )}
         {/* KPIs */}
         <div style={{ display:"grid", gridTemplateColumns:isMobile?"1fr 1fr":"repeat(4,1fr)", gap:isMobile?8:14, marginBottom:isMobile?12:20 }}>
           <KpiCard icon={<IcoUsers2 s={isMobile?16:18} c={C.ok}/>}      label="Membres actifs" value={activeMembers>0?String(activeMembers):"—"}  delta={null} accentColor={C.ok}     isMobile={isMobile}/>

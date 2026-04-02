@@ -18,6 +18,7 @@ import { AidePage } from "./Aide";
 import { Historique } from "./Historique";
 import { SuperAdminView } from "./SuperAdmin";
 import { CoachView } from "./CoachView";
+import { StudioOnboarding } from "./StudioOnboarding";
 import { AdherentView } from "./AdherentView";
 
 
@@ -160,6 +161,8 @@ const PAGE_TITLES = {
   }, []);
 
   const [discs, setDiscs] = useState([]);
+  const [showOnboarding, setShowOnboarding] = useState(false);
+  const [onboardingChecked, setOnboardingChecked] = useState(false);
 
   // membersCount chargé depuis /api/sa/studios lors de l'impersonation (service role)
 
@@ -167,18 +170,24 @@ const PAGE_TITLES = {
   useEffect(() => {
     const id = propStudioId || sharedStudioId;
     if (!id) return;
-    createClient()
-      .from("disciplines")
-      .select("id,name,icon,color,slots")
-      .eq("studio_id", id)
-      .order("created_at")
-      .then(({ data }) => {
-        if (data?.length) {
+    fetch(`/api/disciplines?studioId=${id}`)
+      .then(r => r.json())
+      .then(json => {
+        const data = json.disciplines || [];
+        if (data.length) {
           setDiscs(data.map(d => ({ ...d, slots: d.slots||[] })));
         } else {
-          // Fallback démo uniquement si aucune discipline en base
           setDiscs(DISCIPLINES.map(d => ({ ...d, slots: [] })));
+          // Studio vide → proposer l'onboarding (sauf impersonate et superadmin)
+          if (role === "admin" && !impersonating && !onboardingChecked) {
+            setShowOnboarding(true);
+          }
         }
+        setOnboardingChecked(true);
+      })
+      .catch(() => {
+        setDiscs(DISCIPLINES.map(d => ({ ...d, slots: [] })));
+        setOnboardingChecked(true);
       });
   }, [propStudioId, sharedStudioId]);
 
@@ -262,6 +271,16 @@ const PAGE_TITLES = {
           ::-webkit-scrollbar-thumb { background:#D0C4B8; border-radius:3px; }
           ::-webkit-scrollbar-track { background:transparent; }
         `}</style>
+        {showOnboarding && (
+          <StudioOnboarding isMobile={isMobile} onComplete={() => {
+            setShowOnboarding(false);
+            // Recharger les disciplines après l'onboarding
+            const id = propStudioId || sharedStudioId;
+            if (id) fetch(`/api/disciplines?studioId=${id}`).then(r=>r.json()).then(json => {
+              if (json.disciplines?.length) setDiscs(json.disciplines.map(d => ({ ...d, slots: d.slots||[] })));
+            });
+          }}/>
+        )}
         {!isMobile && <Sidebar active={page} onNav={handleNav} studioName={activeStudioName} planName={dynamicPlanName||planName} membersCount={dynamicMembersCount !== null ? dynamicMembersCount : membersCount} userName={userName} userRole={userRole} trialEndsAt={dynamicTrialEndsAt!==null?dynamicTrialEndsAt:trialEndsAt} billingStatus={dynamicBillingStatus||billingStatus}/>}
         <div style={{ flex:1, display:"flex", flexDirection:"column", minWidth:0, paddingBottom:isMobile?62:0 }}>
           <TopBar title={PAGE_TITLES[page]} isMobile={isMobile} onSignOut={onSignOut} isSuperAdmin={initialRole==="superadmin" && !isImpersonatingAdmin} studioName={activeStudioName} billingStatus={dynamicBillingStatus||billingStatus} planName={dynamicPlanName||planName}/>

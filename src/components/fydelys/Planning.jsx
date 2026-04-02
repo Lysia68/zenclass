@@ -816,7 +816,7 @@ function Planning({ isMobile }) {
       .order("session_date").order("session_time")
       .then(async ({ data, error }) => {
         if (error) { setDbLoading(false); return; }
-        if (!data || data.length === 0) { setSessions(SESSIONS_DEMO); setIsDemoData(true); setDbLoading(false); return; }
+        if (!data || data.length === 0) { setSessions([]); setIsDemoData(false); setDbLoading(false); return; }
         const mapped = data.map(s => ({
           id: s.id, disciplineId: s.discipline_id,
           teacher: s.teacher || "", room: s.room || "Studio A", level: s.level || "Tous niveaux",
@@ -1120,7 +1120,6 @@ function Planning({ isMobile }) {
 
   return (
     <div>
-      {isDemoData && <DemoBanner />}
 
       {/* ── Modal confirmation custom ── */}
       {confirmModal && (
@@ -1571,7 +1570,27 @@ function Planning({ isMobile }) {
         {dbLoading ? (
           <div style={{ textAlign: "center", padding: "40px 0", color: C.textMuted, fontSize: 15 }}>⏳ Chargement…</div>
         ) : timeline.length === 0 ? (
-          <EmptyState icon="📅" title="Aucune séance" sub={filterDiscs.length ? "Aucune séance pour cette discipline" : "Commencez par créer une séance !"} />
+          filterDiscs.length ? (
+            <EmptyState icon="📅" title="Aucune séance" sub="Aucune séance pour cette discipline" />
+          ) : (
+            <div style={{ textAlign:"center", padding:"40px 16px" }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>📅</div>
+              <div style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:8 }}>Aucune séance planifiée</div>
+              <div style={{ fontSize:14, color:C.textSoft, lineHeight:1.6, marginBottom:20, maxWidth:400, margin:"0 auto 20px" }}>
+                Créez votre première séance en cliquant sur <strong>+ Séance</strong> ci-dessus, ou générez un planning récurrent.
+              </div>
+              <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" }}>
+                <button onClick={()=>setShowAdd(true)}
+                  style={{ padding:"10px 20px", borderRadius:10, border:"none", background:C.accent, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+                  + Créer une séance
+                </button>
+                <button onClick={()=>window.dispatchEvent(new CustomEvent("fydelys:nav",{detail:"aide"}))}
+                  style={{ padding:"10px 20px", borderRadius:10, border:`1.5px solid ${C.border}`, background:C.surface, color:C.textMid, fontSize:14, fontWeight:600, cursor:"pointer" }}>
+                  ? Aide
+                </button>
+              </div>
+            </div>
+          )
         ) : timeline.map((item, idx) => {
           if (item.type === "closure") return (
             <div key={"cl-"+item.closure.id} style={{ display:"flex", alignItems:"center", gap:10, margin:"4px 0 12px", padding:"10px 16px", background:"#FFFBEB", borderRadius:12, border:"1.5px solid #FDE68A" }}>

@@ -788,7 +788,24 @@ function Members({ isMobile, onImpersonate, openMemberId, onMemberOpened }) {
         {dbLoading ? (
           <div style={{textAlign:"center",padding:"40px 0",color:C.textMuted,fontSize:15}}>⏳ Chargement…</div>
         ) : filtered.length===0 ? (
-          <EmptyState icon="👤" title="Aucun membre" sub={search?"Aucun résultat":"Créez votre premier membre !"}/>
+          search ? <EmptyState icon="👤" title="Aucun résultat" sub="Essayez un autre nom ou email"/>
+          : <div style={{ textAlign:"center", padding:"40px 16px" }}>
+              <div style={{ fontSize:48, marginBottom:12 }}>👥</div>
+              <div style={{ fontSize:18, fontWeight:700, color:C.text, marginBottom:8 }}>Aucun membre</div>
+              <div style={{ fontSize:14, color:C.textSoft, lineHeight:1.6, marginBottom:20, maxWidth:400, margin:"0 auto 20px" }}>
+                Ajoutez votre premier membre. Un magic link de connexion lui sera envoyé par email.
+              </div>
+              <div style={{ display:"flex", gap:10, justifyContent:"center", flexWrap:"wrap" }}>
+                <button onClick={()=>{setShowAdd(true);setNM(EMPTY_FORM);setNMErrors({});}}
+                  style={{ padding:"10px 20px", borderRadius:10, border:"none", background:C.accent, color:"#fff", fontSize:14, fontWeight:700, cursor:"pointer" }}>
+                  + Ajouter un membre
+                </button>
+                <button onClick={()=>window.dispatchEvent(new CustomEvent("fydelys:nav",{detail:"aide"}))}
+                  style={{ padding:"10px 20px", borderRadius:10, border:`1.5px solid ${C.border}`, background:C.surface, color:C.textMid, fontSize:14, fontWeight:600, cursor:"pointer" }}>
+                  ? Aide
+                </button>
+              </div>
+            </div>
         ) : (
           <Card noPad>{filtered.map(m=><MemberRow key={m.id} m={m} onSelect={m=>setSelected(selected?.id===m.id?null:m)} selected={selected?.id===m.id}/>)}</Card>
         )}

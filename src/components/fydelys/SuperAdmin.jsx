@@ -175,7 +175,7 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
       <div style={{background:"#FFFFFF",border:"1px solid rgba(167,139,250,.2)",borderRadius:20,padding:32,width:"100%",maxWidth:520,boxShadow:"0 32px 64px rgba(0,0,0,.5)",maxHeight:"90vh",overflowY:"auto"}}>
 
         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center",marginBottom:16}}>
-          <div style={{fontSize:20,fontWeight:800,color:"#2A1F14",letterSpacing:-0.5}}>{editing?"Modifier le tenant":"Nouveau tenant"}</div>
+          <div style={{fontSize:20,fontWeight:800,color:"#2A1F14",letterSpacing:-0.5}}>{editing?"Modifier l'abonné":"Nouvel abonné"}</div>
           <button onClick={()=>setModal(null)} style={{background:"#F4EFE8",border:"1px solid #DDD5C8",borderRadius:8,width:32,height:32,cursor:"pointer",color:"#8C7B6C",fontSize:16,display:"flex",alignItems:"center",justifyContent:"center"}}>✕</button>
         </div>
 
@@ -323,7 +323,7 @@ function TenantFormModal({ editing, setModal, showToast, setTenants, createClien
               {step<3?(
                 <button onClick={nextStep} style={{flex:2,padding:"11px",background:"linear-gradient(145deg,#B88050,#9A6030)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Continuer</button>
               ):(
-                <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(135deg,#059669,#047857)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Créer le tenant</button>
+                <button onClick={save} style={{flex:2,padding:"11px",background:"linear-gradient(135deg,#059669,#047857)",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>Créer l'abonné</button>
               )}
               {step===1&&<button onClick={()=>setModal(null)} style={{flex:1,padding:"11px",background:"transparent",border:"1px solid #DDD5C8",borderRadius:10,color:"#B0A090",fontSize:14,cursor:"pointer"}}>Annuler</button>}
             </>
@@ -366,7 +366,7 @@ function DeleteModal({ tenant, setModal, showToast, setTenants, createClient }) 
       style={{position:"fixed",inset:0,background:"rgba(42,31,20,.5)",zIndex:800,display:"flex",alignItems:"center",justifyContent:"center",padding:16}}>
       <div style={{background:"#FFFFFF",border:"1px solid rgba(248,113,113,.3)",borderRadius:20,padding:32,width:"100%",maxWidth:420,boxShadow:"0 32px 64px rgba(0,0,0,.5)"}}>
         <div style={{fontSize:32,textAlign:"center",marginBottom:16}}>🗑</div>
-        <div style={{fontSize:18,fontWeight:800,color:"#2A1F14",textAlign:"center",marginBottom:8}}>Supprimer ce tenant ?</div>
+        <div style={{fontSize:18,fontWeight:800,color:"#2A1F14",textAlign:"center",marginBottom:8}}>Supprimer cet abonné ?</div>
         <div style={{fontSize:14,color:"#8C7B6C",textAlign:"center",marginBottom:24,lineHeight:1.6}}>
           <strong style={{color:"#F87171"}}>{tenant.name}</strong> et toutes ses données (membres, séances, paiements) seront supprimées définitivement.
         </div>
@@ -400,7 +400,8 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
   const [testEmail, setTestEmail]     = useState("");
   const [testPhone, setTestPhone]     = useState("");
   const [testResult, setTestResult]   = useState(null);
-  const [testLoading, setTestLoading] = useState(false); // null | {type:"new"} | {type:"edit",tenant} | {type:"delete",tenant}
+  const [testLoading, setTestLoading] = useState(false);
+  const [expandedTenant, setExpandedTenant] = useState(null);
   const [toast, setToast]     = useState(null);
   const [confirmLogout, setConfirmLogout] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -412,12 +413,13 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
     // Utiliser l'API service role pour contourner la RLS sur profiles
     fetch("/api/sa/studios")
       .then(r => r.json())
-      .then(({ studios: studiosData, profiles: profilesData, memberCounts: memberCountsData, error }) => {
+      .then(({ studios: studiosData, profiles: profilesData, memberCounts: memberCountsData, lastSignIn: lastSignInData, error }) => {
       if (error) { console.error("Studios load error:", error); setLoading(false); return; }
       const mois = ["Jan","Fév","Mar","Avr","Mai","Jun","Jul","Aoû","Sep","Oct","Nov","Déc"];
       const profileMap = {};
       (profilesData || []).forEach((p) => { if (p.studio_id) profileMap[p.studio_id] = p; });
       const memCounts = memberCountsData || {};
+      const signIns = lastSignInData || {};
 
       const mapped = (studiosData || []).map((s) => {
         const admin = profileMap[s.id];
@@ -442,6 +444,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
           billingStatus:  s.billing_status || "trialing",
           trialEndsAt:    s.trial_ends_at || null,
           members:        memCounts[s.id] || 0,
+          lastSignIn:     signIns[s.id] || null,
           revenue:        0,
           growth:         0,
         };
@@ -516,7 +519,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
         {/* KPIs */}
         <div style={{display:"grid",gridTemplateColumns:`repeat(${isMobile?2:4},1fr)`,gap:isMobile?10:16,marginBottom:24}}>
           {[
-            {l:"Tenants actifs", v:actifCount, sub:`/ ${tenants.length} total`,        c:"#A06838", bg:"rgba(167,139,250,.1)", icon:"🏢"},
+            {l:"Abonnés actifs", v:actifCount, sub:`/ ${tenants.length} total`,        c:"#A06838", bg:"rgba(167,139,250,.1)", icon:"🏢"},
             {l:"Total membres",  v:totalMem,   sub:"tous studios",                     c:"#34D399", bg:"rgba(52,211,153,.1)",  icon:"👥"},
             {l:"CA mensuel",     v:totalRev>0?`${(totalRev/1000).toFixed(1)}k €`:"—", sub:"tenants actifs", c:"#FBBF24", bg:"rgba(251,191,36,.1)", icon:"💰"},
             {l:"Suspendus",      v:suspCount,  sub:suspCount?"action requise":"aucun", c:"#F87171", bg:"rgba(248,113,113,.1)", icon:"⚠"},
@@ -658,7 +661,7 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
                 </button>
               ))}
             </div>
-            <button onClick={()=>setModal({type:"new"})} style={{fontSize:13,padding:"7px 16px",borderRadius:8,border:"none",background:"#A06838",color:"#fff",fontWeight:700,cursor:"pointer"}}>＋ Nouveau tenant</button>
+            <button onClick={()=>setModal({type:"new"})} style={{fontSize:13,padding:"7px 16px",borderRadius:8,border:"none",background:"#A06838",color:"#fff",fontWeight:700,cursor:"pointer"}}>＋ Nouvel abonné</button>
           </div>
 
           {/* Empty state */}
@@ -667,65 +670,87 @@ function SuperAdminView({ onSwitch, isMobile, onSignOut, onImpersonateStudio }) 
               <div style={{fontSize:40,marginBottom:12}}>🏢</div>
               <div style={{fontSize:16,fontWeight:700,color:"#5C4A38",marginBottom:6}}>Aucun tenant pour l'instant</div>
               <div style={{fontSize:13,color:"#B0A090",marginBottom:20}}>Créez votre premier studio client</div>
-              <button onClick={()=>setModal({type:"new"})} style={{padding:"10px 24px",background:"#A06838",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>＋ Créer le premier tenant</button>
+              <button onClick={()=>setModal({type:"new"})} style={{padding:"10px 24px",background:"#A06838",border:"none",borderRadius:10,color:"#fff",fontSize:14,fontWeight:700,cursor:"pointer"}}>＋ Créer le premier abonné</button>
             </div>
           )}
 
           {/* Rows */}
-          {filtered.map(t=>(
-            <div key={t.id} style={{padding:"13px 18px",borderBottom:"1px solid #EAE4DA",display:"flex",alignItems:"center",gap:14,flexWrap:isMobile?"wrap":"nowrap"}}
-              onMouseEnter={e=>e.currentTarget.style.background="#FBF8F4"}
-              onMouseLeave={e=>e.currentTarget.style.background=""}>
-              <div style={{width:34,height:34,borderRadius:8,background:"#F5EBE0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🏛</div>
-              <div style={{flex:1,minWidth:100}}>
-                <div style={{fontSize:14,fontWeight:700,color:"#2A1F14"}}>{t.name}</div>
-                <div style={{fontSize:11,color:"#8C7B6C"}}>{t.city} · {t.slug}.fydelys.fr · depuis {t.since}</div>
-                {t.contact&&<div style={{fontSize:11,color:"#A06838"}}>{t.contact} · {t.email}</div>}
-              </div>
-              {!isMobile&&<>
+          {filtered.map(t=>{
+            const isExp = expandedTenant === t.id;
+            return (
+            <div key={t.id} style={{borderBottom:"1px solid #EAE4DA"}}>
+              {/* Row header — cliquable */}
+              <div onClick={()=>setExpandedTenant(isExp?null:t.id)}
+                style={{padding:"13px 18px",display:"flex",alignItems:"center",gap:14,cursor:"pointer",flexWrap:isMobile?"wrap":"nowrap"}}
+                onMouseEnter={e=>e.currentTarget.style.background="#FBF8F4"}
+                onMouseLeave={e=>e.currentTarget.style.background=""}>
+                <div style={{width:34,height:34,borderRadius:8,background:"#F5EBE0",display:"flex",alignItems:"center",justifyContent:"center",fontSize:16,flexShrink:0}}>🏛</div>
+                <div style={{flex:1,minWidth:100}}>
+                  <div style={{fontSize:14,fontWeight:700,color:"#2A1F14"}}>{t.name}</div>
+                  <div style={{fontSize:11,color:"#8C7B6C"}}>{t.city} · {t.slug}.fydelys.fr · depuis {t.since}</div>
+                  {t.contact&&<div style={{fontSize:11,color:"#A06838"}}>{t.contact} · {t.email}</div>}
+                </div>
                 <div style={{textAlign:"center",minWidth:56}}>
-                  <div style={{fontSize:15,fontWeight:800,color:"#34D399"}}>{t.members}</div>
+                  <div style={{fontSize:15,fontWeight:800,color:t.members>0?"#34D399":"#F87171"}}>{t.members}</div>
                   <div style={{fontSize:10,color:"#B0A090"}}>membres</div>
                 </div>
-                <div style={{textAlign:"center",minWidth:70}}>
-                  <div style={{fontSize:15,fontWeight:800,color:"#FBBF24"}}>{(t.revenue||0).toLocaleString()} €</div>
-                  <div style={{fontSize:10,color:"#B0A090"}}>/mois</div>
+                <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
+                  <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:"#F4EFE8",color:"#8C7B6C"}}>{t.plan}</span>
+                  <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.status==="actif"?"rgba(52,211,153,.15)":"rgba(248,113,113,.15)",color:t.status==="actif"?"#34D399":"#F87171"}}>{t.status==="actif"?"Actif":"Suspendu"}</span>
                 </div>
-              </>}
-              <div style={{display:"flex",gap:6,alignItems:"center",flexShrink:0}}>
-                <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.plan==="Pro"?"rgba(160,104,56,.2)":t.plan==="Business"?"rgba(251,191,36,.2)":"#F4EFE8",color:t.plan==="Pro"?"#8C5E38":t.plan==="Business"?"#FCD34D":"#8C7B6C"}}>{t.plan}</span>
-                <span style={{fontSize:11,fontWeight:700,padding:"3px 9px",borderRadius:10,background:t.status==="actif"?"rgba(52,211,153,.15)":"rgba(248,113,113,.15)",color:t.status==="actif"?"#34D399":"#F87171"}}>{t.status==="actif"?"Actif":"Suspendu"}</span>
+                <span style={{fontSize:12,color:"#B0A090",transition:"transform .2s",transform:isExp?"rotate(180deg)":"none"}}>▾</span>
               </div>
-              <div style={{display:"flex",gap:6,flexShrink:0}}>
-                <button
-                  onClick={()=>onImpersonateStudio && onImpersonateStudio(t.slug)}
-                  title="Voir l'app studio comme un admin"
-                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1.5px solid rgba(124,58,237,.35)",background:"rgba(124,58,237,.08)",color:"#7C3AED",cursor:"pointer",fontWeight:700}}>
-                  👁 Simuler
-                </button>
-                <button onClick={()=>setModal({type:"edit",tenant:t})}
-                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(167,139,250,.3)",background:"rgba(167,139,250,.1)",color:"#8C5E38",cursor:"pointer",fontWeight:600}}>✏ Modifier</button>
-                {t.status==="actif"
-                  ? <button onClick={async()=>{
-                      const sb=createClient();
-                      await sb.from("studios").update({status:"suspendu",suspended_at:new Date().toISOString()}).eq("id",t.id);
-                      setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"suspendu"}:x));
-                      showToast(`"${t.name}" suspendu`,false);
-                    }}
-                      style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.1)",color:"#F87171",cursor:"pointer",fontWeight:600}}>Suspendre</button>
-                  : <button onClick={async()=>{
-                      const sb=createClient();
-                      await sb.from("studios").update({status:"actif",suspended_at:null}).eq("id",t.id);
-                      setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"actif"}:x));
-                      showToast(`"${t.name}" réactivé`);
-                    }}
-                      style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(52,211,153,.3)",background:"rgba(52,211,153,.1)",color:"#34D399",cursor:"pointer",fontWeight:600}}>Réactiver</button>
-                }
-                <button onClick={()=>setModal({type:"delete",tenant:t})}
-                  style={{fontSize:11,padding:"4px 10px",borderRadius:6,border:"1px solid rgba(248,113,113,.2)",background:"rgba(248,113,113,.07)",color:"#F87171",cursor:"pointer",fontWeight:600}}>🗑</button>
-              </div>
+
+              {/* Accordéon contenu */}
+              {isExp && (
+                <div style={{padding:"0 18px 16px",background:"#FBF8F4"}}>
+                  <div style={{display:"grid",gridTemplateColumns:isMobile?"1fr":"1fr 1fr 1fr",gap:10,marginBottom:14}}>
+                    {[
+                      ["📍 Adresse",`${t.address||"—"}, ${t.zip||""} ${t.city||""}`],
+                      ["📧 Email",t.email||"—"],
+                      ["📞 Téléphone",t.phone||"—"],
+                      ["💳 Paiement",t.paymentMode==="connect"?"Stripe Connect":t.paymentMode==="direct"?"Stripe Direct":"Non configuré"],
+                      ["📊 Statut billing",t.billingStatus||"—"],
+                      ["📅 Fin essai",t.trialEndsAt?new Date(t.trialEndsAt).toLocaleDateString("fr-FR"):"—"],
+                      ["🔑 Dernière connexion",t.lastSignIn?new Date(t.lastSignIn).toLocaleDateString("fr-FR",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"}):"Jamais"],
+                    ].map(([lbl,val])=>(
+                      <div key={lbl} style={{padding:"8px 10px",background:"#fff",borderRadius:8,border:"1px solid #EAE4DA"}}>
+                        <div style={{fontSize:10,fontWeight:700,color:"#B0A090",textTransform:"uppercase",letterSpacing:.5}}>{lbl}</div>
+                        <div style={{fontSize:13,fontWeight:600,color:"#2A1F14",marginTop:2}}>{val}</div>
+                      </div>
+                    ))}
+                  </div>
+                  {t.notes&&<div style={{padding:"8px 12px",background:"#FFF8E8",borderRadius:8,border:"1px solid #F0D080",fontSize:12,color:"#8B6914",marginBottom:14}}>📝 {t.notes}</div>}
+                  <div style={{display:"flex",gap:6,flexWrap:"wrap"}}>
+                    <button onClick={()=>onImpersonateStudio && onImpersonateStudio(t.slug)}
+                      style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1.5px solid rgba(124,58,237,.35)",background:"rgba(124,58,237,.08)",color:"#7C3AED",cursor:"pointer",fontWeight:700}}>
+                      👁 Simuler
+                    </button>
+                    <button onClick={()=>setModal({type:"edit",tenant:t})}
+                      style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1px solid #DDD5C8",background:"#fff",color:"#8C5E38",cursor:"pointer",fontWeight:600}}>✏ Modifier</button>
+                    {t.status==="actif"
+                      ? <button onClick={async()=>{
+                          const sb=createClient();
+                          await sb.from("studios").update({status:"suspendu",suspended_at:new Date().toISOString()}).eq("id",t.id);
+                          setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"suspendu"}:x));
+                          showToast(`"${t.name}" suspendu`,false);
+                        }}
+                          style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1px solid rgba(248,113,113,.3)",background:"rgba(248,113,113,.1)",color:"#F87171",cursor:"pointer",fontWeight:600}}>Suspendre</button>
+                      : <button onClick={async()=>{
+                          const sb=createClient();
+                          await sb.from("studios").update({status:"actif",suspended_at:null}).eq("id",t.id);
+                          setTenants(p=>p.map(x=>x.id===t.id?{...x,status:"actif"}:x));
+                          showToast(`"${t.name}" réactivé`);
+                        }}
+                          style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1px solid rgba(52,211,153,.3)",background:"rgba(52,211,153,.1)",color:"#34D399",cursor:"pointer",fontWeight:600}}>Réactiver</button>
+                    }
+                    <button onClick={()=>setModal({type:"delete",tenant:t})}
+                      style={{fontSize:12,padding:"6px 14px",borderRadius:8,border:"1px solid rgba(248,113,113,.2)",background:"rgba(248,113,113,.07)",color:"#F87171",cursor:"pointer",fontWeight:600}}>🗑 Supprimer</button>
+                  </div>
+                </div>
+              )}
             </div>
-          ))}
+          );})}
 
           {filtered.length===0&&tenants.length>0&&(
             <div style={{padding:"32px",textAlign:"center",color:"#B0A090",fontSize:13}}>Aucun résultat pour « {search} »</div>

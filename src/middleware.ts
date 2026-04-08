@@ -8,7 +8,7 @@ export async function middleware(request: NextRequest) {
   // Geo-blocking : bloquer les IPs hors France (sauf localhost, assets et bots Google)
   const country = request.headers.get("x-vercel-ip-country") || ""
   const ua = request.headers.get("user-agent") || ""
-  const isBot = /googlebot|google-inspectiontool|lighthouse|pagespeed|chrome-lighthouse|adsbot-google|mediapartners-google|bingbot|facebookexternalhit|twitterbot|linkedinbot|slurp/i.test(ua)
+  const isBot = /bot|crawl|spider|slurp|googlebot|google-inspectiontool|google-structured-data-testing-tool|google-xrawler|storebot-google|lighthouse|pagespeed|chrome-lighthouse|adsbot-google|mediapartners-google|feedfetcher-google|apis-google|bingbot|bingpreview|msnbot|yandexbot|yandeximages|baiduspider|duckduckbot|facebookexternalhit|facebookcatalog|facebook|twitterbot|linkedinbot|pinterest|whatsapp|telegrambot|applebot|semrushbot|ahrefsbot|dotbot|rogerbot|screaming frog|majestic|mj12bot|petalbot|bytespider|sogou|exabot|ia_archiver|archive\.org_bot|uptimerobot|sitebulb|seokicks|sistrix|seobility|dataforseo|serpstat|gtmetrix|pingdom|uptimerobot/i.test(ua)
   const ALLOWED_COUNTRIES = ["FR", "BE", "CH", "LU", "MC", "DE", ""] // France + voisins + vide (localhost/dev)
   if (country && !ALLOWED_COUNTRIES.includes(country) && !isBot && !pathname.startsWith("/_next") && !pathname.startsWith("/api/stripe") && !pathname.startsWith("/google") && !pathname.startsWith("/robots.txt") && !pathname.startsWith("/sitemap")) {
     return new NextResponse("Accès restreint à la France et pays limitrophes.", { status: 403 })

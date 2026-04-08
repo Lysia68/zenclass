@@ -5,10 +5,12 @@ export async function middleware(request: NextRequest) {
   const hostname = request.headers.get("host") || ""
   const { pathname, searchParams } = request.nextUrl
 
-  // Geo-blocking : bloquer les IPs hors France (sauf localhost et assets)
+  // Geo-blocking : bloquer les IPs hors France (sauf localhost, assets et bots Google)
   const country = request.headers.get("x-vercel-ip-country") || ""
+  const ua = request.headers.get("user-agent") || ""
+  const isBot = /googlebot|google-inspectiontool|lighthouse|pagespeed|chrome-lighthouse|adsbot-google|mediapartners-google|bingbot|facebookexternalhit|twitterbot|linkedinbot|slurp/i.test(ua)
   const ALLOWED_COUNTRIES = ["FR", "BE", "CH", "LU", "MC", "DE", ""] // France + voisins + vide (localhost/dev)
-  if (country && !ALLOWED_COUNTRIES.includes(country) && !pathname.startsWith("/_next") && !pathname.startsWith("/api/stripe") && !pathname.startsWith("/google") && !pathname.startsWith("/robots.txt") && !pathname.startsWith("/sitemap")) {
+  if (country && !ALLOWED_COUNTRIES.includes(country) && !isBot && !pathname.startsWith("/_next") && !pathname.startsWith("/api/stripe") && !pathname.startsWith("/google") && !pathname.startsWith("/robots.txt") && !pathname.startsWith("/sitemap")) {
     return new NextResponse("Accès restreint à la France et pays limitrophes.", { status: 403 })
   }
 

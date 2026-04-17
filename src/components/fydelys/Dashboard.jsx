@@ -113,7 +113,7 @@ function Dashboard({ isMobile }) {
 
     Promise.all([
       sb.from("sessions").select("id,discipline_id,teacher,room,duration_min,spots,session_date,session_time,status").eq("studio_id", studioId),
-      sb.from("members").select("id,first_name,last_name,email,phone,status,joined_at,subscription_id,subscriptions(name)").eq("studio_id", studioId),
+      sb.from("members").select("id,first_name,last_name,email,phone,status,joined_at,credits,credits_total,subscription_id,subscriptions(name)").eq("studio_id", studioId),
       sb.from("member_payments").select("id,amount,status,payment_date,payment_type,notes,members(first_name,last_name)").eq("studio_id", studioId),
       fetch(`/api/disciplines?studioId=${studioId}`).then(r=>r.json()).then(j=>({data:j.disciplines||[]})).catch(()=>sb.from("disciplines").select("id,name,color,icon").eq("studio_id", studioId)),
     ]).then(async ([sessRes, membRes, payRes, discRes]) => {
@@ -173,7 +173,8 @@ function Dashboard({ isMobile }) {
           subscription: m.subscriptions?.name||"—",
           joined: m.joined_at||"",
           avatar: (m.first_name?.[0]||"") + (m.last_name?.[0]||""),
-          credits: 0,
+          credits: m.credits ?? 0,
+          credits_total: m.credits_total ?? 0,
         })));
         setPayments(payData.map(p=>({...p, date:p.payment_date, status:p.status, member: p.members ? `${p.members.first_name||""} ${p.members.last_name||""}`.trim() : "", payment_type: p.payment_type||"" })));
         if (discData.length > 0) {

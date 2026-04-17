@@ -436,8 +436,10 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
       if (!me?.id) return;
 
       // Vérifier crédits si le membre en a un système de crédits actif
+      // (uniquement si les paiements en ligne sont activés — sinon paiement sur place)
+      const onlinePaymentsActive = studioPaymentMode === "connect" || studioPaymentMode === "direct";
       const hasCredits = me.credits !== null && me.credits !== undefined && me.credits_total > 0;
-      if (hasCredits && me.credits <= 0) {
+      if (onlinePaymentsActive && hasCredits && me.credits <= 0) {
         showToast("Crédits insuffisants — rechargez votre compte", false);
         return;
       }
@@ -520,7 +522,13 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                 <div style={{ fontSize:13, color:C.textSoft }}>{confirmSess.time} · {confirmSess.duration_min} min · {confirmSess.room}</div>
                 <div style={{ fontSize:13, color:C.textSoft }}>{confirmSess.teacher}</div>
                 {(() => {
+                  const onlinePaymentsActive = studioPaymentMode === "connect" || studioPaymentMode === "direct";
                   const hasCredits = me?.credits !== null && me?.credits !== undefined && me?.credits_total > 0;
+                  if (!onlinePaymentsActive) return (
+                    <div style={{ marginTop:10, padding:"8px 12px", background:"#FEF3E2", borderRadius:8, fontSize:13, color:"#92400E" }}>
+                      💶 Paiement sur place auprès du studio.
+                    </div>
+                  );
                   if (!hasCredits) return null;
                   if (me.credits <= 0) return (
                     <div style={{ marginTop:10, padding:"8px 12px", background:"#FEE2E2", borderRadius:8, fontSize:13, color:"#991B1B", fontWeight:600 }}>
@@ -536,8 +544,9 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
               </div>
               <div style={{ display:"flex", gap:10 }}>
                 {(() => {
+                  const onlinePaymentsActive = studioPaymentMode === "connect" || studioPaymentMode === "direct";
                   const hasCredits = me?.credits !== null && me?.credits !== undefined && me?.credits_total > 0;
-                  const blocked = hasCredits && me.credits <= 0;
+                  const blocked = onlinePaymentsActive && hasCredits && me.credits <= 0;
                   return blocked
                     ? <Button sm variant="ghost" onClick={()=>setConfirmSess(null)}>Fermer</Button>
                     : <><Button sm onClick={()=>book(confirmSess)}>Confirmer</Button>
@@ -689,7 +698,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                                 const hasCredits  = hasC && me.credits > 0;
                                 const subPeriod   = me?.subscriptions?.period || me?.subPeriod;
                                 const isUnlimited = subPeriod === "mois" || subPeriod === "trimestre" || subPeriod === "année";
-                                const paymentActive = studioPaymentMode !== "none";
+                                const paymentActive = studioPaymentMode === "connect" || studioPaymentMode === "direct";
                                 const canBook = !paymentActive || isUnlimited || hasCredits;
                                 const noSub   = paymentActive && !isUnlimited && !hasC;
                                 const noCredit = paymentActive && !isUnlimited && hasC && me.credits <= 0;

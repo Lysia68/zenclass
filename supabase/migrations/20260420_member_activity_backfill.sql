@@ -78,6 +78,35 @@ WHERE b.attended = true AND b.member_id IS NOT NULL
       AND ma.details->>'booking_id' = b.id::text
   );
 
+-- 3b) Déductions de crédits associées aux présences validées
+-- (uniquement pour les membres utilisant le système de crédits)
+INSERT INTO member_activity (studio_id, member_id, actor_role, action, details, created_at)
+SELECT
+  s.studio_id,
+  b.member_id,
+  'system',
+  'credit_deduct',
+  jsonb_build_object(
+    'amount', 1,
+    'reason', 'attendance',
+    'booking_id', b.id,
+    'session_id', b.session_id,
+    'session_date', s.session_date,
+    'backfilled', true
+  ),
+  (s.session_date || ' ' || COALESCE(s.session_time::text, '12:00'))::timestamptz + interval '1 second'
+FROM bookings b
+JOIN sessions s ON s.id = b.session_id
+JOIN members m ON m.id = b.member_id
+WHERE b.attended = true
+  AND b.member_id IS NOT NULL
+  AND COALESCE(m.credits_total, 0) > 0
+  AND NOT EXISTS (
+    SELECT 1 FROM member_activity ma
+    WHERE ma.action = 'credit_deduct'
+      AND ma.details->>'booking_id' = b.id::text
+  );
+
 -- 4) Absences (attended = false)
 INSERT INTO member_activity (studio_id, member_id, actor_role, action, details, created_at)
 SELECT

@@ -403,7 +403,9 @@ export function Historique({ isMobile }) {
                     </div>
                     <div style={{ background: C.surface, border: `1px solid ${C.border}`, borderRadius: 12, overflow: "hidden" }}>
                       {byDay[day].map(a => {
-                        const time = a.created_at.slice(11, 16);
+                        // 00:00 = entrée backfillée (timestamp date-only), on masque l'heure
+                        const rawTime = a.created_at.slice(11, 16);
+                        const time = (rawTime === "00:00" && a.details?.backfilled) ? "—" : rawTime;
                         const memberName = a.members ? `${a.members.first_name || ""} ${a.members.last_name || ""}`.trim() : "—";
                         const label = actionLabel(a.action, a.details);
                         const color = actionColor(a.action);

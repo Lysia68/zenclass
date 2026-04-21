@@ -81,7 +81,8 @@ function Dashboard({ isMobile }) {
   useEffect(() => {
     if (!studioId) return;
     const sb = createClient();
-    const today = new Date().toISOString().slice(0,10);
+    const _d = new Date();
+    const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,"0")}-${String(_d.getDate()).padStart(2,"0")}`;
     const monthStart = today.slice(0,7);
 
     // Charger le flag page publique

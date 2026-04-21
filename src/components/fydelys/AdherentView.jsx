@@ -363,9 +363,11 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
     if (!studioId) return;
     setLoadingSess(true);
     const sb = createClient();
-    const today = new Date().toISOString().split("T")[0];
+    // Date locale (évite le décalage UTC en soirée)
+    const _d = new Date();
+    const today = `${_d.getFullYear()}-${String(_d.getMonth()+1).padStart(2,"0")}-${String(_d.getDate()).padStart(2,"0")}`;
     const d30 = new Date(); d30.setDate(d30.getDate() + 30);
-    const toDate = d30.toISOString().slice(0,10);
+    const toDate = `${d30.getFullYear()}-${String(d30.getMonth()+1).padStart(2,"0")}-${String(d30.getDate()).padStart(2,"0")}`;
     // Charger les fermetures
     sb.from("studio_closures").select("*").eq("studio_id", studioId).gte("date_end", today).order("date_start")
       .then(({ data }) => setClosures(data || []));

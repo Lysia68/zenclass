@@ -1007,6 +1007,7 @@ export default function LandingPage() {
               <a href="#fonctionnalites" className="footer-link">Fonctionnalités</a>
               <a href="#tarifs" className="footer-link">Tarifs</a>
               <a href="#nouveautes" className="footer-link">Nouveautés</a>
+              <a href="/actualites" className="footer-link">Actualités</a>
               <a href="/login?tab=register" className="footer-link">Créer un studio</a>
               <a href="/login" className="footer-link">Se connecter</a>
             </div>

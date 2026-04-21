@@ -597,6 +597,9 @@ export default function LandingPage() {
           .mockups-grid{grid-template-columns:1fr!important;}
           details summary{font-size:14px!important;}
           .float-card,.float-mobile{display:none!important;}
+          .sticky-cta-mobile{display:block!important;}
+          footer{padding-bottom:80px!important;}
+          [data-floating-contact]{bottom:78px!important;}
         }
         @media(max-width:480px){
           .disc-grid{grid-template-columns:1fr;}
@@ -632,9 +635,22 @@ export default function LandingPage() {
           Gérez votre studio<br/>avec <em style={{fontStyle:"italic",color:"#A06838"}}>sérénité</em>
         </h1>
 
-        <p className="h-sub" style={{fontSize:"clamp(16px,2vw,19px)",color:"#8C7B6C",maxWidth:520,lineHeight:1.7,marginBottom:44}}>
-          Planning, membres, paiements — tout ce dont votre studio de yoga, pilates ou bien-être a besoin, dans une plateforme élégante et intuitive.
+        <p className="h-sub" style={{fontSize:"clamp(16px,2vw,19px)",color:"#8C7B6C",maxWidth:540,lineHeight:1.7,marginBottom:36}}>
+          Vos adhérents réservent et paient en autonomie. Vous récupérez du temps pour ce qui compte vraiment : vos cours.
         </p>
+
+        <div className="h-bens" style={{display:"flex",gap:18,justifyContent:"center",flexWrap:"wrap",marginBottom:40,maxWidth:680}}>
+          {[
+            { n:"−5h", l:"d'administratif par semaine" },
+            { n:"+30%", l:"de présence aux cours" },
+            { n:"<1h", l:"pour configurer votre studio" },
+          ].map((b,i) => (
+            <div key={i} style={{display:"flex",alignItems:"center",gap:10,padding:"10px 18px",background:"rgba(255,255,255,.6)",border:"1px solid rgba(160,104,56,.18)",borderRadius:14,backdropFilter:"blur(8px)"}}>
+              <div style={{fontFamily:"var(--D)",fontSize:24,fontWeight:700,color:"#A06838",lineHeight:1}}>{b.n}</div>
+              <div style={{fontSize:12.5,color:"#5C4A38",textAlign:"left",lineHeight:1.3,maxWidth:110}}>{b.l}</div>
+            </div>
+          ))}
+        </div>
 
         <div className="h-btns" style={{display:"flex",gap:12,flexWrap:"wrap",justifyContent:"center"}}>
           <a href="/login?tab=register" className="btn-p">Démarrer l'essai gratuit →</a>
@@ -1025,6 +1041,12 @@ export default function LandingPage() {
 
       {/* ── BULLE CONTACT FLOTTANTE ── */}
       <FloatingContact/>
+
+      {/* ── STICKY CTA MOBILE ── */}
+      <a href="/login?tab=register" className="sticky-cta-mobile"
+        style={{position:"fixed",bottom:0,left:0,right:0,zIndex:8000,padding:"14px 20px calc(14px + env(safe-area-inset-bottom))",background:"linear-gradient(145deg,#B88050,#9A6030)",color:"#fff",fontSize:15,fontWeight:700,textAlign:"center",textDecoration:"none",boxShadow:"0 -4px 16px rgba(42,31,20,.15)",display:"none"}}>
+        Démarrer l'essai gratuit →
+      </a>
     </>
   )
 }

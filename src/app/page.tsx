@@ -203,6 +203,15 @@ const DISCIPLINES = [
   { img: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&q=75&auto=format&fit=crop",    name: "Stretching",   desc: "Souplesse, récupération, barre…",  tag: "" },
 ]
 
+// Liste des nouveautés affichées sur la page d'accueil — éditer ici pour publier
+// Tags : "Nouveau" | "Amélioration" | "Correction"
+const NOUVEAUTES = [
+  { date: "2026-04-21", tag: "Nouveau",      title: "Historique complet par adhérent", desc: "Retrouvez toutes les actions effectuées sur un adhérent : crédits, réservations, paiements, changements d'abonnement." },
+  { date: "2026-04-20", tag: "Amélioration", title: "Site plus rapide",                desc: "L'accueil et l'espace adhérent s'affichent désormais plus vite, en particulier sur mobile." },
+  { date: "2026-04-19", tag: "Nouveau",      title: "Compteur d'adhérents visible",    desc: "Le nombre d'adhérents s'affiche en haut de la page Membres pour un coup d'œil immédiat." },
+  { date: "2026-04-18", tag: "Correction",   title: "Affichage des fermetures",        desc: "Les périodes de fermeture (congés, jours fériés) ne s'affichent plus en double côté adhérent." },
+]
+
 // Feature : { label, included: true|false }
 const PLANS = [
   {
@@ -766,6 +775,37 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── NOUVEAUTÉS ── */}
+      <section id="nouveautes" className="sec" style={{background:"var(--bg2)"}}>
+        <div className="inner" style={{maxWidth:760}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <div className="sec-tag">✦ Nouveautés produit</div>
+            <h2 className="sec-h">Ce qui bouge chez Fydelys</h2>
+            <p className="sec-sub" style={{maxWidth:480,margin:"0 auto"}}>Suivez nos dernières évolutions — nouveautés, améliorations et corrections.</p>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:14}}>
+            {NOUVEAUTES.map((n,i) => {
+              const tagColor = n.tag==="Nouveau" ? {bg:"rgba(160,104,56,.1)",fg:"#A06838",bd:"rgba(160,104,56,.25)"}
+                            : n.tag==="Amélioration" ? {bg:"rgba(78,138,88,.12)",fg:"#4E8A58",bd:"rgba(78,138,88,.3)"}
+                            : {bg:"rgba(196,146,42,.12)",fg:"#8B6914",bd:"rgba(196,146,42,.3)"};
+              const dateFmt = new Date(n.date+"T12:00").toLocaleDateString("fr-FR",{day:"numeric",month:"long",year:"numeric"});
+              return (
+                <div key={i} style={{background:"var(--surface)",border:"1.5px solid var(--border)",borderRadius:14,padding:"18px 22px",display:"flex",gap:18,alignItems:"flex-start"}}>
+                  <div style={{flexShrink:0,width:90,fontSize:12,color:"var(--soft)",fontWeight:500,paddingTop:2}}>{dateFmt}</div>
+                  <div style={{flex:1,minWidth:0}}>
+                    <div style={{display:"flex",alignItems:"center",gap:8,marginBottom:6,flexWrap:"wrap"}}>
+                      <span style={{fontSize:11,fontWeight:700,padding:"3px 10px",borderRadius:12,background:tagColor.bg,color:tagColor.fg,border:`1px solid ${tagColor.bd}`,letterSpacing:.3}}>{n.tag}</span>
+                      <span style={{fontSize:15,fontWeight:700,color:"var(--text)"}}>{n.title}</span>
+                    </div>
+                    <div style={{fontSize:13.5,color:"var(--soft)",lineHeight:1.6}}>{n.desc}</div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section style={{padding:"32px 0 96px"}}>
         <div className="cta-band">
@@ -799,6 +839,7 @@ export default function LandingPage() {
             <div className="footer-links">
               <a href="#fonctionnalites" className="footer-link">Fonctionnalités</a>
               <a href="#tarifs" className="footer-link">Tarifs</a>
+              <a href="#nouveautes" className="footer-link">Nouveautés</a>
               <a href="/login?tab=register" className="footer-link">Créer un studio</a>
               <a href="/login" className="footer-link">Se connecter</a>
             </div>

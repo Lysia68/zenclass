@@ -1,5 +1,5 @@
 "use client"
-import { useEffect, useRef, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 
 
 
@@ -202,6 +202,37 @@ const DISCIPLINES = [
   { img: "https://images.unsplash.com/photo-1571019613454-1cb2f99b2d8b?w=600&q=75&auto=format&fit=crop", name: "Fitness",      desc: "HIIT, circuit training, cardio…",  tag: "" },
   { img: "https://images.unsplash.com/photo-1552196563-55cd4e45efb3?w=600&q=75&auto=format&fit=crop",    name: "Stretching",   desc: "Souplesse, récupération, barre…",  tag: "" },
 ]
+
+// Comparatif vs alternatives — éditer la liste pour ajuster
+const COMPARE_ROWS = [
+  { feat: "Planning et réservations en ligne",      excel:false, wix:false,    autres:true,  fydelys:true  },
+  { feat: "Suivi des crédits / abonnements",        excel:"~",   wix:false,    autres:true,  fydelys:true  },
+  { feat: "Espace adhérent sans mot de passe",      excel:false, wix:false,    autres:"~",   fydelys:true  },
+  { feat: "Paiement en ligne sécurisé",             excel:false, wix:true,     autres:true,  fydelys:true  },
+  { feat: "Rappels automatiques avant les cours",   excel:false, wix:false,    autres:"~",   fydelys:true  },
+  { feat: "Site vitrine inclus (votre-nom.fydelys.fr)", excel:false, wix:true, autres:false, fydelys:true  },
+  { feat: "Spécialisé bien-être (yoga, pilates…)",  excel:false, wix:false,    autres:false, fydelys:true  },
+  { feat: "Support en français",                    excel:false, wix:"~",      autres:"~",   fydelys:true  },
+  { feat: "Sans abonnement annuel forcé",           excel:true,  wix:false,    autres:false, fydelys:true  },
+];
+
+// Questions fréquentes
+const FAQ_ITEMS = [
+  { q: "Combien de temps pour démarrer ?",
+    a: "Vous créez votre studio en 2 minutes : nom, sous-domaine, type d'activité. Ensuite vous invitez vos coachs et accueillez vos premiers adhérents. La plupart des gérants sont opérationnels en moins d'une heure." },
+  { q: "Puis-je migrer depuis mon Excel ou un autre outil ?",
+    a: "Oui, nous vous accompagnons gratuitement à l'import de vos adhérents et abonnements depuis un fichier Excel/CSV. Pas de saisie manuelle pour vous." },
+  { q: "Y a-t-il un engagement ?",
+    a: "Non, l'abonnement est mensuel et résiliable à tout moment depuis votre espace. Vous gardez toutes vos données en cas de départ (export Excel)." },
+  { q: "Mes adhérents doivent-ils créer un compte ?",
+    a: "Non. Ils reçoivent un lien de connexion par email (pas de mot de passe à retenir) et accèdent directement à leur espace pour réserver, payer et consulter leur historique." },
+  { q: "Que se passe-t-il pendant l'essai gratuit ?",
+    a: "Vous avez accès à toutes les fonctionnalités pendant 15 jours, sans carte bancaire. À la fin, vous choisissez votre formule ou arrêtez sans aucun frais." },
+  { q: "Mes données sont-elles en sécurité ?",
+    a: "Vos données sont hébergées en Europe (Vercel + Supabase), conformes RGPD. Les paiements passent par Stripe, leader mondial du paiement sécurisé. Sauvegardes quotidiennes incluses." },
+  { q: "Puis-je personnaliser ma page publique ?",
+    a: "Oui, votre studio dispose de sa propre adresse (votre-nom.fydelys.fr) avec photo, description, planning et contacts. Vos adhérents y réservent en ligne en quelques clics." },
+];
 
 // Liste des nouveautés affichées sur la page d'accueil — éditer ici pour publier
 // Tags : "Nouveau" | "Amélioration" | "Correction"
@@ -564,6 +595,8 @@ export default function LandingPage() {
           .how-grid{grid-template-columns:1fr!important;}
           .plans-grid{grid-template-columns:1fr!important;}
           .mockups-grid{grid-template-columns:1fr!important;}
+          details summary{font-size:14px!important;}
+          .float-card,.float-mobile{display:none!important;}
         }
         @media(max-width:480px){
           .disc-grid{grid-template-columns:1fr;}
@@ -631,71 +664,130 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* ── SCREENSHOT + DISCIPLINES ── */}
+      {/* ── APP PREVIEW (multi-panneaux) ── */}
       <section className="sec">
         <div className="inner">
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:64,alignItems:"center"}} className="how-grid">
-            {/* Mockup */}
-            <div>
-              <div className="sec-tag">✦ Interface intuitive</div>
-              <h2 className="sec-h">Simple pour vous.<br/>Simple pour vos membres.</h2>
-              <p className="sec-sub" style={{marginBottom:32}}>Un tableau de bord clair, sans formation. Vos coachs et adhérents prennent en main l'application en quelques minutes.</p>
-              {/* Mini-mockup */}
-              <div className="mockup">
-                <div className="mockup-bar">
-                  <div className="mockup-dot" style={{background:"#F87171"}}/>
-                  <div className="mockup-dot" style={{background:"#FBBF24"}}/>
-                  <div className="mockup-dot" style={{background:"#34D399"}}/>
-                  <div className="mockup-url"/>
-                  <div style={{fontSize:10,color:"#B0A090",fontFamily:"monospace",marginLeft:8}}>samavi.fydelys.fr</div>
+          <div style={{textAlign:"center",marginBottom:56}}>
+            <div className="sec-tag">✦ Aperçu de l'application</div>
+            <h2 className="sec-h">Une interface pensée pour le quotidien</h2>
+            <p className="sec-sub" style={{maxWidth:520,margin:"0 auto"}}>Tableau de bord, planning et espace adhérent — tout est conçu pour gagner du temps, sans formation.</p>
+          </div>
+
+          <div style={{position:"relative",maxWidth:980,margin:"0 auto"}}>
+            {/* Panneau principal — Planning admin */}
+            <div className="mockup" style={{maxWidth:760,margin:"0 auto",boxShadow:"0 30px 80px rgba(42,31,20,.14)"}}>
+              <div className="mockup-bar">
+                <div className="mockup-dot" style={{background:"#F87171"}}/>
+                <div className="mockup-dot" style={{background:"#FBBF24"}}/>
+                <div className="mockup-dot" style={{background:"#34D399"}}/>
+                <div className="mockup-url"/>
+                <div style={{fontSize:10,color:"#B0A090",fontFamily:"monospace",marginLeft:8}}>app.fydelys.fr/planning</div>
+              </div>
+              <div style={{padding:"22px 24px",background:"#FDFAF7"}}>
+                <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:18}}>
+                  <div>
+                    <div style={{fontSize:18,fontWeight:800,color:"#2A1F14",fontFamily:"var(--D)",letterSpacing:-.3}}>Planning de la semaine</div>
+                    <div style={{fontSize:11,color:"#8C7B6C",marginTop:2}}>Lundi 21 → Dimanche 27 avril</div>
+                  </div>
+                  <div style={{display:"flex",gap:6}}>
+                    <div style={{padding:"6px 12px",borderRadius:8,background:"rgba(160,104,56,.1)",fontSize:11,fontWeight:700,color:"#A06838"}}>+ Séance</div>
+                    <div style={{padding:"6px 10px",borderRadius:8,border:"1px solid rgba(160,104,56,.2)",fontSize:11,color:"#5C4A38"}}>Filtres</div>
+                  </div>
                 </div>
-                <div className="mockup-body">
-                  <div style={{fontSize:13,fontWeight:700,color:"#2A1F14",marginBottom:12}}>📊 Tableau de bord — Studio Samavi</div>
-                  <div className="mockup-row">
-                    {[["47","Membres actifs"],["12","Séances / sem."],["2 380 €","CA ce mois"]].map(([v,l])=>(
-                      <div key={l} className="mockup-stat">
-                        <div className="mockup-stat-n">{v}</div>
-                        <div className="mockup-stat-l">{l}</div>
-                      </div>
-                    ))}
-                  </div>
-                  <div style={{fontSize:11,fontWeight:700,color:"#8C7B6C",marginBottom:8,marginTop:4}}>PROCHAINES SÉANCES</div>
-                  <div className="mockup-table">
-                    {[["ML","09:00 Yoga Hatha — Salle A"],["JD","11:00 Pilates — Salle B"],["SC","18:30 Méditation — Studio"]].map(([init,label])=>(
-                      <div key={label} className="mockup-tr">
-                        <div className="mockup-av">{init}</div>
-                        <div style={{flex:1,fontSize:11,color:"#5C4A38",fontWeight:500}}>{label}</div>
-                        <div className="mockup-badge"/>
-                      </div>
-                    ))}
-                  </div>
+                {/* Mini-grille 3 jours */}
+                <div style={{display:"grid",gridTemplateColumns:"60px repeat(3,1fr)",gap:6,fontSize:11}}>
+                  <div></div>
+                  {["Mar 22","Mer 23","Jeu 24"].map(d=><div key={d} style={{textAlign:"center",fontWeight:700,color:"#5C4A38",padding:"6px 0"}}>{d}</div>)}
+                  {[
+                    ["09:00",["Yoga Hatha","#C4956A"],["Pilates","#6B9E7A"],null],
+                    ["12:15",["Yogalates","#C4922A"],null,["Méditation","#6A8FAE"]],
+                    ["18:30",["Vinyasa","#A06838"],["Stretching","#7A9E8A"],["Yin Yoga","#AE7A7A"]],
+                  ].map(([h, ...slots],ri) => (
+                    <React.Fragment key={ri}>
+                      <div style={{padding:"10px 4px",fontSize:10,color:"#8C7B6C",fontWeight:600,fontVariantNumeric:"tabular-nums"}}>{h as string}</div>
+                      {(slots as any[]).map((s,ci) => s ? (
+                        <div key={ci} style={{background:s[1]+"15",border:`1.5px solid ${s[1]}40`,borderRadius:8,padding:"8px 10px"}}>
+                          <div style={{fontSize:11,fontWeight:700,color:"#2A1F14"}}>{s[0]}</div>
+                          <div style={{fontSize:9,color:"#8C7B6C",marginTop:2}}>● ● ● ○ ○</div>
+                        </div>
+                      ) : (<div key={ci} style={{background:"rgba(160,104,56,.04)",borderRadius:8}}/>))}
+                    </React.Fragment>
+                  ))}
                 </div>
               </div>
             </div>
 
-            {/* Disciplines */}
-            <div>
-              <div className="sec-tag">✦ Disciplines</div>
-              <h2 className="sec-h">Adapté à toutes les pratiques</h2>
-              <p className="sec-sub" style={{marginBottom:0}}>Fydelys s'adapte à votre studio, quelle que soit votre discipline.</p>
-              <div className="disc-grid">
-                {DISCIPLINES.map((d) => (
-                  <div key={d.name} className="disc-card-photo">
-                    <div style={{position:"relative",overflow:"hidden",borderRadius:"12px 12px 0 0",height:130}}>
-                      <img src={d.img} alt={d.name + " studio"} loading="lazy" decoding="async" width={600} height={400} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .4s"}}
-                        onMouseOver={e=>(e.currentTarget.style.transform="scale(1.05)")}
-                        onMouseOut={e=>(e.currentTarget.style.transform="scale(1)")}
-                      />
-                      {d.tag && <span style={{position:"absolute",top:8,left:8,background:"rgba(196,146,42,.92)",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:8,letterSpacing:".4px"}}>{d.tag}</span>}
-                    </div>
-                    <div style={{padding:"12px 14px"}}>
-                      <div className="disc-name">{d.name}</div>
-                      <div className="disc-desc">{d.desc}</div>
-                    </div>
-                  </div>
-                ))}
+            {/* Panneau flottant 1 — Fiche membre (en haut à droite) */}
+            <div className="float-card" style={{position:"absolute",top:-30,right:-10,width:230,background:"#FFF",border:"1.5px solid rgba(160,104,56,.18)",borderRadius:14,padding:"14px 16px",boxShadow:"0 18px 40px rgba(42,31,20,.18)",transform:"rotate(2.5deg)"}}>
+              <div style={{display:"flex",alignItems:"center",gap:10,marginBottom:10}}>
+                <div style={{width:36,height:36,borderRadius:"50%",background:"linear-gradient(135deg,#E8C88A,#C4922A)",display:"flex",alignItems:"center",justifyContent:"center",color:"#fff",fontSize:13,fontWeight:700}}>ML</div>
+                <div>
+                  <div style={{fontSize:12,fontWeight:700,color:"#2A1F14"}}>Marie LOUF</div>
+                  <div style={{fontSize:10,color:"#8C7B6C"}}>Membre depuis mars 2026</div>
+                </div>
+              </div>
+              <div style={{display:"flex",gap:6,marginBottom:8}}>
+                <div style={{flex:1,padding:"6px 8px",background:"rgba(78,138,88,.1)",borderRadius:6,textAlign:"center"}}>
+                  <div style={{fontSize:14,fontWeight:800,color:"#4E8A58"}}>14</div>
+                  <div style={{fontSize:9,color:"#5C4A38"}}>Crédits</div>
+                </div>
+                <div style={{flex:1,padding:"6px 8px",background:"rgba(160,104,56,.08)",borderRadius:6,textAlign:"center"}}>
+                  <div style={{fontSize:14,fontWeight:800,color:"#A06838"}}>32</div>
+                  <div style={{fontSize:9,color:"#5C4A38"}}>Séances</div>
+                </div>
+              </div>
+              <div style={{fontSize:10,color:"#8C7B6C",borderTop:"1px solid rgba(160,104,56,.1)",paddingTop:8}}>
+                <span style={{color:"#4E8A58",fontWeight:700}}>✓</span> Présence validée — 21/04
               </div>
             </div>
+
+            {/* Panneau flottant 2 — Mobile adhérent (en bas à gauche) */}
+            <div className="float-mobile" style={{position:"absolute",bottom:-40,left:-10,width:170,background:"#2A1F14",borderRadius:22,padding:8,boxShadow:"0 22px 50px rgba(42,31,20,.22)",transform:"rotate(-3deg)"}}>
+              <div style={{background:"#FDFAF7",borderRadius:16,padding:"14px 12px",overflow:"hidden"}}>
+                <div style={{fontSize:9,color:"#B0A090",marginBottom:4,fontWeight:600}}>SAMAVI</div>
+                <div style={{fontSize:13,fontWeight:800,color:"#2A1F14",fontFamily:"var(--D)",lineHeight:1.1,marginBottom:10}}>Réservez votre cours</div>
+                <div style={{display:"flex",flexDirection:"column",gap:6}}>
+                  {[["18:30","Yoga","Brigitte G"],["19:45","Pilates","Marc D"]].map(([t,d,c]) => (
+                    <div key={t} style={{padding:"6px 8px",background:"#fff",border:"1px solid rgba(160,104,56,.15)",borderRadius:8}}>
+                      <div style={{display:"flex",alignItems:"center",justifyContent:"space-between",marginBottom:1}}>
+                        <span style={{fontSize:10,fontWeight:700,color:"#2A1F14"}}>{t}</span>
+                        <span style={{fontSize:8,color:"#4E8A58",fontWeight:700}}>3 places</span>
+                      </div>
+                      <div style={{fontSize:9,color:"#5C4A38"}}>{d} · {c}</div>
+                    </div>
+                  ))}
+                </div>
+                <div style={{marginTop:10,padding:"6px 8px",background:"linear-gradient(145deg,#B88050,#9A6030)",borderRadius:6,textAlign:"center",fontSize:10,fontWeight:700,color:"#fff"}}>Réserver</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ── DISCIPLINES ── */}
+      <section className="sec" style={{paddingTop:120}}>
+        <div className="inner">
+          <div style={{textAlign:"center",marginBottom:32}}>
+            <div className="sec-tag">✦ Disciplines</div>
+            <h2 className="sec-h">Adapté à toutes les pratiques</h2>
+            <p className="sec-sub" style={{maxWidth:480,margin:"0 auto"}}>Fydelys s'adapte à votre studio, quelle que soit votre discipline.</p>
+          </div>
+          <div className="disc-grid">
+            {DISCIPLINES.map((d) => (
+              <div key={d.name} className="disc-card-photo">
+                <div style={{position:"relative",overflow:"hidden",borderRadius:"12px 12px 0 0",height:130}}>
+                  <img src={d.img} alt={d.name + " studio"} loading="lazy" decoding="async" width={600} height={400} style={{width:"100%",height:"100%",objectFit:"cover",transition:"transform .4s"}}
+                    onMouseOver={e=>(e.currentTarget.style.transform="scale(1.05)")}
+                    onMouseOut={e=>(e.currentTarget.style.transform="scale(1)")}
+                  />
+                  {d.tag && <span style={{position:"absolute",top:8,left:8,background:"rgba(196,146,42,.92)",color:"#fff",fontSize:10,fontWeight:700,padding:"2px 8px",borderRadius:8,letterSpacing:".4px"}}>{d.tag}</span>}
+                </div>
+                <div style={{padding:"12px 14px"}}>
+                  <div className="disc-name">{d.name}</div>
+                  <div className="disc-desc">{d.desc}</div>
+                </div>
+              </div>
+            ))}
           </div>
         </div>
       </section>
@@ -772,6 +864,65 @@ export default function LandingPage() {
             ))}
           </div>
           <p style={{marginTop:20,fontSize:13,color:"var(--muted)"}}>15 jours d'essai gratuit inclus · Sans engagement · Résiliable à tout moment</p>
+        </div>
+      </section>
+
+      {/* ── COMPARATIF ── */}
+      <section className="sec" style={{background:"var(--bg2)"}}>
+        <div className="inner" style={{maxWidth:920}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <div className="sec-tag">✦ Pourquoi Fydelys ?</div>
+            <h2 className="sec-h">Comparé à vos outils actuels</h2>
+            <p className="sec-sub" style={{maxWidth:520,margin:"0 auto"}}>Excel, site Wix bricolé, ou logiciel généraliste — voici ce qui change avec Fydelys.</p>
+          </div>
+          <div style={{background:"var(--surface)",border:"1.5px solid var(--border)",borderRadius:18,overflow:"hidden",boxShadow:"0 4px 24px rgba(42,31,20,.05)"}}>
+            <div style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",background:"var(--bg2)",borderBottom:"1.5px solid var(--border)",fontSize:13,fontWeight:700,color:"var(--mid)"}}>
+              <div style={{padding:"14px 18px"}}>Fonctionnalité</div>
+              <div style={{padding:"14px 8px",textAlign:"center"}}>Excel</div>
+              <div style={{padding:"14px 8px",textAlign:"center"}}>Wix / WordPress</div>
+              <div style={{padding:"14px 8px",textAlign:"center"}}>Logiciel généraliste</div>
+              <div style={{padding:"14px 8px",textAlign:"center",background:"rgba(196,146,42,.1)",color:"var(--accent)"}}>Fydelys</div>
+            </div>
+            {COMPARE_ROWS.map((r,i) => {
+              const cell = (v: any, hi=false) => {
+                const style = {padding:"13px 8px",textAlign:"center" as const,fontSize:18,background:hi?"rgba(196,146,42,.05)":"transparent",borderBottom:i===COMPARE_ROWS.length-1?"none":"1px solid var(--border2)"};
+                if (v === true)  return <div style={{...style,color:"#4E8A58"}}>✓</div>;
+                if (v === false) return <div style={{...style,color:"#C43A3A",opacity:.5}}>—</div>;
+                return <div style={{...style,color:"#C4922A",fontSize:14,fontWeight:600}}>partiel</div>;
+              };
+              return (
+                <div key={i} style={{display:"grid",gridTemplateColumns:"2fr 1fr 1fr 1fr 1fr",alignItems:"center"}}>
+                  <div style={{padding:"13px 18px",fontSize:13.5,color:"var(--text)",borderBottom:i===COMPARE_ROWS.length-1?"none":"1px solid var(--border2)"}}>{r.feat}</div>
+                  {cell(r.excel)}
+                  {cell(r.wix)}
+                  {cell(r.autres)}
+                  {cell(r.fydelys, true)}
+                </div>
+              );
+            })}
+          </div>
+          <p style={{textAlign:"center",fontSize:12,color:"var(--muted)",marginTop:14}}>✓ inclus · partiel = nécessite extension/bricolage · — non disponible</p>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section id="faq" className="sec">
+        <div className="inner" style={{maxWidth:760}}>
+          <div style={{textAlign:"center",marginBottom:48}}>
+            <div className="sec-tag">✦ Questions fréquentes</div>
+            <h2 className="sec-h">Vos questions, nos réponses</h2>
+          </div>
+          <div style={{display:"flex",flexDirection:"column",gap:10}}>
+            {FAQ_ITEMS.map((item,i) => (
+              <details key={i} style={{background:"var(--surface)",border:"1.5px solid var(--border)",borderRadius:14,padding:"4px 8px",cursor:"pointer"}}>
+                <summary style={{padding:"16px 18px",fontSize:15,fontWeight:600,color:"var(--text)",listStyle:"none",display:"flex",justifyContent:"space-between",alignItems:"center",gap:14}}>
+                  <span style={{flex:1}}>{item.q}</span>
+                  <span style={{flexShrink:0,fontSize:20,color:"var(--accent)",fontWeight:300,lineHeight:1}}>+</span>
+                </summary>
+                <div style={{padding:"0 18px 18px",fontSize:14,color:"var(--soft)",lineHeight:1.7}}>{item.a}</div>
+              </details>
+            ))}
+          </div>
         </div>
       </section>
 

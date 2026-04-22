@@ -229,8 +229,9 @@ const PAGE_TITLES = {
     </>
   );
   const activeStudioName = (impersonating?.as === "admin" && impersonatedStudioName) ? impersonatedStudioName : studioName;
+  const activeStudioSlug = (impersonating?.as === "admin" && impersonating?.studioSlug) ? impersonating.studioSlug : studioSlug;
   const appCtxValue = {
-    studioName: activeStudioName, studioSlug, userName, planName,
+    studioName: activeStudioName, studioSlug: activeStudioSlug, userName, planName,
     membersCount: dynamicMembersCount !== null ? dynamicMembersCount : membersCount,
     userRole, userEmail: "", discs, setDiscs,
     studioId: sharedStudioId, setStudioId: setSharedStudioId,

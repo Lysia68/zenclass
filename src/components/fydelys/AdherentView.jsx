@@ -1142,7 +1142,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
             <div style={{ padding:"10px 14px 14px", borderTop:`1px solid ${C.accentBg}` }}>
               <a href="https://videosonline.yogalatestudio.fr/espace"
                 style={{ display:"flex", alignItems:"center", justifyContent:"center", gap:8, padding:"10px 14px", background:"#FFF", border:`1.5px solid ${C.accentBg}`, borderRadius:10, textDecoration:"none", color:C.accent, fontSize:13, fontWeight:600 }}>
-                ← VideosOnline
+                ← Videos Online
               </a>
             </div>
           )}
@@ -1159,6 +1159,12 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
             </div>
             {me && (
               <div style={{ display:"flex", alignItems:"center", gap:10 }}>
+                {isVideosOnlineStudio && hasVideosOnline && (
+                  <a href="https://videosonline.yogalatestudio.fr/espace"
+                    style={{ display:"flex", alignItems:"center", gap:6, padding:"6px 14px", borderRadius:8, border:`1.5px solid ${C.accentBg}`, background:"#FFF", color:C.accent, fontSize:12.5, fontWeight:700, textDecoration:"none" }}>
+                    ← Videos Online
+                  </a>
+                )}
                 {me.credits_total > 0 && (
                   <div style={{ display:"flex", alignItems:"center", gap:5, padding:"4px 10px", background:me.credits<=0?C.warnBg:C.accentBg, borderRadius:20, border:`1px solid ${me.credits<=0?C.warn:C.accent}20` }}>
                     <IcoCreditCard2 s={12} c={me.credits<=0?C.warn:C.accent}/>
@@ -1187,7 +1193,7 @@ function AdherentView({ onSwitch, isMobile, studioName = "", impersonateUserId =
                   <a href="https://videosonline.yogalatestudio.fr/espace"
                     title="Retour VideosOnline"
                     style={{ padding:"4px 10px", borderRadius:6, border:`1px solid ${C.accentBg}`, background:"#FFF", color:C.accent, fontSize:11, fontWeight:700, textDecoration:"none" }}>
-                    ← VO
+                    ← Videos
                   </a>
                 )}
                 {me.credits_total > 0 && (
